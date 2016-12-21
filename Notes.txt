@@ -1,0 +1,7 @@
+Things to do -
+=========
+Battles
+More Lua commands
+Textbox
+Items
+Menu
