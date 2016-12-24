@@ -1,7 +1,51 @@
+Battle systems
+=========
+
+Rouge like hybrid fire emblem pokemon mystery dungeon thingie
+----------
+Pros:
+Cool
+Multiple party members easy
+Cons:
+Harder to make
+Pathfinding ((mostly?) done)
+
+Big Quest
+-----------
+Pros:
+Easy to make
+Cons:
+Boring
+
+Naruto
+--------
+Pros:
+????
+Fun to make?
+Cons:
+Need gooder AI
+
+Things I need for the overworld to be completely made as should be:
+Textbox
+Item giving
+Map changing
+Battle activation
+Question asking
+
 Things to do -
 =========
-Battles
-More Lua commands
-Textbox
+Battles - HARD (2 weeks)
+More Lua commands - AS NEEDED.
+Textbox - DONE (MrDude) (VERY FRESH)
 Items
-Menu
+	Equipment - MODERATE (2 hours?)
+	Consumables - EASY (1 hour?)
+Status menu - EASY (1 hour?)
+Bag - Moderate??? (No dynamic lists. Maybe just item id and 25 items max??) (1.5 hours?)
+Options menu - EASY (1.5 hours?)
+Actually work on the game's content - 2 days for big quest only with refactoring
+
+TOTAL - 11 hours, 2 weeks, and 2 days
+
+Left - 37 days as of 12/20
+36 days left...
