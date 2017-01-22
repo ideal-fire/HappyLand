@@ -5,9 +5,9 @@ TITLE_ID = MYLEGNOOB
 TARGET   = HappyLand
 OBJS     = main.o
 
-LIBS = -lvita2d -lSceKernel_stub -lSceDisplay_stub -lSceGxm_stub \
+LIBS = -lvita2d -lSceDisplay_stub -lSceGxm_stub \
 	-lSceSysmodule_stub -lSceCtrl_stub -lScePgf_stub \
-	-lSceCommonDialog_stub -lSceAudio_stub -lSceTouch_stub -lfreetype -lpng -ljpeg -lz -lm -lc -llua
+	-lSceCommonDialog_stub -lSceAudio_stub -lSceTouch_stub -lfreetype -lpng -ljpeg -lz -lm -lc -llua -lm
 
 PREFIX  = arm-vita-eabi
 CC      = $(PREFIX)-gcc
@@ -23,10 +23,15 @@ all: $(TARGET).vpk
 
 %.vpk: eboot.bin
 	vita-mksfoex -s TITLE_ID=$(TITLE_ID) "$(TARGET)" param.sfo
-	vita-pack-vpk -s param.sfo -b eboot.bin $@
+	vita-pack-vpk -s param.sfo -b eboot.bin \
+	--add sce_sys/icon0.png=sce_sys/icon0.png \
+	--add sce_sys/livearea/contents/bg.png=sce_sys/livearea/contents/bg.png \
+	--add sce_sys/livearea/contents/startup.png=sce_sys/livearea/contents/startup.png \
+	--add sce_sys/livearea/contents/template.xml=sce_sys/livearea/contents/template.xml \
+	HappyLand.vpk
 
 eboot.bin: $(TARGET).velf
-	vita-make-fself $< $@
+	vita-make-fself -s $< $@
 
 %.velf: %.elf
 	vita-elf-create $< $@

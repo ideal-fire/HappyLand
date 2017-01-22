@@ -34,18 +34,48 @@ Question asking
 
 Things to do -
 =========
-Battles - HARD (2 weeks)
+Battles - HARD (2 weeks) (ALMOST) DONE
 More Lua commands - AS NEEDED.
-Textbox - DONE (MrDude) (VERY FRESH)
+Textbox - DONE (MrDude) (VERY FRESH) DONE
 Items
-	Equipment - MODERATE (2 hours?)
-	Consumables - EASY (1 hour?)
-Status menu - EASY (1 hour?)
-Bag - Moderate??? (No dynamic lists. Maybe just item id and 25 items max??) (1.5 hours?)
-Options menu - EASY (1.5 hours?)
+	Equipment - MODERATE (2 hours?) (Maybe not dropped)
+ 	Consumables - EASY (1 hour?) (DROPPPED)
+Status menu - EASY (1 hour?) (DONE)
+Bag - Moderate??? (No dynamic lists. Maybe just item id and 25 items max??) (1.5 hours?) (DROPPED)
+Options menu - EASY (1.5 hours?) (DROPPED)
 Actually work on the game's content - 2 days for big quest only with refactoring
+
+
+
+THINGS LEFT
+=======================
+ENEMIES
+	Tree
+	Slime
+	Snowman
+	Nameless
+	Bluebigfoot
+	Red Bigfoot (noob)
+	Average BigFoot
+
+	Skills
+	Throw Tree
+	Carrot Drill
+	Ice
+	Heal
+	
+LIVE AREA  - DONE 
+FINISH DIALOUGE  - DONE
+
+
 
 TOTAL - 11 hours, 2 weeks, and 2 days
 
 Left - 37 days as of 12/20
 36 days left...
+Left - 20 days as of 1/7/17
+20 days left...
+Left - 10 days as of 1/17/17
+10 days left...
+Left - 5 days as of 1/22/17
+5 dyas left...

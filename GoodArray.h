@@ -16,7 +16,7 @@ void InitGoodArray(Good2dArray* _array){
 void SetGoodArray(Good2dArray* _array, short _width, short _height, short _typeSize){
 	(*_array).width=_width;
 	(*_array).height=_height;
-	(*_array).array = realloc((*_array).array, _width*_height*_typeSize);
+	(*_array).array = realloc((_array)->array, _width*_height*_typeSize);
 	//(*_array).array = malloc(_width*_height*sizeof(char));
 	(*_array).singleElementSize=_typeSize;
 }
