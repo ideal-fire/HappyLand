@@ -85,33 +85,87 @@ function Event04()
 			ShowMessageWithPortrait("Bueno.",false,playerHappy,0);
 		end
 
-		DebugMsg("STart fight");
+		--DebugMsg("STart fight");
 
-		-- After you've killed bigfoot
-		flags[3]=1;
+		SetMapImageData(7,3,1,0,0);
+		SetMapImageData(8,3,1,0,0);
+		SetMapImageData(7,4,1,0,0);
+		SetMapImageData(8,4,1,0,0);
 
-		tempx=0;
-		tempy=5;
-		while (true) do
-			SetMapImageData(tempx,tempy,1,0,6);
-			SetMapImageData(14-tempx,tempy,1,0,6);
-	
-			if (tempy==0) then
-				break;
-			end
-	
-			tempx=tempx+1;
-			tempy=tempy-1;
-			RedrawMap();
-			Wait(200);
-		end
+		-- START BATTLE
+			WierdSlimeHybridMember = Malloc(true,2);
+			WierdSlimeHybridStats = GetPartyMemberStats(WierdSlimeHybridMember);
+			SetStats(WierdSlimeHybridStats,255,80,255,50,35,0,43,21,140);
+
+			enemyidle0 = Malloc(true,0);
+			enemyatk0 = Malloc(true,0);
+			SetAnimation(enemyidle0,10,100,100,8,false,0,0,LoadPNG("app0:Stuff/Enemies/BigFoot.png"));
+			SetAnimation(enemyatk0,15,79,78,3,false,0,0,LoadPNG("app0:Stuff/Enemies/BigFootAttack.png"));
 		
-		-- Add portal
-		SetMapImageData(7,0,1,0,7);
-		SetMapOtherData(7,0,false,5);
+			--SetStatsSpells(WierdSlimeHybridMember,1,2);
+
+
+			didWin = StartSpecificBattle(1,WierdSlimeHybridMember,enemyidle0,enemyatk0);
+			if (didWin==true) then
+				flags[3]=1;
+			else
+				if (Lang==1) then
+					ShowMessageWithPortrait("Hahahaha! I'm more big than you!",false,bigfootport,0);
+				elseif (Lang==2) then
+					ShowMessageWithPortrait("'!Jajajaja! '!You soy m'as grande que t'u!",false,bigfootport,0);
+				end
+			end
+			didWin=nil;
+
+			FreeAnimationImage(enemyidle0);
+			FreeAnimationImage(enemyatk0);
+			Free(enemyidle0);
+			Free(enemyatk0);
+			Free(WierdSlimeHybridMember);
+
+
+			WierdSlimeHybridMember=nil;
+			WierdSlimeHybridStats=nil;
+			enemyidle0 = nil;
+			enemyatk0 = nil;
+
+			RestorePartyMember(0);
+			RestorePartyMember(1);
+
+
+		SetMapImageData(7,3,1,0,2);
+		SetMapImageData(8,3,1,0,3);
+		SetMapImageData(7,4,1,0,4);
+		SetMapImageData(8,4,1,0,5);
+		-- After you've killed bigfoot
+		if (flags[3]==1) then
 	
-		tempx=nil;
-		tempy=nil;
+			tempx=0;
+			tempy=5;
+			while (true) do
+				SetMapImageData(tempx,tempy,1,0,6);
+				SetMapImageData(14-tempx,tempy,1,0,6);
+		
+				if (tempy==0) then
+					break;
+				end
+		
+				tempx=tempx+1;
+				tempy=tempy-1;
+				RedrawMap();
+				Wait(200);
+			end
+			
+			-- Add portal
+			SetMapImageData(7,0,1,0,7);
+			SetMapOtherData(7,0,false,5);
+		
+			tempx=nil;
+			tempy=nil;
+		end
+
+
+		
 
 		-- Dispose portraits
 		UnloadTexture(bigfootport);
@@ -179,4 +233,16 @@ else
 	-- Remove portal
 	SetMapImageData(7,0,1,0,0);
 	SetMapOtherData(7,0,false,0);
+end
+
+
+
+
+RedrawMap();
+if (GetLevel(0)<6) then
+	if (Lang==1) then
+		DebugMsg("You feel you should fight more noob enemies.",false);
+	elseif (Lang==2) then
+		DebugMsg("T'u piensas que debes matar m'as enemigos f'aciles.",false)
+	end
 end

@@ -13,6 +13,7 @@ function MapDispose()
 end
 
 function Event01()
+--
 	--WierdSlimeHybridMember = Malloc(true,2);
 	--WierdSlimeHybridStats = GetPartyMemberStats(WierdSlimeHybridMember);
 	--SetStats(WierdSlimeHybridStats,10,10,1,3,3,1,1,4,500);
@@ -112,6 +113,7 @@ function Event06()
 	signport=nil;
 end
 function Event07()
+	
 	-- Tree
 	treeport = LoadPNG("app0:Stuff/Portraits/AngryTree.png");
 	smileyplayer = LoadPNG("app0:Stuff/Portraits/Player.png");
@@ -136,9 +138,46 @@ function Event07()
 			ShowMessageWithPortrait(">:(", false, treeport, 0);
 		end
 
-		DebugMsg("STart tree battle")
+		
+		-- START BATTLE
+			WierdSlimeHybridMember = Malloc(true,2);
+			WierdSlimeHybridStats = GetPartyMemberStats(WierdSlimeHybridMember);
+			SetStats(WierdSlimeHybridStats,987,70,255,15,13,7,11,9,40);
 
-		flags[2]=1;
+			enemyidle0 = Malloc(true,0);
+			enemyatk0 = Malloc(true,0);
+			SetAnimation(enemyidle0,30,64,64,3,false,0,0,LoadPNG("app0:Stuff/Enemies/AngryTree.png"));
+			SetAnimation(enemyatk0,8,64,64,3,false,0,0,LoadPNG("app0:Stuff/Enemies/AngryTreeAttack.png"));
+		
+			SetStatsSpells(WierdSlimeHybridMember,4);
+
+
+			didWin = StartSpecificBattle(1,WierdSlimeHybridMember,enemyidle0,enemyatk0);
+			if (didWin==true) then
+				flags[2]=1;
+			else
+				if (Lang==1) then
+					ShowMessageWithPortrait("Hahahaha! I'm more angry than you!",false,treeport,0);
+				elseif (Lang==2) then
+					ShowMessageWithPortrait("'!Jajajaja! '!You estoy m'as enojado que t'u!",false,treeport,0);
+				end
+			end
+			didWin=nil;
+
+			FreeAnimationImage(enemyidle0);
+			FreeAnimationImage(enemyatk0);
+			Free(enemyidle0);
+			Free(enemyatk0);
+			Free(WierdSlimeHybridMember);
+
+
+			WierdSlimeHybridMember=nil;
+			WierdSlimeHybridStats=nil;
+			enemyidle0 = nil;
+			enemyatk0 = nil;
+
+			RestorePartyMember(0);
+		
 	else
 		if (Lang==1) then
 			ShowMessageWithPortrait("Ouch.", false, treeport, 0);
@@ -149,6 +188,7 @@ function Event07()
 	
 	UnloadTexture(treeport);
 	treeport=nil;
+	
 end
 function Event08()
 	-- Flower
@@ -232,11 +272,4 @@ battleEnemyLoadId=0;
 dofile("app0:Stuff/BattleLua/Slime.lua");
 --
 
-
-SetEncounterRate(15);
-
---[[
-
-
-I NEED TO PROGRAM MALLOC FREE!!!
-]]
+SetEncounterRate(10);

@@ -1,3 +1,40 @@
+EXAMPLE LUA
+
+ENEMY BATTLE NOT FROM RANDOM ENCOUTNER
+
+
+	WierdSlimeHybridMember = Malloc(true,2);
+	WierdSlimeHybridStats = GetPartyMemberStats(WierdSlimeHybridMember);
+	SetStats(WierdSlimeHybridStats,10,10,1,3,3,1,1,4,500);
+
+	enemyidle0 = Malloc(true,0);
+	enemyatk0 = Malloc(true,0);
+	SetAnimation(enemyidle0,100,64,64,3,false,0,0,LoadPNG("app0:Stuff/Enemies/AngryTree.png"));
+	SetAnimation(enemyatk0,20,32,32,3,false,0,0,LoadPNG("app0:Stuff/Enemies/Slime.png"));
+
+	StartSpecificBattle(2,WierdSlimeHybridMember,enemyidle0,enemyatk0,WierdSlimeHybridMember,enemyidle0,enemyatk0);
+
+	FreeAnimationImage(enemyidle0);
+	FreeAnimationImage(enemyatk0);
+	Free(enemyidle0);
+	Free(enemyatk0);
+	Free(WierdSlimeHybridMember);
+
+
+
+====================================
+== WHAT MUST BE PUT IN THE VPK (ROOT)
+===================================
+eboot
+sce_sys
+Stuff
+OtherStuff
+SpanishReplace
+
+
+
+
+
 Battle systems
 =========
 
@@ -50,8 +87,8 @@ Actually work on the game's content - 2 days for big quest only with refactoring
 THINGS LEFT
 =======================
 ENEMIES
-	Tree
-	Slime
+	Tree - DONE
+	Slime - DONE
 	Snowman
 	Nameless
 	Bluebigfoot
@@ -59,14 +96,14 @@ ENEMIES
 	Average BigFoot
 
 	Skills
-	Throw Tree
+	Throw Tree - DONE
 	Carrot Drill
-	Ice
-	Heal
-	
+	Ice - DONE
+	Heal - DONE
+	Big Heal
+		
 LIVE AREA  - DONE 
 FINISH DIALOUGE  - DONE
-
 
 
 TOTAL - 11 hours, 2 weeks, and 2 days
@@ -79,3 +116,7 @@ Left - 10 days as of 1/17/17
 10 days left...
 Left - 5 days as of 1/22/17
 5 dyas left...
+Left - 4 days as of 1/23/17
+4 days...so..much..left....
+Left - 3 days as of 1/24/17
+3 days..ohno.

@@ -8,6 +8,7 @@ function MapDispose()
 	Event06=nil;
 	Event07=nil;
 	Event08=nil;
+	Event09=nil;
 end
 
 function Event01()
@@ -82,7 +83,61 @@ function Event06()
 end
 function Event07()
 	if (flags[1]==0) then
-			
+		signport = LoadPNG("app0:Stuff/Portraits/Matt.png");
+		nathanport = LoadPNG("app0:Stuff/Portraits/Player.png");
+		if (Lang==1) then
+			ShowMessageWithPortrait("Waaaaaait, I want to come with you!",false,signport,0);
+			questionanswer = ShowMessageWithPortrait("Can Matt come? (The game will be very hard without him.)",true,nathanport,0);
+		elseif (Lang==2) then
+			ShowMessageWithPortrait("'!Nooooo, yo quiero ir contigo!",false,signport,0);
+			questionanswer = ShowMessageWithPortrait("'?Matt puede ir conmigo? (Sin Matt, el juego va a ser muy dif'icil.)",true,nathanport,0);
+		end
+
+		if (questionanswer==true) then
+			-- Don't know if I need to or how to translate these
+			if (Lang==1) then
+				ShowMessageWithPortrait("o0o0oOOo, okay!!", false, signport, 0);
+				ShowMessage("Matt joined the party!",false);
+			elseif (Lang==2) then
+				ShowMessageWithPortrait(":)", false, signport, 0);
+			end
+
+			-- Party slots are 0 based, party size isn't.
+			mattslot = GetPartySize();
+			tempidle = GetPartyMemberAnimation(mattslot,1)
+			tempatk = GetPartyMemberAnimation(mattslot,2)
+
+			SetAnimation(tempidle,30,29,68,-1,false,0,0,LoadPNG("app0:Stuff/Battle/MattIdle.png"));
+			SetAnimation(tempatk,10,56,68,-1,true,0,0,LoadPNG("app0:Stuff/Battle/MattAttack.png"));
+			SetStats(GetPartyMemberStats(mattslot),1,35,20,8,8,15,15,7,0,MallocString("Matt"));
+			SetPartySize(mattslot+1);
+			RestorePartyMember(mattslot);
+
+			tempidle=nil;
+			tempatk=nil;
+			mattslot=nil;
+
+			flags[1]=1;
+			-- Hide Matt
+			SetMapOtherData(6,12,false,0);
+			SetMapImageData(6,12,1,0,0);
+		elseif (questionanswer==false) then
+			if (Lang==1) then
+				questionanswer = ShowMessageWithPortrait("k, fiiiine", false, signport, 0);
+			elseif (Lang==2) then
+				questionanswer = ShowMessageWithPortrait("'!NOo0oo0oOo!", false, signport, 0);
+			end
+		end
+
+		UnloadTexture(signport);
+		UnloadTexture(nathanport);
+		questionanswer=nil;
+		signport=nil;
+		nathanport=nil;
+
+
+		SetPlayerPosition(6,8);
+		ChangeMap("app0:Stuff/Maps/StartTown")
 	else
 		SetPlayerPosition(6,8);
 		ChangeMap("app0:Stuff/Maps/StartTown")
@@ -137,6 +192,22 @@ function Event08()
 	else
 		DebugMsg("I'm not here.");
 	end
+end
+function Event09()
+	tempPort = LoadPNG("app0:Stuff/Portraits/SmileyFace.png");
+
+	for i=0,GetPartySize()-1 do
+		RestorePartyMember(i);
+	end
+
+	if (Lang==1) then
+		ShowMessageWithPortrait("HP and MP restored.",false,tempPort,0);
+	elseif (Lang==2) then
+		ShowMessageWithPortrait("HP y MP restauraron.",false,tempPort,0);
+	end
+
+	UnloadTexture(tempPort);
+	tempPort=nil;
 end
 
 

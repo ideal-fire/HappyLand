@@ -28,7 +28,7 @@ function Event03()
 	if (Lang==1) then
 		ShowMessageWithPortrait("Go up to get to Big Foot Land.",false,tempPort,0);
 	elseif (Lang==2) then
-		ShowMessageWithPortrait("'!Sube para ir a La Sala De Pie Grande!",false,tempPort,0);
+		ShowMessageWithPortrait("Subir para ir a La Sala De Pie Grande.",false,tempPort,0);
 	end
 
 	UnloadTexture(tempPort);
@@ -43,3 +43,19 @@ end
 tileset0=LoadPNG("app0:Stuff/Tilesets/SnowyTilesetA.png");
 SetTileset(tileset0,0);
 tileset0=nil;
+
+
+--
+battleEnemyLoadId=0;
+dofile("app0:Stuff/BattleLua/Snowman.lua");
+--
+SetEncounterRate(8);
+
+RedrawMap();
+if (GetLevel(0)<4) then
+	if (Lang==1) then
+		ShowMessage("You feel you should fight more noob enemies.",false);
+	elseif (Lang==2) then
+		ShowMessage("T'u piensas que debes matar m'as enemigos f'aciles.",false)
+	end
+end

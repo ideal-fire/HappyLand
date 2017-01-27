@@ -16,6 +16,9 @@ O---O---O--OOOOO-O----OOOOO-O---O---
 #define LANG_SPANISH 2
 int LANGUAGE=LANG_ENGLISH;
 
+#define STARTINGMAP "app0:Stuff/Maps/NathansHouse"
+//#define STARTINGMAP "app0:Stuff/Maps/BigFootLand"
+
 
 // Translatos for hardcoded strings
 #include "HardcodedLanguage.h"
@@ -90,8 +93,8 @@ int drawYOffset=0;
 		char numberOfFrames; // Total number of frames.
 		char goBackwards; // Go backwards at the end?
 		signed char addOnChange; // What is added on change.
-		char drawXOffset; // An x offset.
-		char drawYOffset; // A y offset.
+		signed short drawXOffset; // An x offset.
+		signed short drawYOffset; // A y offset.
 	}animation;
 	typedef struct Q_object{ 
 		short x;
@@ -232,6 +235,12 @@ partyMember dummyMember;
 stats possibleEnemies[10];
 animation possibleEnemiesIdleAnimation[10];
 animation possibleEnemiesAttackAnimation[10];
+
+void RestorePartyMember(int id){
+	int passedSlot = id;
+	party[passedSlot].hp=party[passedSlot].fighterStats.maxHp;
+	party[passedSlot].mp=party[passedSlot].fighterStats.maxMp;
+}
 
 // pl0x, I beg you, don't crash when I'm disposing textures.
 void PlzNoCrashOnDispose(){
@@ -662,8 +671,13 @@ char ShowMessageWithPortrait(char* message, char isQuestion, vita2d_texture* por
 	int i=0;
 	int j=0;
 	if (isQuestion==1){
-		yesButtonTexture=vita2d_load_PNG_file("app0:Stuff/Yes.png");
-		noButtonTexture=vita2d_load_PNG_file("app0:Stuff/No.png");
+		if (LANGUAGE==LANG_ENGLISH){
+			yesButtonTexture=vita2d_load_PNG_file("app0:Stuff/Yes.png");
+			noButtonTexture=vita2d_load_PNG_file("app0:Stuff/No.png");
+		}else if (LANGUAGE==LANG_SPANISH){
+			yesButtonTexture=vita2d_load_PNG_file("app0:SpanishReplace/Yes.png");
+			noButtonTexture=vita2d_load_PNG_file("app0:SpanishReplace/No.png");
+		}
 	}
 
 	//I guess this adds the newline segments?
@@ -978,8 +992,8 @@ int Damage(partyMember* attacker, partyMember* victim, int moveAttack, int moveM
 	if (victim->hp<0){
 		victim->hp=0;
 	}
-	if (victim->hp>victim->fighterStats.maxHp+20){
-		victim->hp=victim->fighterStats.maxHp+20;
+	if (victim->hp>victim->fighterStats.maxHp+15){
+		victim->hp=victim->fighterStats.maxHp+15;
 	}
 	return doneDamage;
 }
@@ -1003,6 +1017,11 @@ void InitWildBattle(){
 	if (firstRandomA>2){
 		int firstRandomB = RandBetween(2,4);
 		numberOfEnemies=firstRandomB;
+	}else if (firstRandomA==1){
+		if (RandBetween(1,3)!=1){
+			int firstRandomB = RandBetween(2,4);
+			numberOfEnemies=firstRandomB;
+		}
 	}else{
 		numberOfEnemies=firstRandomA;
 	}
@@ -1542,7 +1561,7 @@ void Overworld(){
 		EndFrameStuff();
 }
 
-void BattleLop(){
+char BattleLop(char canRun){
 	// 0 - Ready for next person in line
 	// 1 - Choosing attack
 	// 2 - Choosing target
@@ -1586,6 +1605,10 @@ void BattleLop(){
 	// Y speed for magic moving
 	signed char temp4=1;
 
+	// FOr checking if somebody is alive.
+	// if 0 after battle end, player lost
+	char isOneAlive=0;
+
 	// This generates the orderOfAction list
 	// i is the the current orderOfAction slot.
 	for (i=0;i<8;i++){
@@ -1620,11 +1643,24 @@ void BattleLop(){
 		}
 	}
 
-	vita2d_texture* attackButton = vita2d_load_PNG_file("app0:Stuff/AttackIcon.png");
-	vita2d_texture* magicButton = vita2d_load_PNG_file("app0:Stuff/MagicIcon.png");
-	vita2d_texture* runButton= vita2d_load_PNG_file("app0:Stuff/RunIcon.png");
-	vita2d_texture* itemButton = vita2d_load_PNG_file("app0:Stuff/ItemIcon.png");
-	vita2d_texture* winTexture = vita2d_load_PNG_file("app0:Stuff/Battle/Win.png");
+	vita2d_texture* attackButton=NULL;
+	vita2d_texture* magicButton=NULL;
+	vita2d_texture* runButton=NULL;
+	vita2d_texture* itemButton=NULL;
+	vita2d_texture* winTexture=NULL;
+	if (LANGUAGE==LANG_ENGLISH){
+		attackButton = vita2d_load_PNG_file("app0:Stuff/AttackIcon.png");
+		magicButton = vita2d_load_PNG_file("app0:Stuff/MagicIcon.png");
+		runButton= vita2d_load_PNG_file("app0:Stuff/RunIcon.png");
+		itemButton = vita2d_load_PNG_file("app0:Stuff/ItemIcon.png");
+		winTexture = vita2d_load_PNG_file("app0:Stuff/Battle/Win.png");
+	}else if (LANGUAGE==LANG_SPANISH){
+		attackButton = vita2d_load_PNG_file("app0:SpanishReplace/AttackIcon.png");
+		magicButton = vita2d_load_PNG_file("app0:SpanishReplace/MagicIcon.png");
+		runButton= vita2d_load_PNG_file("app0:SpanishReplace/RunIcon.png");
+		itemButton = vita2d_load_PNG_file("app0:Stuff/ItemIcon.png");
+		winTexture = vita2d_load_PNG_file("app0:SpanishReplace/Battle/Win.png");
+	}
 
 	spell* selectedSpell=&(GetSpellList(0)->theSpell);
 
@@ -1732,18 +1768,15 @@ void BattleLop(){
 		if (battleStatus==0)/*My body is ready for next turn*/{
 
 			// Check if alive
-				char isOneAlive=0;
+				isOneAlive=0;
 				for (i=0;i<partySize;i++){
-				if (party[i].hp>0){
-					isOneAlive=1;
-				}
+					if (party[i].hp>0){
+						isOneAlive=1;
+					}
 				}
 				if (isOneAlive==0){
-				// TODO - player has lost.
-				ShowMessage(N_DEADMESSAGE,0);
-				place=2;
-				//place=0;
-				break;
+					// player has lost.
+					break;
 				}
 				isOneAlive=0;
 				for (i=0;i<numberOfEnemies;i++){
@@ -1752,75 +1785,76 @@ void BattleLop(){
 					}
 				}
 				if (isOneAlive==0){
-				// j k
-
-				int totalEarnExp=0;
-				for (i=0;i<numberOfEnemies;i++){
-					totalEarnExp+=enemies[i].fighterStats.exp;
-					for (k=0;k<10;k++){
-						if (enemies[i].fighterStats.spells[k]!=0){
-						for (j=0;j<partySize;j++){
-								AddSpellToStats(&party[i].fighterStats,enemies[i].fighterStats.spells[k]);
+					// Set this back to 1 to not trigger thing after battle end
+					isOneAlive=1;
+	
+					int totalEarnExp=0;
+					for (i=0;i<numberOfEnemies;i++){
+						totalEarnExp+=enemies[i].fighterStats.exp;
+						for (k=0;k<10;k++){
+							if (enemies[i].fighterStats.spells[k]!=0){
+								for (j=0;j<partySize;j++){
+									AddSpellToStats(&party[j].fighterStats,enemies[i].fighterStats.spells[k]);
+								}
 							}
 						}
 					}
-				}
-				
-				for (j=0;j<partySize;j++){
-					party[j].fighterStats.exp+=totalEarnExp;
-				}
-				
-				char didLevelUp[partySize];
-				// level*5+10
-				for (i=0;i<partySize;i++){
-					while (party[i].fighterStats.exp>=party[i].fighterStats.level*5+10){
-						party[i].fighterStats.exp-=party[i].fighterStats.level*5+10;
-						party[i].fighterStats.level++;
-			
-						party[i].fighterStats.attack+=3;
-						party[i].fighterStats.magicAttack+=3;
-						party[i].fighterStats.defence+=3;
-						party[i].fighterStats.magicDefence+=3;
-						party[i].fighterStats.speed+=3;
-						party[i].fighterStats.maxHp+=7;
-						party[i].fighterStats.maxMp+=7;
-						party[i].hp=party[i].fighterStats.maxHp;
-						party[i].mp=party[i].fighterStats.maxMp;
-			
-						didLevelUp[i]=1;
+					
+					for (j=0;j<partySize;j++){
+						party[j].fighterStats.exp+=totalEarnExp;
 					}
-				}
-			
-				sprintf((char*)&temp2,"%d",totalEarnExp);
-				while (1){
-					StartFrameStuff();
-			
-					if (WasJustPressed(aButton)){
-						break;
-					}
-			
-					vita2d_start_drawing();
-					vita2d_clear_screen();
-				
-					vita2d_draw_texture_scale(winTexture,CenterSomething(vita2d_texture_get_width(winTexture)*2),3,2,2);
-					//DrawTextAsISay(SCREENWIDTH/2-(strlen(N_WIN)*64/2),3,N_WIN,8)CenterSomething;
-					DrawTextAsISay(0,206+64,"EXP:",8);
-					DrawTextAsISay(256,206+64,temp2,8);
-			
+					
+					char didLevelUp[partySize];
+					// level*5+10
 					for (i=0;i<partySize;i++){
-						if (didLevelUp[i]==1){
-							DrawTextAsISay(0,300+i*32+i*5+64,party[i].fighterStats.name,4);
-							DrawTextAsISay(strlen(party[i].fighterStats.name)*32+32,300+i*32+i*5+64,N_LEVELEDUP,4);
+						while (party[i].fighterStats.exp>=party[i].fighterStats.level*5+10){
+							party[i].fighterStats.exp-=party[i].fighterStats.level*5+10;
+							party[i].fighterStats.level++;
+				
+							party[i].fighterStats.attack+=3;
+							party[i].fighterStats.magicAttack+=3;
+							party[i].fighterStats.defence+=3;
+							party[i].fighterStats.magicDefence+=3;
+							party[i].fighterStats.speed+=3;
+							party[i].fighterStats.maxHp+=3;
+							party[i].fighterStats.maxMp+=3;
+							party[i].hp=party[i].fighterStats.maxHp;
+							party[i].mp=party[i].fighterStats.maxMp;
+				
+							didLevelUp[i]=1;
 						}
 					}
-			
-					vita2d_end_drawing();
-					vita2d_swap_buffers();
-			
-					EndFrameStuff();
-				}
-				place=0;
-				break;
+				
+					sprintf((char*)&temp2,"%d",totalEarnExp);
+					while (1){
+						StartFrameStuff();
+				
+						if (WasJustPressed(aButton)){
+							break;
+						}
+				
+						vita2d_start_drawing();
+						vita2d_clear_screen();
+					
+						vita2d_draw_texture_scale(winTexture,CenterSomething(vita2d_texture_get_width(winTexture)*2),3,2,2);
+						//DrawTextAsISay(SCREENWIDTH/2-(strlen(N_WIN)*64/2),3,N_WIN,8)CenterSomething;
+						DrawTextAsISay(0,206+64,"EXP:",8);
+						DrawTextAsISay(256,206+64,temp2,8);
+				
+						for (i=0;i<partySize;i++){
+							if (didLevelUp[i]==1){
+								DrawTextAsISay(0,300+i*32+i*5+64,party[i].fighterStats.name,4);
+								DrawTextAsISay(strlen(party[i].fighterStats.name)*32+32,300+i*32+i*5+64,N_LEVELEDUP,4);
+							}
+						}
+				
+						vita2d_end_drawing();
+						vita2d_swap_buffers();
+				
+						EndFrameStuff();
+					}
+					place=0;
+					break;
 				}
 
 			if (GetBattlerById(orderOfAction[currentOrder])->hp<=0){
@@ -1855,8 +1889,8 @@ void BattleLop(){
 					}
 
 					// 1/5 to use spell
-					if (RandBetween(1,4)==1){
-						int enemySpellSelected = GetBattlerById(orderOfAction[currentOrder])->fighterStats.spells[RandBetween(0,GetNumberOfSpells(&GetBattlerById(orderOfAction[(int)currentOrder])->fighterStats)-1)];
+					if (RandBetween(1,4)==1 && GetNumberOfSpells(&GetBattlerById(orderOfAction[(int)currentOrder])->fighterStats)>0){
+						int enemySpellSelected = GetBattlerById(orderOfAction[currentOrder])->fighterStats.spells[RandBetween(0,GetNumberOfSpells(&GetBattlerById(orderOfAction[(int)currentOrder])->fighterStats)-1)]-1;
 						selectedSpell = &(GetSpellList(enemySpellSelected)->theSpell);
 						ResetAnimation(&(selectedSpell->theAnimation));
 						LoadSpellImageIfNeeded(enemySpellSelected);
@@ -1892,14 +1926,24 @@ void BattleLop(){
 		}else if (battleStatus==1)/*Choosing type of move*/{
 			if (WasJustPressed(SCE_CTRL_RIGHT)){
 				selected++;
-				if (selected==3){
-					selected=0;
+				if (canRun==1){
+					if (selected==3){
+						selected=0;
+					}
+				}else{
+					if (selected==2){
+						selected=0;
+					}
 				}
 			}
 			if (WasJustPressed(SCE_CTRL_LEFT)){
 				selected--;
 				if (selected<0){
-					selected=2;
+					if (canRun==1){
+						selected=2;
+					}else{
+						selected=1;
+					}
 				}
 			}
 			if (WasJustPressed(aButton)/* || DidJustTouch()==1*/){
@@ -2102,6 +2146,7 @@ void BattleLop(){
 				currentOrder++;
 			}
 		}else if (battleStatus==5)/*Waiting for spell animation*/{
+			UpdateAnimationIfNeed(&(selectedSpell->theAnimation));
 			if (selectedSpell->theAnimation.currentFrame==0 && temp!=0){
 				currentOrder++;
 				battleStatus=0;
@@ -2123,7 +2168,9 @@ void BattleLop(){
 			vita2d_draw_texture_scale(attackButton,32,SCREENHEIGHT-vita2d_texture_get_height(attackButton)*2,2,2);
 			vita2d_draw_texture_scale(magicButton,264,SCREENHEIGHT-vita2d_texture_get_height(magicButton)*2,2,2);
 			//vita2d_draw_texture_scale(itemButton,496,SCREENHEIGHT-vita2d_texture_get_height(itemButton)*2,2,2);
-			vita2d_draw_texture_scale(runButton,/*728*/496,SCREENHEIGHT-vita2d_texture_get_height(itemButton)*2,2,2);
+			if (canRun==1){
+				vita2d_draw_texture_scale(runButton,/*728*/496,SCREENHEIGHT-vita2d_texture_get_height(itemButton)*2,2,2);
+			}
 			UpdateAnimationIfNeed(&selectorAnimation);
 			vita2d_draw_texture_part_scale_rotate(selectorAnimation.texture,selected*200+selected*32+132,SCREENHEIGHT-128,selectorAnimation.currentFrame*selectorAnimation.width,0,selectorAnimation.width,selectorAnimation.height,3.7,3.7,1.57);
 		}else if (battleStatus==2){
@@ -2153,7 +2200,7 @@ void BattleLop(){
 			// Draw health and MP bar for party member
 			// hp
 			vita2d_draw_rectangle(32+i*128+i*16,16,128,32,RGBA8(0,0,0,255));
-			if (party[i].hp>=party[i].fighterStats.maxHp+20){
+			if (party[i].hp>=party[i].fighterStats.maxHp+15){
 				// Draw more red rectangle if overheal
 				vita2d_draw_rectangle(32+i*128+i*16,16,floor(128*(((double)party[i].hp)/party[i].fighterStats.maxHp)),32,RGBA8(255,0,0,255));
 			}else{
@@ -2230,7 +2277,6 @@ void BattleLop(){
 			vita2d_draw_rectangle(GetBattlerById(target)->x,GetBattlerById(target)->y-32,floor(128*(((double)GetBattlerById(target)->hp)/GetBattlerById(target)->fighterStats.maxHp)),32,RGBA8(190,0,0,255));
 
 		}
-
 		vita2d_end_drawing();
 		vita2d_swap_buffers();
 	
@@ -2246,11 +2292,26 @@ void BattleLop(){
 
 	DisposeAllLoadedSpellImages();
 
+	if (isOneAlive==0){
+		if (canRun==1){
+			ShowMessage(N_DEADMESSAGE,0);
+			place=0;
+			playerObject->x=64;
+			playerObject->y=64;
+			ChangeMap("app0:Stuff/Maps/NathansHouse");
+		}else{
+			place=0;
+		}
+		return 0;
+	}
+
 	// Make sure no rapid battle lop
 	if (place==3){
 		ShowMessage("That shouldn't have happenedededed. Overworld, go!",0);
 		place=0;
 	}
+
+	return 1;
 }
 
 void TitleLoop(){
@@ -2259,7 +2320,6 @@ void TitleLoop(){
 		StartFrameStuff();
 
 		if (pad.buttons & aButton){
-
 			if (LANGUAGE == LANG_ENGLISH){
 				lua_pushnumber(L,1);
 			}else if (LANGUAGE==LANG_SPANISH){
@@ -2271,8 +2331,18 @@ void TitleLoop(){
 
 			// Need to load here as Lang variable has been set.
 			luaL_dofile(L,"app0:Stuff/Happy.lua");
-			LoadMap("app0:Stuff/Maps/StartTown");
+			LoadMap(STARTINGMAP);
 			place=0;
+
+			if ((pad.buttons & SCE_CTRL_LTRIGGER) && (pad.buttons & SCE_CTRL_RTRIGGER) && (pad.buttons & SCE_CTRL_RIGHT)){
+				BasicMessage("You activated the top secret key combo. You will get a high level. Restart the game to play normally");
+				party[0].fighterStats.maxHp=999;
+				party[0].fighterStats.speed=999;
+				party[0].fighterStats.attack=999;
+				party[0].fighterStats.defence=999;
+				party[0].fighterStats.magicDefence=999;
+			}
+
 			break;
 		}
 		if (WasJustPressed(SCE_CTRL_TRIANGLE)){
@@ -2280,6 +2350,13 @@ void TitleLoop(){
 				LANGUAGE=LANG_SPANISH;
 			}else if (LANGUAGE==LANG_SPANISH){
 				LANGUAGE=LANG_ENGLISH;
+			}
+			PlzNoCrashOnDispose();
+			vita2d_free_texture(titleImage);
+			if (LANGUAGE==LANG_ENGLISH){
+				titleImage = vita2d_load_PNG_file("app0:Stuff/title.png");
+			}else if (LANGUAGE==LANG_SPANISH){
+				titleImage = vita2d_load_PNG_file("app0:SpanishReplace/title.png");
 			}
 		}
 		if (WasJustPressed(SCE_CTRL_SQUARE)){
@@ -2655,7 +2732,7 @@ int L_StartWildBattle(lua_State* passedState){
 	InitWildBattle();
 	BattleInit();
 	place=3;
-	BattleLop();
+	BattleLop(1);
 	return 0;
 }
 
@@ -2760,6 +2837,8 @@ int L_Wait(lua_State* passedState){
 // Redraws the map.
 // Honestly, this was just for torches part
 int L_RedrawMap(lua_State* passedState){
+	UpdateCameraValues(playerObject);
+
 	// Drawing
 	vita2d_start_drawing();
 	vita2d_clear_screen();
@@ -2832,11 +2911,36 @@ int L_FreeAnimationImage(lua_State* passedState){
 	return 0;
 }
 
+int L_Level(lua_State* passedState){
+	int passedMemberId = lua_tonumber(passedState,1);
+	int numLevels = lua_tonumber(passedState,2);
+	int i=0;
+	for (i=0;i<numLevels;i++){
+		
+		party[passedMemberId].fighterStats.level++;
+		
+		party[passedMemberId].fighterStats.attack+=3;
+		party[passedMemberId].fighterStats.magicAttack+=3;
+		party[passedMemberId].fighterStats.defence+=3;
+		party[passedMemberId].fighterStats.magicDefence+=3;
+		party[passedMemberId].fighterStats.speed+=3;
+		party[passedMemberId].fighterStats.maxHp+=3;
+		party[passedMemberId].fighterStats.maxMp+=3;
+		party[passedMemberId].hp=party[passedMemberId].fighterStats.maxHp;
+		party[passedMemberId].mp=party[passedMemberId].fighterStats.maxMp;
+		
+	
+	}
+	return 0;
+}
+
 // Starts a battle with the enemies you want
 // ARGS
 // numberOfEnemies, enemyPartyMember 0, enemyIdleAnimation 0, enemyAttackAnimation 0, enemyStats 1, enemyIdleAnimation 1, enemyAttackAnimation 1, etc...
 // Max is 4 enemies
 // You may ommit args for enemies unused.
+// RETURN
+// didwin(bool)
 int L_StartSpecificBattle(lua_State* passedState){ 
 	int i=0;
 	// Current arg we're using. Start at 2 for first stats
@@ -2856,8 +2960,8 @@ int L_StartSpecificBattle(lua_State* passedState){
 
 	BattleInit();
 	place=3;
-	BattleLop();
-	return 0;
+	lua_pushboolean(passedState,BattleLop(0));
+	return 1;
 }
 
 // Sets spells
@@ -2868,6 +2972,44 @@ int L_SetStatsSpells(lua_State* passedState){
 	int i=0;
 	for (i=2;i<=lua_gettop(passedState);i++){
 		passedStats->spells[i-2]=lua_tonumber(passedState,i);
+	}
+	return 0;
+}
+
+int L_GetLevel(lua_State* passedState){
+	int passedMemberId = lua_tonumber(passedState,1);
+	lua_pushnumber(passedState,party[passedMemberId].fighterStats.level);
+	return 1;
+}
+
+int L_EndGame(lua_State* passedState){
+	//ThanksForPlaying
+	place=2;
+	if (LANGUAGE==LANG_ENGLISH){
+		ShowMessage("Thanks for playing!",0);
+	}else if (LANGUAGE==LANG_SPANISH){
+		ShowMessage("Gracias por jugar.",0);
+	}
+/*
+	FILE * fp;
+	// I don't know. You unlock the ability to save your language when you win??
+   fp = fopen ("savedata0:didWin.nathan", "w+");
+   fprintf(fp, "%d", LANGUAGE);
+   fclose(fp);
+   */
+   return 0;
+}
+
+int L_ToBlack(lua_State* passedState){
+	playerObject->x=1000;
+	playerObject->y=600;
+	int x,y,i;
+	for (i=0;i<numberOfLayers;i++){
+		for (y=0;y<tileOtherData.height;y++){
+			for (x=0;x<tileOtherData.width;x++){
+				GetMapImageData(x,y,i)->tile=1;
+			}
+		}
 	}
 	return 0;
 }
@@ -2990,6 +3132,18 @@ void PushCFunctions(){
 	//
 	lua_pushcfunction(L,L_SetStatsSpells);
 	lua_setglobal(L,"SetStatsSpells");
+	//
+	lua_pushcfunction(L,L_Level);
+	lua_setglobal(L,"Level");
+	//
+	lua_pushcfunction(L,L_GetLevel);
+	lua_setglobal(L,"GetLevel");
+	//
+	lua_pushcfunction(L,L_EndGame);
+	lua_setglobal(L,"ThanksForPlaying");
+	//
+	lua_pushcfunction(L,L_ToBlack);
+	lua_setglobal(L,"ToBlack");
 }
 
 
@@ -3031,7 +3185,7 @@ void Init(){
 		vita2d_swap_buffers();
 		sceCtrlPeekBufferPositive(0, &pad, 1);
 		if (!((pad.buttons & SCE_CTRL_LTRIGGER) && (pad.buttons & SCE_CTRL_UP))){
-			Wait(500);
+			Wait(700);
 		}
 	#endif
 
@@ -3153,7 +3307,7 @@ int main(){
 		}else if (place==2){
 			break;
 		}else if (place==3){
-			BattleLop();
+			BattleLop(1);
 		}else if (place==4){
 			StatusLoop();
 		}else if (place==5){
