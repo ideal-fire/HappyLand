@@ -12,10 +12,10 @@ end
 function Event01()
 	-- Way back
 	SetPlayerPosition(7,1);
-	ChangeMap("app0:Stuff/Maps/BigFootChamber");
+	ChangeMap(FixString("Stuff/Maps/BigFootChamber"));
 end
 function Event02()
-	tempPort = LoadPNG("app0:Stuff/Portraits/SmileyFace.png");
+	tempPort = LoadPNG(FixString("Stuff/Portraits/SmileyFace.png"));
 
 	for i=0,GetPartySize()-1 do
 		RestorePartyMember(i);
@@ -36,14 +36,14 @@ end
 function Event04()
 	-- POTATOZZZZZZZZ
 
-	BigFootPackPortrait = LoadPNG("app0:Stuff/Portraits/BigFootPack.png");
-	BlueBigFootPortrait = LoadPNG("app0:Stuff/Portraits/BigFootBlue.png");
-	PlayerPortrait = LoadPNG("app0:Stuff/Portraits/Player.png");
-	PlayerAngryPortrait = LoadPNG("app0:Stuff/Portraits/PlayerAngry.png");
-	PlayerSurprised = LoadPNG("app0:Stuff/Portraits/PlayerSurprised.png");
-	NamelessPortrait = LoadPNG("app0:Stuff/Portraits/AngryBasicMan.png");
-	NamelessDeadPortrait = LoadPNG("app0:Stuff/Portraits/HurtBasicMan.png");
-	EatPortrait = LoadPNG("app0:Stuff/Portraits/PlayerEat.png");
+	BigFootPackPortrait = LoadPNG(FixString("Stuff/Portraits/BigFootPack.png"));
+	BlueBigFootPortrait = LoadPNG(FixString("Stuff/Portraits/BigFootBlue.png"));
+	PlayerPortrait = LoadPNG(FixString("Stuff/Portraits/Player.png"));
+	PlayerAngryPortrait = LoadPNG(FixString("Stuff/Portraits/PlayerAngry.png"));
+	PlayerSurprised = LoadPNG(FixString("Stuff/Portraits/PlayerSurprised.png"));
+	NamelessPortrait = LoadPNG(FixString("Stuff/Portraits/AngryBasicMan.png"));
+	NamelessDeadPortrait = LoadPNG(FixString("Stuff/Portraits/HurtBasicMan.png"));
+	EatPortrait = LoadPNG(FixString("Stuff/Portraits/PlayerEat.png"));
 
 	if (Lang==1) then
 		ShowMessageWithPortrait("What are you doing? You can't take back the potatoes yet.",false,BigFootPackPortrait,0);
@@ -84,8 +84,8 @@ function Event04()
 			
 			InlineEnemy0Idle = Malloc(true,0);
 			InlineEnemy0Attack = Malloc(true,0);
-			SetAnimation(InlineEnemy0Idle,10,100,100,4,true,0,0,LoadPNG("app0:Stuff/Enemies/BlueBigFoot.png"));
-			SetAnimation(InlineEnemy0Attack,8,100,100,4,true,0,0,LoadPNG("app0:Stuff/Enemies/BlueBigFootAttack.png"));
+			SetAnimation(InlineEnemy0Idle,10,100,100,4,true,0,0,LoadPNG(FixString("Stuff/Enemies/BlueBigFoot.png")));
+			SetAnimation(InlineEnemy0Attack,8,100,100,4,true,0,0,LoadPNG(FixString("Stuff/Enemies/BlueBigFootAttack.png")));
 
 			InlineEnemy1Member = Malloc(true,2);
 			InlineEnemy1Stats = GetPartyMemberStats(InlineEnemy1Member);
@@ -94,8 +94,8 @@ function Event04()
 			
 			InlineEnemy1Idle = Malloc(true,0);
 			InlineEnemy1Attack = Malloc(true,0);
-			SetAnimation(InlineEnemy1Idle,10,100,100,8,false,0,0,LoadPNG("app0:Stuff/Enemies/BigFoot.png"));
-			SetAnimation(InlineEnemy1Attack,15,79,78,3,false,0,0,LoadPNG("app0:Stuff/Enemies/BigFootAttack.png"));
+			SetAnimation(InlineEnemy1Idle,10,100,100,8,false,0,0,LoadPNG(FixString("Stuff/Enemies/BigFoot.png")));
+			SetAnimation(InlineEnemy1Attack,15,79,78,3,false,0,0,LoadPNG(FixString("Stuff/Enemies/BigFootAttack.png")));
 
 			didWin = StartSpecificBattle(4,InlineEnemy0Member,InlineEnemy0Idle,InlineEnemy0Attack, InlineEnemy1Member, InlineEnemy1Idle, InlineEnemy1Attack, InlineEnemy1Member, InlineEnemy1Idle, InlineEnemy1Attack, InlineEnemy1Member, InlineEnemy1Idle, InlineEnemy1Attack);
 			
@@ -168,8 +168,8 @@ function Event04()
 		
 		InlineEnemy0Idle = Malloc(true,0);
 		InlineEnemy0Attack = Malloc(true,0);
-		SetAnimation(InlineEnemy0Idle,15,50,50,4,true,0,0,LoadPNG("app0:Stuff/Enemies/Nameless.png"));
-		SetAnimation(InlineEnemy0Attack,7,50,50,3,true,0,0,LoadPNG("app0:Stuff/Enemies/NamelessAttack.png"));
+		SetAnimation(InlineEnemy0Idle,15,50,50,4,true,0,0,LoadPNG(FixString("Stuff/Enemies/Nameless.png")));
+		SetAnimation(InlineEnemy0Attack,7,50,50,3,true,0,0,LoadPNG(FixString("Stuff/Enemies/NamelessAttack.png")));
 
 		didWin = StartSpecificBattle(1,InlineEnemy0Member,InlineEnemy0Idle,InlineEnemy0Attack);
 		
@@ -226,6 +226,6 @@ function Event04()
 end
 
 
-tileset0=LoadPNG("app0:Stuff/Tilesets/BigFootLand.png");
+tileset0=LoadPNG(FixString("Stuff/Tilesets/BigFootLand.png"));
 SetTileset(tileset0,0);
 tileset0=nil;

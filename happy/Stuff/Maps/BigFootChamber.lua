@@ -14,7 +14,7 @@ function Event06()
 end
 
 function Event01()
-	tempPort = LoadPNG("app0:Stuff/Portraits/Note.png");
+	tempPort = LoadPNG(FixString("Stuff/Portraits/Note.png"));
 
 	if (Lang==1) then
 		ShowMessageWithPortrait("Welcome to Big Foot Chamber.",false,tempPort,0);
@@ -26,7 +26,7 @@ function Event01()
 	tempPort=nil;
 end
 function Event02()
-	tempPort = LoadPNG("app0:Stuff/Portraits/SmileyFace.png");
+	tempPort = LoadPNG(FixString("Stuff/Portraits/SmileyFace.png"));
 
 	for i=0,GetPartySize()-1 do
 		RestorePartyMember(i);
@@ -55,9 +55,9 @@ function Event04()
 	if (flags[3]==0) then
 
 		-- Load needed portraits
-		bigfootport = LoadPNG("app0:Stuff/Portraits/BigFoot.png");
-		playerSurprised = LoadPNG("app0:Stuff/Portraits/PlayerSurprised.png");
-		playerHappy = LoadPNG("app0:Stuff/Portraits/Player.png");
+		bigfootport = LoadPNG(FixString("Stuff/Portraits/BigFoot.png"));
+		playerSurprised = LoadPNG(FixString("Stuff/Portraits/PlayerSurprised.png"));
+		playerHappy = LoadPNG(FixString("Stuff/Portraits/Player.png"));
 		
 		if (Lang==1) then
 			ShowMessageWithPortrait("...",false,playerSurprised,0);
@@ -99,8 +99,8 @@ function Event04()
 
 			enemyidle0 = Malloc(true,0);
 			enemyatk0 = Malloc(true,0);
-			SetAnimation(enemyidle0,10,100,100,8,false,0,0,LoadPNG("app0:Stuff/Enemies/BigFoot.png"));
-			SetAnimation(enemyatk0,15,79,78,3,false,0,0,LoadPNG("app0:Stuff/Enemies/BigFootAttack.png"));
+			SetAnimation(enemyidle0,10,100,100,8,false,0,0,LoadPNG(FixString("Stuff/Enemies/BigFoot.png")));
+			SetAnimation(enemyatk0,15,79,78,3,false,0,0,LoadPNG(FixString("Stuff/Enemies/BigFootAttack.png")));
 		
 			--SetStatsSpells(WierdSlimeHybridMember,1,2);
 
@@ -175,7 +175,7 @@ function Event04()
 		UnloadTexture(playerHappy);
 		playerHappy=nil;
 	else
-		deadfootport = LoadPNG("app0:Stuff/Portraits/BigFootDead.png");
+		deadfootport = LoadPNG(FixString("Stuff/Portraits/BigFootDead.png"));
 		if (Lang==1) then
 			ShowMessageWithPortrait("Ouch.", false, deadfootport, 0);
 		elseif (Lang==2) then
@@ -188,9 +188,9 @@ end
 function Event05()
 	if (flags[3]==1) then
 		SetPlayerPosition(7,13);
-		ChangeMap("app0:Stuff/Maps/BigFootLand");
+		ChangeMap(FixString("Stuff/Maps/BigFootLand"));
 	else
-		tempPort = LoadPNG("app0:Stuff/Portraits/Player.png");
+		tempPort = LoadPNG(FixString("Stuff/Portraits/Player.png"));
 		if (Lang==1) then
 			ShowMessageWithPortrait("I should go fight Big Foot.",false,tempPort,0);
 		elseif (Lang==2) then
@@ -203,11 +203,11 @@ end
 
 function Event07()
 	SetPlayerPosition(7,1);
-	ChangeMap("app0:Stuff/Maps/SnowLand");
+	ChangeMap(FixString("Stuff/Maps/SnowLand"));
 end
 
 
-tileset0=LoadPNG("app0:Stuff/Tilesets/BigFootChamber.png");
+tileset0=LoadPNG(FixString("Stuff/Tilesets/BigFootChamber.png"));
 SetTileset(tileset0,0);
 tileset0=nil;
 

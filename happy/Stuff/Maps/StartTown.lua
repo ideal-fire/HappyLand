@@ -32,10 +32,10 @@ function Event01()
 	--Free(WierdSlimeHybridMember);
 --
 	SetPlayerPosition(7,13);
-	ChangeMap("app0:Stuff/Maps/NathansHouse")
+	ChangeMap(FixString("Stuff/Maps/NathansHouse"));
 end
 function Event02()
-	namelessmanport = LoadPNG("app0:Stuff/Portraits/BasicMan.png");
+	namelessmanport = LoadPNG(FixString("Stuff/Portraits/BasicMan.png"));
 	if (Lang==1) then
 		ShowMessageWithPortrait("What are you stil doing here? You have to go and fight BigFoot to get our potatoes back!",false,namelessmanport,0);
 	elseif (Lang==2) then
@@ -46,7 +46,7 @@ function Event02()
 	namelessmanport=nil;
 end
 function Event03()
-	signport = LoadPNG("app0:Stuff/Portraits/WaterBottle.png");
+	signport = LoadPNG(FixString("Stuff/Portraits/WaterBottle.png"));
 	if (flags[0]==0) then
 		if (Lang==1) then
 			ShowMessageWithPortrait("I'm Infinite Big Water Bottle. I can teach you how to use the spell 'Drink Water'.", false, signport, 0);
@@ -90,10 +90,10 @@ end
 function Event04()
 	SetPlayerPosition(1,10);
 	-- Exit to snow area
-	ChangeMap("app0:Stuff/Maps/SnowLand")
+	ChangeMap(FixString("Stuff/Maps/SnowLand"));
 end
 function Event05()
-	signport = LoadPNG("app0:Stuff/Portraits/Sign.png");
+	signport = LoadPNG(FixString("Stuff/Portraits/Sign.png"));
 	if (Lang==1) then
 		ShowMessageWithPortrait("Only the lenendary hero can pull the sword from the sword thingie.", false, signport, 0);
 	elseif (Lang==2) then
@@ -103,7 +103,7 @@ function Event05()
 	signport=nil;
 end
 function Event06()
-	signport = LoadPNG("app0:Stuff/Portraits/PlayerSad.png");
+	signport = LoadPNG(FixString("Stuff/Portraits/PlayerSad.png"));
 	if (Lang==1) then
 		ShowMessageWithPortrait("I can't pull the sword.", false, signport, 0);
 	elseif (Lang==2) then
@@ -115,8 +115,8 @@ end
 function Event07()
 	
 	-- Tree
-	treeport = LoadPNG("app0:Stuff/Portraits/AngryTree.png");
-	smileyplayer = LoadPNG("app0:Stuff/Portraits/Player.png");
+	treeport = LoadPNG(FixString("Stuff/Portraits/AngryTree.png"));
+	smileyplayer = LoadPNG(FixString("Stuff/Portraits/Player.png"));
 	
 	if (flags[2]==0) then
 
@@ -146,8 +146,8 @@ function Event07()
 
 			enemyidle0 = Malloc(true,0);
 			enemyatk0 = Malloc(true,0);
-			SetAnimation(enemyidle0,30,64,64,3,false,0,0,LoadPNG("app0:Stuff/Enemies/AngryTree.png"));
-			SetAnimation(enemyatk0,8,64,64,3,false,0,0,LoadPNG("app0:Stuff/Enemies/AngryTreeAttack.png"));
+			SetAnimation(enemyidle0,30,64,64,3,false,0,0,LoadPNG(FixString("Stuff/Enemies/AngryTree.png")));
+			SetAnimation(enemyatk0,8,64,64,3,false,0,0,LoadPNG(FixString("Stuff/Enemies/AngryTreeAttack.png")));
 		
 			SetStatsSpells(WierdSlimeHybridMember,4);
 
@@ -192,7 +192,7 @@ function Event07()
 end
 function Event08()
 	-- Flower
-	signport = LoadPNG("app0:Stuff/Portraits/Flower.png");
+	signport = LoadPNG(FixString("Stuff/Portraits/Flower.png"));
 	if (Lang==1) then
 		ShowMessageWithPortrait("I'm The Lone Flower.", false, signport, 0);
 	elseif (Lang==2) then
@@ -204,7 +204,7 @@ end
 -- Matt
 function Event09()
 	if (flags[1]==0) then
-		signport = LoadPNG("app0:Stuff/Portraits/Matt.png");
+		signport = LoadPNG(FixString("Stuff/Portraits/Matt.png"));
 		if (Lang==1) then
 			questionanswer = ShowMessageWithPortrait("Can I come?", true, signport, 0);
 		elseif (Lang==2) then
@@ -223,8 +223,8 @@ function Event09()
 			tempidle = GetPartyMemberAnimation(mattslot,1)
 			tempatk = GetPartyMemberAnimation(mattslot,2)
 
-			SetAnimation(tempidle,30,29,68,-1,false,0,0,LoadPNG("app0:Stuff/Battle/MattIdle.png"));
-			SetAnimation(tempatk,10,56,68,-1,true,0,0,LoadPNG("app0:Stuff/Battle/MattAttack.png"));
+			SetAnimation(tempidle,30,29,68,-1,false,0,0,LoadPNG(FixString("Stuff/Battle/MattIdle.png")));
+			SetAnimation(tempatk,10,56,68,-1,true,0,0,LoadPNG(FixString("Stuff/Battle/MattAttack.png")));
 			SetStats(GetPartyMemberStats(mattslot),1,35,30,8,8,15,15,7,0,MallocString("Matt"));
 			SetPartySize(mattslot+1);
 			RestorePartyMember(mattslot);
@@ -252,7 +252,7 @@ function Event09()
 	end
 end
 function Event10()
-	signport = LoadPNG("app0:Stuff/Portraits/Sign.png");
+	signport = LoadPNG(FixString("Stuff/Portraits/Sign.png"));
 	if (Lang==1) then
 		ShowMessageWithPortrait("Nathan's humble shack is located to the left of this random sign.", false, signport, 0);
 	elseif (Lang==2) then
@@ -263,13 +263,13 @@ function Event10()
 end
 
 
-tileset0=LoadPNG("app0:Stuff/Tilesets/Town1.png");
+tileset0=LoadPNG(FixString("Stuff/Tilesets/Town1.png"));
 SetTileset(tileset0,0);
 tileset0=nil;
 
 --
 battleEnemyLoadId=0;
-dofile("app0:Stuff/BattleLua/Slime.lua");
+dofile(FixString("Stuff/BattleLua/Slime.lua"));
 --
 
 SetEncounterRate(10);

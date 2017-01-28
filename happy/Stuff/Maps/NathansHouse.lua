@@ -12,7 +12,7 @@ function MapDispose()
 end
 
 function Event01()
-	tempPort = LoadPNG("app0:Stuff/Portraits/Player.png");
+	tempPort = LoadPNG(FixString("Stuff/Portraits/Player.png"));
 
 	if (Lang==1) then
 		ShowMessageWithPortrait("It's my bed.",false,tempPort,0);
@@ -24,7 +24,7 @@ function Event01()
 	tempPort=nil;
 end
 function Event02()
-	tempPort = LoadPNG("app0:Stuff/Portraits/Player.png");
+	tempPort = LoadPNG(FixString("Stuff/Portraits/Player.png"));
 	if (Lang==1) then
 		ShowMessageWithPortrait("It's my fresh computer. I like to play my favorite game on it, Space Pinball. It came free with the XP version of my operating system. XP standing for" .. '"eXtra exPencive", of course.',false,tempPort,0);
 		ShowMessage("(The computer is just a monitor connected to a potato.)",false);
@@ -37,7 +37,7 @@ function Event02()
 	tempPort=nil;
 end
 function Event03()
-	tempPort = LoadPNG("app0:Stuff/Portraits/Sign.png");
+	tempPort = LoadPNG(FixString("Stuff/Portraits/Sign.png"));
 	if (Lang==1) then
 		ShowMessageWithPortrait("Note2self: Put more stuff in my house.",false,tempPort,0);
 	elseif (Lang==2) then
@@ -47,7 +47,7 @@ function Event03()
 	tempPort=nil;
 end
 function Event04()
-	tempPort = LoadPNG("app0:Stuff/Portraits/Player.png");
+	tempPort = LoadPNG(FixString("Stuff/Portraits/Player.png"));
 	if (Lang==1) then
 		ShowMessageWithPortrait("I love having useless boxes in my house.",false,tempPort,0);
 	elseif (Lang==2) then
@@ -57,8 +57,8 @@ function Event04()
 	tempPort=nil;
 end
 function Event05()
-	tempPort = LoadPNG("app0:Stuff/Portraits/Player.png");
-	tempPort2 = LoadPNG("app0:Stuff/Portraits/PlayerSad.png");
+	tempPort = LoadPNG(FixString("Stuff/Portraits/Player.png"));
+	tempPort2 = LoadPNG(FixString("Stuff/Portraits/PlayerSad.png"));
 	if (Lang==1) then
 		ShowMessageWithPortrait("All these chairs are here so I can play musical chairs.",false,tempPort,0);
 		ShowMessageWithPortrait("Unfortunately, I have more chairs than friends.",false,tempPort2,0);
@@ -72,7 +72,7 @@ function Event05()
 	tempPort2=nil;
 end
 function Event06()
-	tempPort = LoadPNG("app0:Stuff/Portraits/Chair.png");
+	tempPort = LoadPNG(FixString("Stuff/Portraits/Chair.png"));
 	if (Lang==1) then
 		ShowMessageWithPortrait("I'm special.",false,tempPort,0);
 	elseif (Lang==2) then
@@ -83,8 +83,8 @@ function Event06()
 end
 function Event07()
 	if (flags[1]==0) then
-		signport = LoadPNG("app0:Stuff/Portraits/Matt.png");
-		nathanport = LoadPNG("app0:Stuff/Portraits/Player.png");
+		signport = LoadPNG(FixString("Stuff/Portraits/Matt.png"));
+		nathanport = LoadPNG(FixString("Stuff/Portraits/Player.png"));
 		if (Lang==1) then
 			ShowMessageWithPortrait("Waaaaaait, I want to come with you!",false,signport,0);
 			questionanswer = ShowMessageWithPortrait("Can Matt come? (The game will be very hard without him.)",true,nathanport,0);
@@ -107,8 +107,8 @@ function Event07()
 			tempidle = GetPartyMemberAnimation(mattslot,1)
 			tempatk = GetPartyMemberAnimation(mattslot,2)
 
-			SetAnimation(tempidle,30,29,68,-1,false,0,0,LoadPNG("app0:Stuff/Battle/MattIdle.png"));
-			SetAnimation(tempatk,10,56,68,-1,true,0,0,LoadPNG("app0:Stuff/Battle/MattAttack.png"));
+			SetAnimation(tempidle,30,29,68,-1,false,0,0,LoadPNG(FixString("Stuff/Battle/MattIdle.png")));
+			SetAnimation(tempatk,10,56,68,-1,true,0,0,LoadPNG(FixString("Stuff/Battle/MattAttack.png")));
 			SetStats(GetPartyMemberStats(mattslot),1,35,20,8,8,15,15,7,0,MallocString("Matt"));
 			SetPartySize(mattslot+1);
 			RestorePartyMember(mattslot);
@@ -137,16 +137,16 @@ function Event07()
 
 
 		SetPlayerPosition(6,8);
-		ChangeMap("app0:Stuff/Maps/StartTown")
+		ChangeMap(FixString("Stuff/Maps/StartTown"));
 	else
 		SetPlayerPosition(6,8);
-		ChangeMap("app0:Stuff/Maps/StartTown")
+		ChangeMap(FixString("Stuff/Maps/StartTown"));
 	end
 end
 -- Matt
 function Event08()
 	if (flags[1]==0) then
-		signport = LoadPNG("app0:Stuff/Portraits/Matt.png");
+		signport = LoadPNG(FixString("Stuff/Portraits/Matt.png"));
 		if (Lang==1) then
 			questionanswer = ShowMessageWithPortrait("Can I come?", true, signport, 0);
 		elseif (Lang==2) then
@@ -165,8 +165,8 @@ function Event08()
 			tempidle = GetPartyMemberAnimation(mattslot,1)
 			tempatk = GetPartyMemberAnimation(mattslot,2)
 
-			SetAnimation(tempidle,30,29,68,-1,false,0,0,LoadPNG("app0:Stuff/Battle/MattIdle.png"));
-			SetAnimation(tempatk,10,56,68,-1,true,0,0,LoadPNG("app0:Stuff/Battle/MattAttack.png"));
+			SetAnimation(tempidle,30,29,68,-1,false,0,0,LoadPNG(FixString("Stuff/Battle/MattIdle.png")));
+			SetAnimation(tempatk,10,56,68,-1,true,0,0,LoadPNG(FixString("Stuff/Battle/MattAttack.png")));
 			SetStats(GetPartyMemberStats(mattslot),1,35,30,8,8,15,15,7,0,MallocString("Matt"));
 			SetPartySize(mattslot+1);
 			RestorePartyMember(mattslot);
@@ -194,7 +194,7 @@ function Event08()
 	end
 end
 function Event09()
-	tempPort = LoadPNG("app0:Stuff/Portraits/SmileyFace.png");
+	tempPort = LoadPNG(FixString("Stuff/Portraits/SmileyFace.png"));
 
 	for i=0,GetPartySize()-1 do
 		RestorePartyMember(i);
@@ -220,6 +220,6 @@ end
 
 
 
-tileset0=LoadPNG("app0:Stuff/Tilesets/Inside1.png");
+tileset0=LoadPNG(FixString("Stuff/Tilesets/Inside1.png"));
 SetTileset(tileset0,0);
 tileset0=nil;

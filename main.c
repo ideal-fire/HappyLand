@@ -16,9 +16,17 @@ O---O---O--OOOOO-O----OOOOO-O---O---
 #define LANG_SPANISH 2
 int LANGUAGE=LANG_ENGLISH;
 
-#define STARTINGMAP "app0:Stuff/Maps/NathansHouse"
-//#define STARTINGMAP "app0:Stuff/Maps/BigFootLand"
 
+#define PLAT_VITA 1
+#define PLAT_WINDOWS 2
+
+#define PLATFORM PLAT_WINDOWS
+
+#if PLATFORM == PLAT_VITA
+	#define STARTINGMAP "app0:Stuff/Maps/NathansHouse"
+#elif PLATFORM == PLAT_WINDOWS
+	#define STARTINGMAP "./Stuff/Maps/NathansHouse"
+#endif
 
 // Translatos for hardcoded strings
 #include "HardcodedLanguage.h"
@@ -49,28 +57,43 @@ int drawYOffset=0;
 #include <Lua/lualib.h>
 #include <Lua/lauxlib.h>
 
-#include <psp2/ctrl.h>
-#include <psp2/kernel/processmgr.h>
-#include <psp2/rtc.h>
-#include <psp2/types.h>
-#include <psp2/touch.h>
-#include <psp2/display.h>
+#if PLATFORM == PLAT_VITA
+	#include <psp2/ctrl.h>
+	#include <psp2/kernel/processmgr.h>
+	#include <psp2/rtc.h>
+	#include <psp2/types.h>
+	#include <psp2/touch.h>
+	#include <psp2/display.h>
+	
+	#include <vita2d.h>
+#elif PLATFORM == PLAT_WINDOWS
+	#include <time.h>
 
-#include <vita2d.h>
+	#include <SDL2/SDL.h>
+	#include <SDL2/SDL_image.h>
+
+	#define u64 unsigned long
+#endif
+
+#if PLATFORM == PLAT_VITA
+	#define CrossTexture vita2d_texture
+#elif PLATFORM == PLAT_WINDOWS
+	#define CrossTexture SDL_Texture
+#endif
 
 // Include stuff I made.
 #include "GoodArray.h"
 //#include "main.h" TODO - Make this
 // main.h
 	// Make stuff fresh
-	typedef int8_t		s8;
-	typedef int16_t		s16;
-	typedef int32_t		s32;
-	typedef int64_t		s64;
-	typedef uint8_t 	u8;
-	typedef uint16_t 	u16;
-	typedef uint32_t	u32;
-	typedef uint64_t	u64;
+	//typedef int8_t		s8;
+	//typedef int16_t		s16;
+	//typedef int32_t		s32;
+	//typedef int64_t		s64;
+	//typedef uint8_t 	u8;
+	//typedef uint16_t 	u16;
+	//typedef uint32_t	u32;
+	//typedef uint64_t	u64;
 
 	void Wait(int miliseconds);
 	u64 GetTicks();
@@ -86,7 +109,7 @@ int drawYOffset=0;
 	typedef struct Q_animation{
 		u64 lastChange; // The last frame that it changed at
 		short speed; // Number of frames until change
-		vita2d_texture* texture; // Image.
+		CrossTexture* texture; // Image.
 		short width; // Width of a single frame
 		short height; // Height of a single frame
 		char currentFrame; // Current frame I'm on.
@@ -138,14 +161,52 @@ int drawYOffset=0;
 // 
 #include "FpsCapper.h"
 
-vita2d_pgf* defaultPgf;
+//vita2d_pgf* defaultPgf;
 
-// Controls at start of frame.
-SceCtrlData pad;
-// Controls from start of last frame.
-SceCtrlData lastPad;
+#if PLATFORM == PLAT_VITA
+	// Controls at start of frame.
+	SceCtrlData pad;
+	// Controls from start of last frame.
+	SceCtrlData lastPad;
 
-unsigned int unusedAreaColor = RGBA8(0,0,0,255);
+	SceTouchData currentTouch;
+	SceTouchData previousTouchData;
+#elif PLATFORM == PLAT_WINDOWS
+	//The window we'll be rendering to
+	SDL_Window* mainWindow;
+	
+	//The window renderer
+	SDL_Renderer* mainWindowRenderer;
+
+	enum SceCtrlPadButtons {
+		SCE_CTRL_SELECT      = 0,	//!< Select button.
+		SCE_CTRL_L3          = 1,	//!< L3 button.
+		SCE_CTRL_R3          = 2,	//!< R3 button.
+		SCE_CTRL_START       = 3,	//!< Start button.
+		SCE_CTRL_UP          = 4,	//!< Up D-Pad button.
+		SCE_CTRL_RIGHT       = 5,	//!< Right D-Pad button.
+		SCE_CTRL_DOWN        = 6,	//!< Down D-Pad button.
+		SCE_CTRL_LEFT        = 7,	//!< Left D-Pad button.
+		SCE_CTRL_LTRIGGER    = 8,	//!< Left trigger.
+		SCE_CTRL_RTRIGGER    = 9,	//!< Right trigger.
+		SCE_CTRL_L1          = 10,	//!< L1 button.
+		SCE_CTRL_R1          = 11,	//!< R1 button.
+		SCE_CTRL_TRIANGLE    = 12,	//!< Triangle button.
+		SCE_CTRL_CIRCLE      = 13,	//!< Circle button.
+		SCE_CTRL_CROSS       = 14,	//!< Cross button.
+		SCE_CTRL_SQUARE      = 15,	//!< Square button.
+		SCE_CTRL_INTERCEPTED = 16,  //!< Input not available because intercepted by another application
+		SCE_CTRL_VOLUP       = 17,	//!< Volume up button.
+		SCE_CTRL_VOLDOWN     = 18	//!< Volume down button.
+	};
+
+	char pad[19]={0};
+	char lastPad[19]={0};
+
+#endif
+
+#define unusedAreaColor 0,0,0,255
+//unsigned int unusedAreaColor = RGBA8(0,0,0,255);
 
 /*
 =================================================
@@ -153,13 +214,13 @@ unsigned int unusedAreaColor = RGBA8(0,0,0,255);
 =================================================
 */
 lua_State* L;
-vita2d_texture* fontImage;
+CrossTexture* fontImage;
 animation selectorAnimation;
 // Where you are. Like Overworld, Menu, Battle, etc.
 // Values in main function
 unsigned char place=0;
 
-spellLinkedList* spellLinkedListStart;
+spellLinkedList* spellLinkedListStart={0};
 unsigned short spellLinkedListSize=1;
 
 /*
@@ -167,14 +228,14 @@ unsigned short spellLinkedListSize=1;
 == TILDE
 ==================
 */
-vita2d_texture* tilde_a;
-vita2d_texture* tilde_e;
-vita2d_texture* tilde_i;
-vita2d_texture* tilde_o;
-vita2d_texture* tilde_u;
-vita2d_texture* tilde_n;
-vita2d_texture* tilde_questionMark;
-vita2d_texture* tilde_esclimationPoint;
+CrossTexture* tilde_a;
+CrossTexture* tilde_e;
+CrossTexture* tilde_i;
+CrossTexture* tilde_o;
+CrossTexture* tilde_u;
+CrossTexture* tilde_n;
+CrossTexture* tilde_questionMark;
+CrossTexture* tilde_esclimationPoint;
 
 /*
 ====================================================
@@ -187,23 +248,21 @@ int aButton=SCE_CTRL_CROSS;
 int bButton=SCE_CTRL_CIRCLE;
 char textboxNewCharSpeed=1;
 char defaultSelected=1;
-SceTouchData currentTouch;
-SceTouchData previousTouchData;
 
 /*
 ==================================================
 == WORLD MAP
 ==================================================
 */
-vita2d_texture* tilesets[5];
+CrossTexture* tilesets[5];
 object mapObjects[MAXOBJECTS];
 Good2dArray layers[5];
 Good2dArray tileOtherData;
 char numberOfLayers=0;
-vita2d_texture* playerDown;
-vita2d_texture* playerUp;
-vita2d_texture* playerLeft;
-vita2d_texture* playerRight;
+CrossTexture* playerDown;
+CrossTexture* playerUp;
+CrossTexture* playerLeft;
+CrossTexture* playerRight;
 // 0 - Not walking. 1 - up, 2 - down, 3 - left, 4 - right
 char isWalking;
 object* playerObject;
@@ -236,6 +295,196 @@ stats possibleEnemies[10];
 animation possibleEnemiesIdleAnimation[10];
 animation possibleEnemiesAttackAnimation[10];
 
+/*
+//////////////////////////////////////
+// CROSS PLATFORM SUPPORT
+///////////////////////////////////////
+*/
+
+void DrawRectangle(int x, int y, int w, int h, int r, int g, int b, int a){
+	#if PLATFORM == PLAT_VITA
+		vita2d_draw_rectangle(x,y,w,h,RGBA8(r,g,b,a));
+	#elif PLATFORM == PLAT_WINDOWS
+		SDL_SetRenderDrawColor(mainWindowRenderer,r,g,b,a);
+		SDL_Rect tempRect;
+		tempRect.x=x;
+		tempRect.y=y;
+		tempRect.w=w;
+		tempRect.h=h;
+		SDL_RenderFillRect(mainWindowRenderer,&tempRect);
+	#endif
+}
+
+void DrawTexture(CrossTexture* passedTexture, int _destX, int _destY){
+	#if PLATFORM == PLAT_VITA
+		vita2d_draw_texture(passedTexture,_destX,_destY);
+	#elif PLATFORM == PLAT_WINDOWS
+		SDL_Rect _srcRect;
+		SDL_Rect _destRect;
+		//if (_srcWidth==-1){
+			SDL_QueryTexture(passedTexture, NULL, NULL, &(_srcRect.w), &(_srcRect.h));
+		//}else{
+		//	_srcRect.w=_srcWidth;
+		//	_srcRect.h=_srcHeight;
+		//}
+		//if (_destWidth==-1){
+			_destRect.w=_srcRect.w;
+			_destRect.h=_srcRect.h;
+		//}else{
+		//	_destRect.w=_destWidth;
+		//	_destRect.h=_destHeight;
+		//}
+	
+		_destRect.x=_destX;
+		_destRect.y=_destY;
+		
+		_srcRect.x=0;
+		_srcRect.y=0;
+	
+		SDL_RenderCopy(mainWindowRenderer, passedTexture, &_srcRect, &_destRect );
+	#endif
+}
+
+void DrawTexturePartScale(CrossTexture* passedTexture, int destX, int destY, int texX, int texY, int texW, int texH, float texXScale, float texYScale){
+	#if PLATFORM == PLAT_VITA
+		vita2d_draw_texture_part_scale(passedTexture,destX,destY,texX,texY.texW, texH, texXScale, int textYScale);
+	#elif PLATFORM == PLAT_WINDOWS
+		SDL_Rect _srcRect;
+		SDL_Rect _destRect;
+		_srcRect.w=texW;
+		_srcRect.h=texH;
+		
+		_srcRect.x=texX;
+		_srcRect.y=texY;
+	
+		_destRect.w=_srcRect.w*texXScale;
+		_destRect.h=_srcRect.h*texYScale;
+
+		_destRect.x=destX;
+		_destRect.y=destY;
+
+		SDL_RenderCopy(mainWindowRenderer, passedTexture, &_srcRect, &_destRect );
+	#endif
+}
+
+void DrawTextureScale(CrossTexture* passedTexture, int destX, int destY, float texXScale, float texYScale){
+	#if PLATFORM == PLAT_VITA
+		vita2d_draw_texture_scale(passedTexture,x,y,texXScale,textYScale);
+	#elif PLATFORM == PLAT_WINDOWS
+		SDL_Rect _srcRect;
+		SDL_Rect _destRect;
+		SDL_QueryTexture(passedTexture, NULL, NULL, &(_srcRect.w), &(_srcRect.h));
+		
+		_srcRect.x=0;
+		_srcRect.y=0;
+	
+		_destRect.w=(_srcRect.w*texXScale);
+		_destRect.h=(_srcRect.h*texYScale);
+
+		_destRect.x=destX;
+		_destRect.y=destY;
+
+		SDL_RenderCopy(mainWindowRenderer, passedTexture, &_srcRect, &_destRect );
+	#endif
+}
+
+// TODO MAKE ROTATE ON WINDOWS
+void DrawTexturePartScaleRotate(CrossTexture* texture, float x, float y, float tex_x, float tex_y, float tex_w, float tex_h, float x_scale, float y_scale, float rad){
+	#if PLATFORM == PLAT_VITA
+		vita2d_draw_texture_part_scale_rotate(texture,x,y,tex_x,tex_y,tex_w,tex_h,x_scale,y_scale,rad);
+	#elif PLATFORM == PLAT_WINDOWS
+		DrawTexturePartScale(texture,x,y,tex_x,tex_y,tex_w,tex_h,x_scale,y_scale);
+	#endif
+}
+
+int GetTextureWidth(CrossTexture* passedTexture){
+	#if PLATFORM == PLAT_VITA
+		return vita2d_texture_get_width(passedTexture);
+	#elif PLATFORM == PLAT_WINDOWS
+		int w, h;
+		SDL_QueryTexture(passedTexture, NULL, NULL, &w, &h);
+		return w;
+	#endif
+}
+
+int GetTextureHeight(CrossTexture* passedTexture){
+	#if PLATFORM == PLAT_VITA
+		return vita2d_texture_get_height(passedTexture);
+	#elif PLATFORM == PLAT_WINDOWS
+		int w, h;
+		SDL_QueryTexture(passedTexture, NULL, NULL, &w, &h);
+		return h;
+	#endif
+}
+
+char ShowErrorIfNull(void* _thingie){
+	#if PLATFORM == PLAT_VITA
+		if (_thingie==NULL){
+			printf("Some wacky thingie is null");
+			return 1;
+		}
+		return 0;
+	#elif PLATFORM == PLAT_WINDOWS
+		if (_thingie==NULL){
+			printf("Error: %s\n",SDL_GetError());
+			return 1;
+		}
+		return 0;
+	#endif
+}
+
+void StartDrawing(){
+	#if PLATFORM == PLAT_VITA
+		vita2d_start_drawing();
+		vita2d_clear_screen();
+	#elif PLATFORM == PLAT_WINDOWS
+		SDL_RenderClear(mainWindowRenderer);
+	#endif
+}
+void EndDrawing(){
+	#if PLATFORM == PLAT_VITA
+		vita2d_end_drawing();
+		vita2d_swap_buffers();
+		vita2d_wait_rendering_done();
+	#elif PLATFORM == PLAT_WINDOWS
+		SDL_RenderPresent(mainWindowRenderer);
+	#endif
+}
+
+CrossTexture* LoadPNG(char* path){
+	#if PLATFORM == PLAT_VITA
+		return vita2d_load_PNG_file(path);
+	#elif PLATFORM == PLAT_WINDOWS
+		// Real one we'll return
+		SDL_Texture* _returnTexture;
+		// Load temp and sho error
+		SDL_Surface* _tempSurface = IMG_Load(path);
+		ShowErrorIfNull(_tempSurface);
+		// Make good
+		_returnTexture = SDL_CreateTextureFromSurface( mainWindowRenderer, _tempSurface );
+		ShowErrorIfNull(_returnTexture);
+		// Free memori
+		SDL_FreeSurface(_tempSurface);
+		return _returnTexture;
+	#endif
+}
+
+void FreeTexture(CrossTexture* passedTexture){
+	#if PLATFORM == PLAT_VITA
+		vita2d_free_texture(passedTexture);
+		passedTexture=NULL;
+	#elif PLATFORM == PLAT_WINDOWS
+		SDL_DestroyTexture(passedTexture);
+		passedTexture=NULL;
+	#endif
+}
+
+/*
+////////////////////////////////////////////////
+// 
+///////////////////////////////////////////////
+*/
+
 void RestorePartyMember(int id){
 	int passedSlot = id;
 	party[passedSlot].hp=party[passedSlot].fighterStats.maxHp;
@@ -244,8 +493,10 @@ void RestorePartyMember(int id){
 
 // pl0x, I beg you, don't crash when I'm disposing textures.
 void PlzNoCrashOnDispose(){
-	vita2d_wait_rendering_done();
-	sceDisplayWaitVblankStart();
+	#if PLATFORM == PLAT_VITA
+		vita2d_wait_rendering_done();
+		sceDisplayWaitVblankStart();
+	#endif
 }
 
 // Fix x that needs to be applied on ALL drawing
@@ -285,7 +536,7 @@ void DrawMap(){
 		for (y=0;y<yAmount;y++){
 			for (x=0;x<xAmount;x++){
 				if (GetMapImageData(x+cameraWholeOffsetX,y+cameraWholeOffsetY,i)->tile!=0){
-					vita2d_draw_texture_part_scale(tilesets[(int)GetMapImageData(x+cameraWholeOffsetX,y+cameraWholeOffsetY,i)->tileset],FixX(x*32-cameraPartialOffsetX),FixY(y*32-cameraPartialOffsetY),((GetMapImageData(x+cameraWholeOffsetX,y+cameraWholeOffsetY,i)->tile-1)*32),0,32,32,MAPXSCALE,MAPYSCALE);
+					DrawTexturePartScale(tilesets[(int)GetMapImageData(x+cameraWholeOffsetX,y+cameraWholeOffsetY,i)->tileset],FixX(x*32-cameraPartialOffsetX),FixY(y*32-cameraPartialOffsetY),((GetMapImageData(x+cameraWholeOffsetX,y+cameraWholeOffsetY,i)->tile-1)*32),0,32,32,MAPXSCALE,MAPYSCALE);
 				}
 			}
 		}
@@ -294,13 +545,21 @@ void DrawMap(){
 
 // Waits for a number of miliseconds.
 void Wait(int miliseconds){
-	sceKernelDelayThread(miliseconds*1000);
+	#if PLATFORM == PLAT_VITA
+		sceKernelDelayThread(miliseconds*1000);
+	#elif PLATFORM == PLAT_WINDOWS
+		SDL_Delay(miliseconds);
+	#endif
 }
 
 u64 GetTicks(){
-	SceRtcTick temp;
-	sceRtcGetCurrentTick(&temp);
-	return temp.tick;
+	#if PLATFORM == PLAT_VITA
+		SceRtcTick temp;
+		sceRtcGetCurrentTick(&temp);
+		return temp.tick;
+	#elif PLATFORM == PLAT_WINDOWS
+		return SDL_GetTicks();
+	#endif
 }
 
 void SetCameraValues(){
@@ -318,13 +577,69 @@ void SetCameraValues(){
 
 void StartFrameStuff(){
 	FpsCapStart();
-	lastPad=pad;
-	sceCtrlPeekBufferPositive(0, &pad, 1);
-	sceTouchPeek(SCE_TOUCH_PORT_FRONT, &currentTouch, 1);
+	#if PLATFORM == PLAT_VITA
+		lastPad=pad;
+		sceCtrlPeekBufferPositive(0, &pad, 1);
+		sceTouchPeek(SCE_TOUCH_PORT_FRONT, &currentTouch, 1);
+	#elif PLATFORM == PLAT_WINDOWS
+		// Update keyboard stuff
+		SDL_Event e;
+		while( SDL_PollEvent( &e ) != 0 ){
+			if( e.type == SDL_QUIT ){
+				place=2;
+			}
+
+			if( e.type == SDL_KEYDOWN ){
+				if (e.key.keysym.sym==SDLK_z){ /* X */
+					pad[SCE_CTRL_CROSS]=1;
+				}else if (e.key.keysym.sym==SDLK_x){/* O */
+					pad[SCE_CTRL_CIRCLE]=1;
+				}else if (e.key.keysym.sym==SDLK_LEFT){/* Left */
+					pad[SCE_CTRL_LEFT]=1;
+				}else if (e.key.keysym.sym==SDLK_RIGHT){ /* Right */
+					pad[SCE_CTRL_RIGHT]=1;
+				}else if (e.key.keysym.sym==SDLK_DOWN){ /* Down */
+					pad[SCE_CTRL_DOWN]=1;
+				}else if (e.key.keysym.sym==SDLK_UP){ /* Up */
+					pad[SCE_CTRL_UP]=1;
+				}else if (e.key.keysym.sym==SDLK_a){ /* Square */
+					pad[SCE_CTRL_SQUARE]=1;
+				}else if (e.key.keysym.sym==SDLK_s){ /* Triangle */
+					pad[SCE_CTRL_TRIANGLE]=1;
+				}else if (e.key.keysym.sym==SDLK_ESCAPE){ /* Start */
+					pad[SCE_CTRL_START]=1;
+				}
+			}else if (e.type == SDL_KEYUP){
+				if (e.key.keysym.sym==SDLK_z){ /* X */
+					pad[SCE_CTRL_CROSS]=0;
+				}else if (e.key.keysym.sym==SDLK_x){/* O */
+					pad[SCE_CTRL_CIRCLE]=0;
+				}else if (e.key.keysym.sym==SDLK_LEFT){/* Left */
+					pad[SCE_CTRL_LEFT]=0;
+				}else if (e.key.keysym.sym==SDLK_RIGHT){ /* Right */
+					pad[SCE_CTRL_RIGHT]=0;
+				}else if (e.key.keysym.sym==SDLK_DOWN){ /* Down */
+					pad[SCE_CTRL_DOWN]=0;
+				}else if (e.key.keysym.sym==SDLK_UP){ /* Up */
+					pad[SCE_CTRL_UP]=0;
+				}else if (e.key.keysym.sym==SDLK_a){ /* Square */
+					pad[SCE_CTRL_SQUARE]=0;
+				}else if (e.key.keysym.sym==SDLK_s){ /* Triangle */
+					pad[SCE_CTRL_TRIANGLE]=0;
+				}else if (e.key.keysym.sym==SDLK_ESCAPE){ /* Start */
+					pad[SCE_CTRL_START]=0;
+				}
+			}
+		}
+	#endif
 }
 void EndFrameStuff(){
+	#if PLATFORM == PLAT_VITA
+		previousTouchData=currentTouch;
+	#elif PLATFORM == PLAT_WINDOWS
+		memcpy(lastPad,pad,19);
+	#endif
 	FpsCapWait();
-	previousTouchData=currentTouch;
 }
 
 // Resets an animation
@@ -359,17 +674,17 @@ void UpdateAnimationIfNeed(animation* animationToDraw){
 // For drawing object's animations. Position changed by map scroll.
 void DrawAnimationAsObject(animation* animationToDraw, int destX, int destY){
 	UpdateAnimationIfNeed(animationToDraw);
-	vita2d_draw_texture_part_scale(animationToDraw->texture,FixXObjects(destX+animationToDraw->drawXOffset),FixYObjects(destY+animationToDraw->drawYOffset),animationToDraw->width*animationToDraw->currentFrame,0,animationToDraw->width,animationToDraw->height,MAPXSCALE,MAPYSCALE);
+	DrawTexturePartScale(animationToDraw->texture,FixXObjects(destX+animationToDraw->drawXOffset),FixYObjects(destY+animationToDraw->drawYOffset),animationToDraw->width*animationToDraw->currentFrame,0,animationToDraw->width,animationToDraw->height,MAPXSCALE,MAPYSCALE);
 }
 // Draw animation. Unchanged by map position
 void DrawAnimation(animation* animationToDraw, int destX, int destY){
 	UpdateAnimationIfNeed(animationToDraw);
-	vita2d_draw_texture_part_scale(animationToDraw->texture,FixX(destX+animationToDraw->drawXOffset),FixY(destY+animationToDraw->drawYOffset),animationToDraw->width*animationToDraw->currentFrame,0,animationToDraw->width,animationToDraw->height,MAPXSCALE,MAPYSCALE);
+	DrawTexturePartScale(animationToDraw->texture,FixX(destX+animationToDraw->drawXOffset),FixY(destY+animationToDraw->drawYOffset),animationToDraw->width*animationToDraw->currentFrame,0,animationToDraw->width,animationToDraw->height,MAPXSCALE,MAPYSCALE);
 }
 // Draws it as given in arguments. No scaling or position changes.
 void DrawAnimationAsISay(animation* animationToDraw, int destX, int destY, int scale){
 	UpdateAnimationIfNeed(animationToDraw);
-	vita2d_draw_texture_part_scale(animationToDraw->texture,(destX+animationToDraw->drawXOffset),(destY+animationToDraw->drawYOffset),animationToDraw->width*animationToDraw->currentFrame,0,animationToDraw->width,animationToDraw->height,scale,scale);
+	DrawTexturePartScale(animationToDraw->texture,(destX+animationToDraw->drawXOffset),(destY+animationToDraw->drawYOffset),animationToDraw->width*animationToDraw->currentFrame,0,animationToDraw->width,animationToDraw->height,scale,scale);
 }
 
 void DrawMapObjects(){
@@ -411,13 +726,13 @@ void UpdateCameraValues(object* theThingie){
 
 void DrawUnusedAreaRect(){
 	// Top
-	vita2d_draw_rectangle(0,0,SCREENWIDTH,drawYOffset,unusedAreaColor);
+	DrawRectangle(0,0,SCREENWIDTH,drawYOffset,unusedAreaColor);
 	// Bottom
-	vita2d_draw_rectangle(0,SCREENHEIGHT-drawYOffset,SCREENWIDTH,drawYOffset,unusedAreaColor);
+	DrawRectangle(0,SCREENHEIGHT-drawYOffset,SCREENWIDTH,drawYOffset,unusedAreaColor);
 	// Left
-	vita2d_draw_rectangle(0,0,drawXOffset,SCREENHEIGHT,unusedAreaColor);
+	DrawRectangle(0,0,drawXOffset,SCREENHEIGHT,unusedAreaColor);
 	// Right
-	vita2d_draw_rectangle(SCREENWIDTH,0,drawXOffset,SCREENHEIGHT,unusedAreaColor);
+	DrawRectangle(SCREENWIDTH,0,drawXOffset,SCREENHEIGHT,unusedAreaColor);
 }
 
 char checkCollision(int x, int y){
@@ -454,38 +769,38 @@ char IsThisTilde(char* passedString, int passedPosition){
 
 void DrawLetter(int letterId, int _x, int _y, int size){
 	//DrawTexture(_mainRenderer,fontImage, (letterId-32)*8, 0, 8, 8, _x, _y, 16, 16);
-	vita2d_draw_texture_part_scale(fontImage,_x,_y,(letterId-32)*(8),0,8,8,MAPXSCALE*size,MAPYSCALE*size);
+	DrawTexturePartScale(fontImage,_x,_y,(letterId-32)*(8),0,8,8,MAPXSCALE*size,MAPYSCALE*size);
 }
 
 void DrawLetterUnscaled(int letterId, int _x, int _y, int size){
-	vita2d_draw_texture_part_scale(fontImage,_x,_y,(letterId-32)*(8),0,8,8,size,size);
+	DrawTexturePartScale(fontImage,_x,_y,(letterId-32)*(8),0,8,8,size,size);
 }
 
 void DrawTildeLetterUnscaled(int letterId, int _x, int _y, int size){
 	switch(letterId){
 		case 97:
-			vita2d_draw_texture_scale(tilde_a,_x,_y,size,size);
+			DrawTextureScale(tilde_a,_x,_y,size,size);
 		break;
 		case 101:
-			vita2d_draw_texture_scale(tilde_e,_x,_y,size,size);
+			DrawTextureScale(tilde_e,_x,_y,size,size);
 		break;
 		case 105:
-			vita2d_draw_texture_scale(tilde_i,_x,_y,size,size);
+			DrawTextureScale(tilde_i,_x,_y,size,size);
 		break;
 		case 111:
-			vita2d_draw_texture_scale(tilde_o,_x,_y,size,size);
+			DrawTextureScale(tilde_o,_x,_y,size,size);
 		break;
 		case 117:
-			vita2d_draw_texture_scale(tilde_u,_x,_y,size,size);
+			DrawTextureScale(tilde_u,_x,_y,size,size);
 		break;
 		case 110:
-			vita2d_draw_texture_scale(tilde_n,_x,_y,size,size);
+			DrawTextureScale(tilde_n,_x,_y,size,size);
 		break;
 		case 63:
-			vita2d_draw_texture_scale(tilde_questionMark,_x,_y,size,size);
+			DrawTextureScale(tilde_questionMark,_x,_y,size,size);
 		break;
 		case 33:
-			vita2d_draw_texture_scale(tilde_esclimationPoint,_x,_y,size,size);
+			DrawTextureScale(tilde_esclimationPoint,_x,_y,size,size);
 		break;
 	}
 }
@@ -519,10 +834,32 @@ void DrawTextAsISay(int x, int y, const char* text, int size){
 }
 
 char WasJustPressed(int value){
-	if (pad.buttons & value && !(lastPad.buttons & value)){
-		return 1;
-	}
-	return 0;
+	#if PLATFORM == PLAT_VITA
+		if (pad.buttons & value && !(lastPad.buttons & value)){
+			return 1;
+		}
+		return 0;
+	#elif PLATFORM == PLAT_WINDOWS
+		if (pad[value]==1 && lastPad[value]==0){
+			return 1;
+		}
+		return 0;
+	#endif
+}
+
+
+char IsDown(int value){
+	#if PLATFORM == PLAT_VITA
+		if (pad.buttons & value){
+			return 1;
+		}
+		return 0;
+	#elif PLATFORM == PLAT_WINDOWS
+		if (pad[value]==1){
+			return 1;
+		}
+		return 0;
+	#endif
 }
 
 // Draws everything we draw on map.
@@ -605,11 +942,10 @@ void BasicMessage(char* message){
 			
 		}
 
-		vita2d_start_drawing();
-		vita2d_clear_screen();
+		StartDrawing();
 
 		// Draw da white rectangle
-		vita2d_draw_rectangle(0,TEXTBOXY,SCREENWIDTH,SCREENHEIGHT-TEXTBOXY,RGBA8(255,255,255,255));
+		DrawRectangle(0,TEXTBOXY,SCREENWIDTH,SCREENHEIGHT-TEXTBOXY,255,255,255,255);
 
 		// Draw message
 		short i;
@@ -636,16 +972,16 @@ void BasicMessage(char* message){
 		}
 
 
-		vita2d_end_drawing();
-		vita2d_swap_buffers();
+		EndDrawing();
 
 		EndFrameStuff();
 	}
 }
 
-char ShowMessageWithPortrait(char* message, char isQuestion, vita2d_texture* portrait, double portScale){
+char ShowMessageWithPortrait(char* message, char isQuestion, CrossTexture* portrait, double portScale){
+	EndFrameStuff();
 	if (portScale==0 && portrait!=NULL){
-		portScale = floor((double)200/vita2d_texture_get_width(portrait));
+		portScale = floor((double)200/GetTextureWidth(portrait));
 	}
 
 	// We count frames, and show a new letter every certian amount of frames.
@@ -664,19 +1000,29 @@ char ShowMessageWithPortrait(char* message, char isQuestion, vita2d_texture* por
 	char totalNewLines=0;
 
 	// Initialize them so I don't get compiler warnings.
-	vita2d_texture* yesButtonTexture=(vita2d_texture*)1;
-	vita2d_texture* noButtonTexture=(vita2d_texture*)1;
+	CrossTexture* yesButtonTexture=(CrossTexture*)1;
+	CrossTexture* noButtonTexture=(CrossTexture*)1;
 	//vita2d_wait_rendering_done();
 
 	int i=0;
 	int j=0;
 	if (isQuestion==1){
 		if (LANGUAGE==LANG_ENGLISH){
-			yesButtonTexture=vita2d_load_PNG_file("app0:Stuff/Yes.png");
-			noButtonTexture=vita2d_load_PNG_file("app0:Stuff/No.png");
+			#if PLATFORM == PLAT_VITA
+				yesButtonTexture=LoadPNG("app0:Stuff/Yes.png");
+				noButtonTexture=LoadPNG("app0:Stuff/No.png");
+			#elif PLATFORM == PLAT_WINDOWS
+				yesButtonTexture=LoadPNG("./Stuff/Yes.png");
+				noButtonTexture=LoadPNG("./Stuff/No.png");
+			#endif
 		}else if (LANGUAGE==LANG_SPANISH){
-			yesButtonTexture=vita2d_load_PNG_file("app0:SpanishReplace/Yes.png");
-			noButtonTexture=vita2d_load_PNG_file("app0:SpanishReplace/No.png");
+			#if PLATFORM == PLAT_VITA
+				yesButtonTexture=LoadPNG("app0:SpanishReplace/Yes.png");
+				noButtonTexture=LoadPNG("app0:SpanishReplace/No.png");
+			#elif PLATFORM == PLAT_WINDOWS
+				yesButtonTexture=LoadPNG("./SpanishReplace/Yes.png");
+				noButtonTexture=LoadPNG("./SpanishReplace/No.png");
+			#endif
 		}
 	}
 
@@ -759,12 +1105,11 @@ char ShowMessageWithPortrait(char* message, char isQuestion, vita2d_texture* por
 			//Mix_PlayChannel(0,textboxBlip,0);
 		}
 
-		vita2d_start_drawing();
-		vita2d_clear_screen();
+		StartDrawing();
 
 		DrawMapThings();
 		// Draw da white rectangle
-		vita2d_draw_rectangle(0,TEXTBOXY,SCREENWIDTH,SCREENHEIGHT-TEXTBOXY,RGBA8(255,255,255,255));
+		DrawRectangle(0,TEXTBOXY,SCREENWIDTH,SCREENHEIGHT-TEXTBOXY,255,255,255,255);
 
 		// Draw message
 		short i;
@@ -792,17 +1137,16 @@ char ShowMessageWithPortrait(char* message, char isQuestion, vita2d_texture* por
 
 		// Draw questions
 		if (isQuestion==1){
-			vita2d_draw_texture_scale(yesButtonTexture,SCREENWIDTH-vita2d_texture_get_width(yesButtonTexture)*2,TEXTBOXY-vita2d_texture_get_height(yesButtonTexture)*4,2,2);
-			vita2d_draw_texture_scale(noButtonTexture,SCREENWIDTH-vita2d_texture_get_width(noButtonTexture)*2,TEXTBOXY-vita2d_texture_get_height(noButtonTexture)*2,2,2);
-			DrawAnimationAsISay(&selectorAnimation,SCREENWIDTH-vita2d_texture_get_width(yesButtonTexture)*2-64,TEXTBOXY-(currentSelected)*64-50,3.7);
+			DrawTextureScale(yesButtonTexture,SCREENWIDTH-GetTextureWidth(yesButtonTexture)*2,TEXTBOXY-GetTextureHeight(yesButtonTexture)*4,2,2);
+			DrawTextureScale(noButtonTexture,SCREENWIDTH-GetTextureWidth(noButtonTexture)*2,TEXTBOXY-GetTextureHeight(noButtonTexture)*2,2,2);
+			DrawAnimationAsISay(&selectorAnimation,SCREENWIDTH-GetTextureWidth(yesButtonTexture)*2-64,TEXTBOXY-(currentSelected)*64-50,3.7);
 		}
 		
 		if (portrait!=NULL){
-			vita2d_draw_texture_scale(portrait,0,TEXTBOXY-vita2d_texture_get_height(portrait)*portScale,portScale,portScale);
+			DrawTextureScale(portrait,0,TEXTBOXY-GetTextureHeight(portrait)*portScale,portScale,portScale);
 		}
 
-		vita2d_end_drawing();
-		vita2d_swap_buffers();
+		EndDrawing();
 
 
 		frames++;
@@ -811,8 +1155,8 @@ char ShowMessageWithPortrait(char* message, char isQuestion, vita2d_texture* por
 
 	if (isQuestion==1){
 		PlzNoCrashOnDispose();
-		vita2d_free_texture(yesButtonTexture);
-		vita2d_free_texture(noButtonTexture);
+		FreeTexture(yesButtonTexture);
+		FreeTexture(noButtonTexture);
 	}
 
 	///////
@@ -907,11 +1251,11 @@ void UnloadMap(){
 		if (possibleEnemies[i].maxHp!=-1){
 			possibleEnemies[i].maxHp=-1;
 			if (possibleEnemiesAttackAnimation[i].texture!=NULL){
-				vita2d_free_texture(possibleEnemiesAttackAnimation[i].texture);
+				FreeTexture(possibleEnemiesAttackAnimation[i].texture);
 				possibleEnemiesAttackAnimation[i].texture=NULL;
 			}
 			if (possibleEnemiesIdleAnimation[i].texture!=NULL){
-				vita2d_free_texture(possibleEnemiesIdleAnimation[i].texture);
+				FreeTexture(possibleEnemiesIdleAnimation[i].texture);
 				possibleEnemiesIdleAnimation[i].texture=NULL;
 			}
 		}
@@ -938,10 +1282,10 @@ void ChangeMap(char* newMap){
 
 void BattleAttackTemplate(animation* animationToModify, char* filePath, char width, int speed){
 	animationToModify->speed=speed;
-	animationToModify->texture=vita2d_load_PNG_file(filePath);
+	animationToModify->texture=LoadPNG(filePath);
 	animationToModify->width=width;
-	/*39*/animationToModify->height=vita2d_texture_get_height(animationToModify->texture);
-	animationToModify->numberOfFrames=vita2d_texture_get_width(animationToModify->texture)/animationToModify->width;
+	/*39*/animationToModify->height=GetTextureHeight(animationToModify->texture);
+	animationToModify->numberOfFrames=GetTextureWidth(animationToModify->texture)/animationToModify->width;
 	animationToModify->goBackwards=1;
 	animationToModify->addOnChange=1;
 	//animationToModify->drawXOffset=(75-animationToModify->width)/2;
@@ -996,12 +1340,6 @@ int Damage(partyMember* attacker, partyMember* victim, int moveAttack, int moveM
 		victim->hp=victim->fighterStats.maxHp+15;
 	}
 	return doneDamage;
-}
-
-void WaitForPush(int button){
-	while (!(pad.buttons & button)){
-		sceCtrlPeekBufferPositive(0, &pad, 1);
-	}
 }
 
 // Includes left and right bounds
@@ -1080,7 +1418,7 @@ spellLinkedList* AddToSpellList(){
 
 	if (listOn->nextEntry){
 		// ??? There's already another entry???
-		ShowMessage("Aw snap. Problem add to list. Maybe we'll loose some entries.",0);
+		BasicMessage("Aw snap. Problem add to list. Maybe we'll loose some entries.");
 	}
 	listOn->nextEntry=tempList;
 	spellLinkedListSize++;
@@ -1144,8 +1482,7 @@ signed char SelectSpell(partyMember member){
 			return -1;
 		}
 
-		vita2d_start_drawing();
-		vita2d_clear_screen();
+		StartDrawing();
 
 		DrawTextAsISay( CenterText(N_MAGICLIST,6),2,N_MAGICLIST,6);
 
@@ -1163,8 +1500,7 @@ signed char SelectSpell(partyMember member){
 		//ShowMessage("b",0);
 		DrawAnimationAsISay(&selectorAnimation,0,selected*48+selected*2+64-10,4);
 
-		vita2d_end_drawing();
-		vita2d_swap_buffers();
+		EndDrawing();
 
 		EndFrameStuff();
 	}
@@ -1176,7 +1512,7 @@ void DisposeAllLoadedSpellImages(){
 	for (i=0;i<spellLinkedListSize;i++){
 		gotList = GetSpellList(i);
 		if (gotList->theSpell.theAnimation.texture!=NULL){
-			vita2d_free_texture(gotList->theSpell.theAnimation.texture);
+			FreeTexture(gotList->theSpell.theAnimation.texture);
 			gotList->theSpell.theAnimation.texture=NULL;
 		}
 	}
@@ -1185,20 +1521,24 @@ void DisposeAllLoadedSpellImages(){
 void LoadSpellImageIfNeeded(int spellId){
 	spell* gotSpell = &(GetSpellList(spellId)->theSpell);
 	if (gotSpell->theAnimation.texture==NULL){
-		gotSpell->theAnimation.texture = vita2d_load_PNG_file(gotSpell->spellPath);
+		gotSpell->theAnimation.texture = LoadPNG(gotSpell->spellPath);
 	}
 }
 
 void AutodetectNumberOfFrames(animation* passedAnimation){
-	passedAnimation->numberOfFrames = (vita2d_texture_get_width(passedAnimation->texture)/passedAnimation->width);
+	passedAnimation->numberOfFrames = (GetTextureWidth(passedAnimation->texture)/passedAnimation->width);
 }
 
 char DidJustTouch(){
+	#if PLATFORM == PLAT_VITA
 	if (currentTouch.reportNum>0 && previousTouchData.reportNum==0){
 		return 1;
 	}else{
 		return 0;
 	}
+	#elif PLATFORM == PLAT_WINDOWS
+		printf("DidJustTOuch not yet for Windows.");
+	#endif
 }
 
 void AddSpellToStats(stats* passedMember, int passedSpellId){
@@ -1253,8 +1593,7 @@ void StatusLoop(){
 				selectedMember=0;
 			}
 		}
-		vita2d_start_drawing();
-		vita2d_clear_screen();
+		StartDrawing();
 
 		DrawTextAsISay(SCREENWIDTH/2-strlen(party[selectedMember].fighterStats.name)*64/2,3,party[selectedMember].fighterStats.name,8);
 		DrawTextAsISay(3,69,N_ATK,4);
@@ -1288,8 +1627,7 @@ void StatusLoop(){
 		DrawAnimationAsISay(&partyIdleAnimation[selectedMember],SCREENWIDTH-partyIdleAnimation[selectedMember].width*animationScale-100,180,animationScale);
 
 
-		vita2d_end_drawing();
-		vita2d_swap_buffers();
+		EndDrawing();
 		EndFrameStuff();
 	}
 }
@@ -1384,17 +1722,16 @@ void MenuLop(){
 		}
 
 
-		vita2d_start_drawing();
-		vita2d_clear_screen();
+		StartDrawing();
 	
 		DrawMapThings();
 		// Draw fancy shade thingie
-		vita2d_draw_rectangle(720,136,5,272,RGBA8(0,0,0,255));
-		vita2d_draw_rectangle(240,408,485,5,RGBA8(0,0,0,255));
+		DrawRectangle(720,136,5,272,0,0,0,255);
+		DrawRectangle(240,408,485,5,0,0,0,255);
 		// Draw border
-		vita2d_draw_rectangle(240,136,480,272,RGBA8(0,255,0,255));
+		DrawRectangle(240,136,480,272,0,255,0,255);
 		// Draw real rectangle
-		vita2d_draw_rectangle(245,141,470,262,RGBA8(252,255,255,255));
+		DrawRectangle(245,141,470,262,252,255,255,255);
 
 		if (subspot==0){
 			DrawTextAsISay(CenterText(N_HAPPYMENU,4),146,N_HAPPYMENU,4);
@@ -1416,149 +1753,140 @@ void MenuLop(){
 		DrawAnimationAsISay(&selectorAnimation,245,selected*32+183+selected*5,2);
 
 
-		vita2d_end_drawing();
-		vita2d_swap_buffers();
+		EndDrawing();
 		EndFrameStuff();
 	}
 }
 
 void Overworld(){
-		StartFrameStuff();
-		// Main logic
-		#if NOSLEEP==1
-			sceKernelPowerTick(0);
-		#endif
+	EndFrameStuff();
+	StartFrameStuff();
+	// Main logic
 
-		// Controls only if not walking
-		if (isWalking==0){
-			if (pad.buttons!=0){
-				if (WasJustPressed(aButton)){
-					short eventUseX;
-					short eventUseY;
+	// Controls only if not walking
+	if (isWalking==0){
+		if (1){
+			if (WasJustPressed(aButton)){
+				short eventUseX;
+				short eventUseY;
 
-					eventUseX=playerObject->x/32;
-					eventUseY=playerObject->y/32;
+				eventUseX=playerObject->x/32;
+				eventUseY=playerObject->y/32;
 
-					if (playerObject->theAnimation.texture==playerRight){
-						eventUseX++;
-					}else if (playerObject->theAnimation.texture==playerLeft){
-						eventUseX--;
-					}else if (playerObject->theAnimation.texture==playerDown){
-						eventUseY++;
-					}else if (playerObject->theAnimation.texture==playerUp){
-						eventUseY--;
-					}
-					tileSpotData* eventTempSpotData = GetMapSpotData(eventUseX,eventUseY);
-					if (eventTempSpotData->event!=0){
-						ExecuteEvent(playerObject,eventTempSpotData->event);
-					}
+				if (playerObject->theAnimation.texture==playerRight){
+					eventUseX++;
+				}else if (playerObject->theAnimation.texture==playerLeft){
+					eventUseX--;
+				}else if (playerObject->theAnimation.texture==playerDown){
+					eventUseY++;
+				}else if (playerObject->theAnimation.texture==playerUp){
+					eventUseY--;
 				}
-				if (pad.buttons & SCE_CTRL_UP){
-					if (checkCollision(playerObject->x/32,playerObject->y/32-1)!=1){
-						isWalking=1;
-						playerObject->theAnimation.numberOfFrames=3;
-						playerObject->y=playerObject->y-4;
-					}
-					playerObject->theAnimation.texture=playerUp;
-				}else if (pad.buttons & SCE_CTRL_DOWN){
-					if (checkCollision(playerObject->x/32,playerObject->y/32+1)!=1){
-						isWalking=2;
-						playerObject->theAnimation.numberOfFrames=3;
-						playerObject->y=playerObject->y+4;
-					}
-					playerObject->theAnimation.texture=playerDown;
-				}else if (pad.buttons & SCE_CTRL_LEFT){
-					if (checkCollision(playerObject->x/32-1,playerObject->y/32)!=1){
-						isWalking=3;
-						playerObject->theAnimation.numberOfFrames=3;
-						playerObject->x=playerObject->x-4;
-					}
-					playerObject->theAnimation.texture=playerLeft;
-				}else if (pad.buttons & SCE_CTRL_RIGHT){
-					if (checkCollision(playerObject->x/32+1,playerObject->y/32)!=1){
-						isWalking=4;
-						playerObject->theAnimation.numberOfFrames=3;
-						playerObject->x=playerObject->x+4;
-					}
-					playerObject->theAnimation.texture=playerRight;
+				tileSpotData* eventTempSpotData = GetMapSpotData(eventUseX,eventUseY);
+				if (eventTempSpotData->event!=0){
+					ExecuteEvent(playerObject,eventTempSpotData->event);
 				}
-			
-				if (playerObject->x%32==0 && playerObject->y%32==0){
-					// Player didn't move.
+			}
+			if (IsDown(SCE_CTRL_UP)){
+				if (checkCollision(playerObject->x/32,playerObject->y/32-1)!=1){
+					isWalking=1;
+					playerObject->theAnimation.numberOfFrames=3;
+					playerObject->y=playerObject->y-4;
+				}
+				playerObject->theAnimation.texture=playerUp;
+			}else if (IsDown(SCE_CTRL_DOWN)){
+				if (checkCollision(playerObject->x/32,playerObject->y/32+1)!=1){
+					isWalking=2;
+					playerObject->theAnimation.numberOfFrames=3;
+					playerObject->y=playerObject->y+4;
+				}
+				playerObject->theAnimation.texture=playerDown;
+			}else if (IsDown(SCE_CTRL_LEFT)){
+				if (checkCollision(playerObject->x/32-1,playerObject->y/32)!=1){
+					isWalking=3;
+					playerObject->theAnimation.numberOfFrames=3;
+					playerObject->x=playerObject->x-4;
+				}
+				playerObject->theAnimation.texture=playerLeft;
+			}else if (IsDown(SCE_CTRL_RIGHT)){
+				if (checkCollision(playerObject->x/32+1,playerObject->y/32)!=1){
+					isWalking=4;
+					playerObject->theAnimation.numberOfFrames=3;
+					playerObject->x=playerObject->x+4;
+				}
+				playerObject->theAnimation.texture=playerRight;
+			}
+		
+			if (playerObject->x%32==0 && playerObject->y%32==0){
+				// Player didn't move.
+				playerObject->theAnimation.addOnChange=1;
+				playerObject->theAnimation.numberOfFrames=1;
+				playerObject->theAnimation.currentFrame=0;
+			}
+
+		}
+	}else{
+		if (playerObject->x%32==0 && playerObject->y%32==0){
+			nextEncounter--;
+
+			// Player reached their destination
+			tileSpotData* eventTempSpotData = GetMapSpotData(playerObject->x/32,playerObject->y/32);
+			if (eventTempSpotData->event!=0){
+				ExecuteEvent(playerObject,eventTempSpotData->event);
+			}
+
+			if (nextEncounter<=0 && encounterRate>=1){
+					nextEncounter = encounterRate+RandBetween(0,5);
+
+					InitWildBattle();
+					BattleInit();
+					place=3;
+
+					playerObject->theAnimation.addOnChange=1;
+					playerObject->theAnimation.numberOfFrames=1;
+					playerObject->theAnimation.currentFrame=0;
+					isWalking=0;
+			}else{
+				isWalking=0;
+				if (!((IsDown(SCE_CTRL_UP)) || (IsDown(SCE_CTRL_DOWN)) || (IsDown(SCE_CTRL_LEFT)) || (IsDown(SCE_CTRL_RIGHT)))){
+					// Stop
 					playerObject->theAnimation.addOnChange=1;
 					playerObject->theAnimation.numberOfFrames=1;
 					playerObject->theAnimation.currentFrame=0;
 				}
-
 			}
 		}else{
-			if (playerObject->x%32==0 && playerObject->y%32==0){
-				nextEncounter--;
-
-				// Player reached their destination
-				tileSpotData* eventTempSpotData = GetMapSpotData(playerObject->x/32,playerObject->y/32);
-				if (eventTempSpotData->event!=0){
-					ExecuteEvent(playerObject,eventTempSpotData->event);
-				}
-
-				if (nextEncounter<=0 && encounterRate>=1){
-						nextEncounter = encounterRate+RandBetween(0,5);
-
-						InitWildBattle();
-						BattleInit();
-						place=3;
-
-						playerObject->theAnimation.addOnChange=1;
-						playerObject->theAnimation.numberOfFrames=1;
-						playerObject->theAnimation.currentFrame=0;
-						isWalking=0;
-				}else{
-					isWalking=0;
-					if (!((pad.buttons & SCE_CTRL_UP) || (pad.buttons & SCE_CTRL_DOWN) || (pad.buttons & SCE_CTRL_LEFT) || (pad.buttons & SCE_CTRL_RIGHT))){
-						// Stop
-						playerObject->theAnimation.addOnChange=1;
-						playerObject->theAnimation.numberOfFrames=1;
-						playerObject->theAnimation.currentFrame=0;
-					}
-				}
-			}else{
-				switch(isWalking){
-					case 1:
-						playerObject->y=playerObject->y-4;
-					break;
-					case 2:
-						playerObject->y=playerObject->y+4;
-					break;
-					case 3:
-						playerObject->x=playerObject->x-4;
-					break;
-					case 4:
-						playerObject->x=playerObject->x+4;
-					break;
-				}
+			switch(isWalking){
+				case 1:
+					playerObject->y=playerObject->y-4;
+				break;
+				case 2:
+					playerObject->y=playerObject->y+4;
+				break;
+				case 3:
+					playerObject->x=playerObject->x-4;
+				break;
+				case 4:
+					playerObject->x=playerObject->x+4;
+				break;
 			}
 		}
+	}
 
-		if (WasJustPressed(SCE_CTRL_START)){// TODO - PLAY SOUND
-			place=1;
-		}
+	if (WasJustPressed(SCE_CTRL_START)){// TODO - PLAY SOUND
+		place=1;
+	}
 
-		UpdateCameraValues(playerObject);
+	UpdateCameraValues(playerObject);
 
 
-		// Drawing
-		vita2d_start_drawing();
-		vita2d_clear_screen();
+	// Drawing
+	StartDrawing();
 
-		DrawMapThings();
-		//DrawText(60,60,"Hello world",2);
+	DrawMapThings();
+	//DrawText(60,60,"Hello world",2);
 
-		vita2d_end_drawing();
-		vita2d_swap_buffers();
-		vita2d_wait_rendering_done();
-		
-
-		EndFrameStuff();
+	EndDrawing();
 }
 
 char BattleLop(char canRun){
@@ -1643,24 +1971,40 @@ char BattleLop(char canRun){
 		}
 	}
 
-	vita2d_texture* attackButton=NULL;
-	vita2d_texture* magicButton=NULL;
-	vita2d_texture* runButton=NULL;
-	vita2d_texture* itemButton=NULL;
-	vita2d_texture* winTexture=NULL;
-	if (LANGUAGE==LANG_ENGLISH){
-		attackButton = vita2d_load_PNG_file("app0:Stuff/AttackIcon.png");
-		magicButton = vita2d_load_PNG_file("app0:Stuff/MagicIcon.png");
-		runButton= vita2d_load_PNG_file("app0:Stuff/RunIcon.png");
-		itemButton = vita2d_load_PNG_file("app0:Stuff/ItemIcon.png");
-		winTexture = vita2d_load_PNG_file("app0:Stuff/Battle/Win.png");
-	}else if (LANGUAGE==LANG_SPANISH){
-		attackButton = vita2d_load_PNG_file("app0:SpanishReplace/AttackIcon.png");
-		magicButton = vita2d_load_PNG_file("app0:SpanishReplace/MagicIcon.png");
-		runButton= vita2d_load_PNG_file("app0:SpanishReplace/RunIcon.png");
-		itemButton = vita2d_load_PNG_file("app0:Stuff/ItemIcon.png");
-		winTexture = vita2d_load_PNG_file("app0:SpanishReplace/Battle/Win.png");
-	}
+	CrossTexture* attackButton=NULL;
+	CrossTexture* magicButton=NULL;
+	CrossTexture* runButton=NULL;
+	CrossTexture* itemButton=NULL;
+	CrossTexture* winTexture=NULL;
+	#if PLATFORM == PLAT_VITA
+		if (LANGUAGE==LANG_ENGLISH){
+			attackButton = LoadPNG("app0:Stuff/AttackIcon.png");
+			magicButton = LoadPNG("app0:Stuff/MagicIcon.png");
+			runButton= LoadPNG("app0:Stuff/RunIcon.png");
+			itemButton = LoadPNG("app0:Stuff/ItemIcon.png");
+			winTexture = LoadPNG("app0:Stuff/Battle/Win.png");
+		}else if (LANGUAGE==LANG_SPANISH){
+			attackButton = LoadPNG("app0:SpanishReplace/AttackIcon.png");
+			magicButton = LoadPNG("app0:SpanishReplace/MagicIcon.png");
+			runButton= LoadPNG("app0:SpanishReplace/RunIcon.png");
+			itemButton = LoadPNG("app0:Stuff/ItemIcon.png");
+			winTexture = LoadPNG("app0:SpanishReplace/Battle/Win.png");
+		}
+	#elif PLATFORM == PLAT_WINDOWS
+		if (LANGUAGE==LANG_ENGLISH){
+			attackButton = LoadPNG("./Stuff/AttackIcon.png");
+			magicButton = LoadPNG("./Stuff/MagicIcon.png");
+			runButton= LoadPNG("./Stuff/RunIcon.png");
+			itemButton = LoadPNG("./Stuff/ItemIcon.png");
+			winTexture = LoadPNG("./Stuff/Battle/Win.png");
+		}else if (LANGUAGE==LANG_SPANISH){
+			attackButton = LoadPNG("./SpanishReplace/AttackIcon.png");
+			magicButton = LoadPNG("./SpanishReplace/MagicIcon.png");
+			runButton= LoadPNG("./SpanishReplace/RunIcon.png");
+			itemButton = LoadPNG("./Stuff/ItemIcon.png");
+			winTexture = LoadPNG("./SpanishReplace/Battle/Win.png");
+		}
+	#endif
 
 	spell* selectedSpell=&(GetSpellList(0)->theSpell);
 
@@ -1704,8 +2048,7 @@ char BattleLop(char canRun){
 
 		while(whileVar){
 			StartFrameStuff();
-			vita2d_start_drawing();
-			vita2d_clear_screen();
+			StartDrawing();
 			DrawMap();
 			DrawUnusedAreaRect();
 
@@ -1731,8 +2074,7 @@ char BattleLop(char canRun){
 
 				DrawAnimationAsISay((GetBattlerAnimationById(i,0)),xPositions[i-1],yPositions[i-1],3);
 			}
-			vita2d_end_drawing();
-			vita2d_swap_buffers();
+			EndDrawing();
 
 			// Check if all there yet
 			for (i=1;i<10;i++){
@@ -1833,10 +2175,9 @@ char BattleLop(char canRun){
 							break;
 						}
 				
-						vita2d_start_drawing();
-						vita2d_clear_screen();
+						StartDrawing();
 					
-						vita2d_draw_texture_scale(winTexture,CenterSomething(vita2d_texture_get_width(winTexture)*2),3,2,2);
+						DrawTextureScale(winTexture,CenterSomething(GetTextureWidth(winTexture)*2),3,2,2);
 						//DrawTextAsISay(SCREENWIDTH/2-(strlen(N_WIN)*64/2),3,N_WIN,8)CenterSomething;
 						DrawTextAsISay(0,206+64,"EXP:",8);
 						DrawTextAsISay(256,206+64,temp2,8);
@@ -1848,8 +2189,7 @@ char BattleLop(char canRun){
 							}
 						}
 				
-						vita2d_end_drawing();
-						vita2d_swap_buffers();
+						EndDrawing();
 				
 						EndFrameStuff();
 					}
@@ -1949,7 +2289,7 @@ char BattleLop(char canRun){
 			if (WasJustPressed(aButton)/* || DidJustTouch()==1*/){
 				// TOuch controls
 				/*if (DidJustTouch()==1){
-					if (currentTouch.report[0].y/2>=SCREENHEIGHT-vita2d_texture_get_height(attackButton)*2){
+					if (currentTouch.report[0].y/2>=SCREENHEIGHT-GetTextureHeight(attackButton)*2){
 						if (currentTouch.report[0].x/2<264){
 							selected=0;
 						}else if (currentTouch.report[0].x/2<496){
@@ -2157,38 +2497,21 @@ char BattleLop(char canRun){
 			sceKernelPowerTick(0);
 		#endif
 
-		vita2d_start_drawing();
-		vita2d_clear_screen();
+		StartDrawing();
 		DrawMap();
 		DrawUnusedAreaRect();
 
 		// Draw selection buttons
 		if (battleStatus==1){
 			// Draw UI and selector
-			vita2d_draw_texture_scale(attackButton,32,SCREENHEIGHT-vita2d_texture_get_height(attackButton)*2,2,2);
-			vita2d_draw_texture_scale(magicButton,264,SCREENHEIGHT-vita2d_texture_get_height(magicButton)*2,2,2);
-			//vita2d_draw_texture_scale(itemButton,496,SCREENHEIGHT-vita2d_texture_get_height(itemButton)*2,2,2);
+			DrawTextureScale(attackButton,32,SCREENHEIGHT-GetTextureHeight(attackButton)*2,2,2);
+			DrawTextureScale(magicButton,264,SCREENHEIGHT-GetTextureHeight(magicButton)*2,2,2);
+			//DrawTextureScale(itemButton,496,SCREENHEIGHT-GetTextureHeight(itemButton)*2,2,2);
 			if (canRun==1){
-				vita2d_draw_texture_scale(runButton,/*728*/496,SCREENHEIGHT-vita2d_texture_get_height(itemButton)*2,2,2);
+				DrawTextureScale(runButton,/*728*/496,SCREENHEIGHT-GetTextureHeight(itemButton)*2,2,2);
 			}
 			UpdateAnimationIfNeed(&selectorAnimation);
-			vita2d_draw_texture_part_scale_rotate(selectorAnimation.texture,selected*200+selected*32+132,SCREENHEIGHT-128,selectorAnimation.currentFrame*selectorAnimation.width,0,selectorAnimation.width,selectorAnimation.height,3.7,3.7,1.57);
-		}else if (battleStatus==2){
-			// Fix cursor if selecting dead person.
-			if (GetBattlerById(target)->hp==0){
-				for (i=target;i<=10;i++){
-					if (i==10){
-						i=1;
-						continue;
-					}
-					if (GetBattlerById(i)->hp>0){
-						target=i;
-						break;
-					}
-				}
-			}
-			// Draw the target selector
-			DrawAnimationAsISay(&selectorAnimation,GetBattlerById(target)->x-64,GetBattlerById(target)->y + GetBattlerAnimationById(target,1)->height ,3.7);
+			DrawTexturePartScaleRotate(selectorAnimation.texture,selected*200+selected*32+132,SCREENHEIGHT-128,selectorAnimation.currentFrame*selectorAnimation.width,0,selectorAnimation.width,selectorAnimation.height,3.7,3.7,1.57);
 		}
 		// Draw the good stuff.
 		for (i=0;i<partySize;i++){
@@ -2199,17 +2522,17 @@ char BattleLop(char canRun){
 
 			// Draw health and MP bar for party member
 			// hp
-			vita2d_draw_rectangle(32+i*128+i*16,16,128,32,RGBA8(0,0,0,255));
+			DrawRectangle(32+i*128+i*16,16,128,32,0,0,0,255);
 			if (party[i].hp>=party[i].fighterStats.maxHp+15){
 				// Draw more red rectangle if overheal
-				vita2d_draw_rectangle(32+i*128+i*16,16,floor(128*(((double)party[i].hp)/party[i].fighterStats.maxHp)),32,RGBA8(255,0,0,255));
+				DrawRectangle(32+i*128+i*16,16,floor(128*(((double)party[i].hp)/party[i].fighterStats.maxHp)),32,255,0,0,255);
 			}else{
 				// Draw normal health red
-				vita2d_draw_rectangle(32+i*128+i*16,16,floor(128*(((double)party[i].hp)/party[i].fighterStats.maxHp)),32,RGBA8(190,0,0,255));
+				DrawRectangle(32+i*128+i*16,16,floor(128*(((double)party[i].hp)/party[i].fighterStats.maxHp)),32,190,0,0,255);
 			}
 			// mp
-			vita2d_draw_rectangle(32+i*128+i*16,48,128,32,RGBA8(0,0,0,255));
-			vita2d_draw_rectangle(32+i*128+i*16,48,floor(128*(((double)party[i].mp)/party[i].fighterStats.maxMp)),32,RGBA8(0,0,190,255));
+			DrawRectangle(32+i*128+i*16,48,128,32,0,0,0,255);
+			DrawRectangle(32+i*128+i*16,48,floor(128*(((double)party[i].mp)/party[i].fighterStats.maxMp)),32,0,0,190,255);
 			// name
 			DrawTextAsISay(32+i*128+i*16,90,party[i].fighterStats.name,2);
 
@@ -2273,22 +2596,38 @@ char BattleLop(char canRun){
 			}
 		}else if (battleStatus==2){
 			// hp
-			vita2d_draw_rectangle(GetBattlerById(target)->x,GetBattlerById(target)->y-32,128,32,RGBA8(0,0,0,255));
-			vita2d_draw_rectangle(GetBattlerById(target)->x,GetBattlerById(target)->y-32,floor(128*(((double)GetBattlerById(target)->hp)/GetBattlerById(target)->fighterStats.maxHp)),32,RGBA8(190,0,0,255));
+			DrawRectangle(GetBattlerById(target)->x,GetBattlerById(target)->y-32,128,32,0,0,0,255);
+			DrawRectangle(GetBattlerById(target)->x,GetBattlerById(target)->y-32,floor(128*(((double)GetBattlerById(target)->hp)/GetBattlerById(target)->fighterStats.maxHp)),32,190,0,0,255);
 
+			
+			// Fix cursor if selecting dead person.
+			if (GetBattlerById(target)->hp==0){
+				for (i=target;i<=10;i++){
+					if (i==10){
+						i=1;
+						continue;
+					}
+					if (GetBattlerById(i)->hp>0){
+						target=i;
+						break;
+					}
+				}
+			}
+			// Draw the target selector
+			DrawAnimationAsISay(&selectorAnimation,GetBattlerById(target)->x-64,GetBattlerById(target)->y + GetBattlerAnimationById(target,1)->height ,3.7);
+			
 		}
-		vita2d_end_drawing();
-		vita2d_swap_buffers();
+		EndDrawing();
 	
 		EndFrameStuff();
 	}
 
 	PlzNoCrashOnDispose();
-	vita2d_free_texture(attackButton);
-	vita2d_free_texture(magicButton);
-	vita2d_free_texture(itemButton);
-	vita2d_free_texture(runButton);
-	vita2d_free_texture(winTexture);
+	FreeTexture(attackButton);
+	FreeTexture(magicButton);
+	FreeTexture(itemButton);
+	FreeTexture(runButton);
+	FreeTexture(winTexture);
 
 	DisposeAllLoadedSpellImages();
 
@@ -2298,7 +2637,11 @@ char BattleLop(char canRun){
 			place=0;
 			playerObject->x=64;
 			playerObject->y=64;
-			ChangeMap("app0:Stuff/Maps/NathansHouse");
+			#if PLATFORM == PLAT_VITA
+				ChangeMap("app0:Stuff/Maps/NathansHouse");
+			#elif PLATFORM == PLAT_WINDOWS
+				ChangeMap("./Stuff/Maps/NathansHouse");
+			#endif
 		}else{
 			place=0;
 		}
@@ -2315,11 +2658,16 @@ char BattleLop(char canRun){
 }
 
 void TitleLoop(){
-	vita2d_texture* titleImage = vita2d_load_PNG_file("app0:Stuff/title.png");
+	#if PLATFORM == PLAT_VITA
+		CrossTexture* titleImage = LoadPNG("app0:Stuff/title.png");
+	#elif PLATFORM == PLAT_WINDOWS
+		CrossTexture* titleImage = LoadPNG("./Stuff/title.png");
+	#endif
+	
 	while (1){
 		StartFrameStuff();
 
-		if (pad.buttons & aButton){
+		if (IsDown(aButton)){
 			if (LANGUAGE == LANG_ENGLISH){
 				lua_pushnumber(L,1);
 			}else if (LANGUAGE==LANG_SPANISH){
@@ -2330,11 +2678,15 @@ void TitleLoop(){
 			SetupHardcodedLanguage();
 
 			// Need to load here as Lang variable has been set.
-			luaL_dofile(L,"app0:Stuff/Happy.lua");
+			#if PLATFORM == PLAT_VITA
+				luaL_dofile(L,"app0:Stuff/Happy.lua");
+			#elif PLATFORM == PLAT_WINDOWS
+				luaL_dofile(L,"./Stuff/Happy.lua");
+			#endif
 			LoadMap(STARTINGMAP);
 			place=0;
 
-			if ((pad.buttons & SCE_CTRL_LTRIGGER) && (pad.buttons & SCE_CTRL_RTRIGGER) && (pad.buttons & SCE_CTRL_RIGHT)){
+			if (IsDown(SCE_CTRL_UP) && IsDown(SCE_CTRL_CROSS) && IsDown(SCE_CTRL_CIRCLE)){
 				BasicMessage("You activated the top secret key combo. You will get a high level. Restart the game to play normally");
 				party[0].fighterStats.maxHp=999;
 				party[0].fighterStats.speed=999;
@@ -2352,12 +2704,20 @@ void TitleLoop(){
 				LANGUAGE=LANG_ENGLISH;
 			}
 			PlzNoCrashOnDispose();
-			vita2d_free_texture(titleImage);
-			if (LANGUAGE==LANG_ENGLISH){
-				titleImage = vita2d_load_PNG_file("app0:Stuff/title.png");
-			}else if (LANGUAGE==LANG_SPANISH){
-				titleImage = vita2d_load_PNG_file("app0:SpanishReplace/title.png");
-			}
+			FreeTexture(titleImage);
+			#if PLATFORM == PLAT_VITA
+				if (LANGUAGE==LANG_ENGLISH){
+					titleImage = LoadPNG("app0:Stuff/title.png");
+				}else if (LANGUAGE==LANG_SPANISH){
+					titleImage = LoadPNG("app0:SpanishReplace/title.png");
+				}
+			#elif PLATFORM == PLAT_WINDOWS
+				if (LANGUAGE==LANG_ENGLISH){
+					titleImage = LoadPNG("app0:Stuff/title.png");
+				}else if (LANGUAGE==LANG_SPANISH){
+					titleImage = LoadPNG("app0:SpanishReplace/title.png");
+				}
+			#endif
 		}
 		if (WasJustPressed(SCE_CTRL_SQUARE)){
 			if (aButton==SCE_CTRL_CROSS){
@@ -2369,10 +2729,9 @@ void TitleLoop(){
 			}
 		}
 
-		vita2d_start_drawing();
-		vita2d_clear_screen();
+		StartDrawing();
 
-		vita2d_draw_texture(titleImage,0,0);
+		DrawTexture(titleImage,0,0);
 
 
 		if (LANGUAGE==LANG_ENGLISH){
@@ -2396,14 +2755,12 @@ void TitleLoop(){
 			}
 		}
 
-		vita2d_end_drawing();
-		vita2d_swap_buffers();
-		vita2d_wait_rendering_done();
+		EndDrawing();
 		
 		EndFrameStuff();
 	}
 	PlzNoCrashOnDispose();
-	vita2d_free_texture(titleImage);
+	FreeTexture(titleImage);
 }
 
 /*
@@ -2415,736 +2772,7 @@ void TitleLoop(){
 ///////////////////////////////////////
 */
 
-// X, Y, layer, Tileset, Tile
-int L_SetMapImageData(lua_State* passedState){
-	tileImageData* _theChosenData = GetMapImageData(lua_tonumber(passedState,1),lua_tonumber(passedState,2),lua_tonumber(passedState,3));
-	_theChosenData->tileset=lua_tonumber(passedState,4);
-	_theChosenData->tile=lua_tonumber(passedState,5);
-	return 0;
-}
-
-// Sets an int pointer to a value.
-// ARGS - 
-// intpointer, value (int)
-int L_SetInt(lua_State* passedState){
-	int* passedInt = lua_touserdata(passedState,1);
-	int toSet = lua_tonumber(passedState,2);
-	(*passedInt)=toSet;
-	return 0;
-}
-// Shows a message or a question
-// ARGS - 
-// message (string), isQuestion (bool)
-// Return - 
-// if isQuestion==true, returns true if answered yes, false if answered no.
-int L_ShowMessage(lua_State* passedState){
-	char* passedMessage = (char*)lua_tostring(passedState,1);
-	char passedIsQuestion = lua_toboolean(passedState,2);
-	char messageAnswer = ShowMessage(passedMessage,passedIsQuestion);
-	if (passedIsQuestion!=0){
-		lua_pushboolean(passedState,messageAnswer);
-		return 1;
-	}
-	return 0;
-}
-
-// Shows a message or a question with a portrait
-// ARGS - 
-// message (string), isQuestion (bool), portrait (vita2d_texture*), portraitScale (double 0 for autodetect to 200)
-// Return - 
-// if isQuestion==true, returns true if answered yes, false if answered no.
-int L_ShowMessageWithPortrait(lua_State* passedState){
-	char* passedMessage = (char*)lua_tostring(passedState,1);
-	char passedIsQuestion = lua_toboolean(passedState,2);
-	vita2d_texture* passedPortrait = lua_touserdata(passedState,3);
-	signed char passedScale = lua_tonumber(passedState,4);
-	char messageAnswer = ShowMessageWithPortrait(passedMessage,passedIsQuestion,passedPortrait,passedScale);
-	if (passedIsQuestion!=0){
-		lua_pushboolean(passedState,messageAnswer);
-		return 1;
-	}
-	return 0;
-}
-
-// Loads a PNG.
-// ARGS - 
-// path (string)
-// Return - 
-// an image pointer
-int L_LoadPNG(lua_State* passedState){
-	char* passedPath = (char*)lua_tostring(passedState,1);
-	lua_pushlightuserdata(passedState,vita2d_load_PNG_file(passedPath));
-	return 1;
-}
-
-// Destroys an image.
-// ARGS - 
-// some_imgage_pointer
-int L_UnloadTexture(lua_State* passedState){
-	vita2d_wait_rendering_done();
-	vita2d_free_texture(lua_touserdata(passedState,1));
-	return 0;
-}
-
-// Set tileset slot to an image
-// ARGS - 
-// image, slot
-int L_SetTileset(lua_State* passedState){
-	tilesets[(int)lua_tonumber(passedState,2)]=(vita2d_texture*)lua_touserdata(passedState,1);
-	return 0;
-}
-
-// Destroy tileset
-// ARGS
-// slot
-int L_DestroyTileset(lua_State* passedState){
-	int passedNumber = lua_tonumber(passedState,1);
-
-	PlzNoCrashOnDispose();
-	vita2d_free_texture(tilesets[passedNumber]);
-	return 0;
-}
-
-// Adds a spell
-// ARGS - 
-// name, attack, magicAttack, texturePath
-int L_AddAttack(lua_State* passedState){
-
-	return 0;
-}
-
-// Returns a spell
-// ARGS - 
-// slot
-// RETURN
-// spell
-int L_GetSpell(lua_State* passedState){
-	lua_pushlightuserdata(passedState,&(GetSpellList(lua_tonumber(passedState,1))->theSpell));
-	return 1;
-}
-
-// Adds to the end of the spell list.
-// Returns
-// spell
-int L_AddSpell(lua_State* passedState){
-	spellLinkedList* returnedSpell = AddToSpellList();
-	returnedSpell->theSpell.theAnimation.texture=NULL;
-	lua_pushlightuserdata(passedState, &(returnedSpell->theSpell));
-	return 1;
-}
-
-// Sets spell stuff
-// Args - 
-// spell, name, atk, magicAttack, texturePath, mpCost, lastMinuteFix
-// PLEASE DO NOT LOAD THE ANIMATION'S IMAGE. 
-// lastMinuteFix is a last minute variable fix thing I made
-// special values give special results
-// 1 - damage unchanged by defence
-int L_SetSpell(lua_State* passedState){
-	spell* passedSpell = lua_touserdata(passedState,1);
-	passedSpell->name = (char*)lua_touserdata(passedState,2);
-	passedSpell->attack = lua_tonumber(passedState,3);
-	passedSpell->magicAttack = lua_tonumber(passedState,4);
-	passedSpell->spellPath = (char*)lua_touserdata(passedState,5);
-	passedSpell->mpCost = lua_tonumber(passedState,6);
-	if (lua_gettop(passedState)==7){
-		passedSpell->lastMinuteFix = lua_tonumber(passedState,7);
-	}
-	return 0;
-}
-
-// Gets a spell's animation
-// Args - 
-// spell
-int L_GetSpellAnimation(lua_State* passedState){
-	spell* passedSpell = lua_touserdata(passedState,1);
-	lua_pushlightuserdata(passedState,&(passedSpell->theAnimation));
-	return 1;
-}
-
-// Sets an animation's values
-// ARGS - 
-// animation, speed, width, height, numberOfFrames, goBackwards, drawXOffset, drawYOffset, texture(optional)
-// Set numberOfFrames to -1 for autodetect
-int L_SetAnimation(lua_State* passedState){
-	animation* passedAnimation = ((animation*)lua_touserdata(passedState,1));
-
-	passedAnimation->speed = lua_tonumber(passedState,2);
-	passedAnimation->width=lua_tonumber(passedState,3);
-	passedAnimation->height = lua_tonumber(passedState,4);
-	passedAnimation->goBackwards = lua_toboolean(passedState,6);
-	passedAnimation->drawXOffset = lua_tonumber(passedState,7);
-	passedAnimation->drawYOffset = lua_tonumber(passedState,8);
-	passedAnimation->addOnChange=1;
-
-	if (lua_gettop(passedState)==9){
-		passedAnimation->texture = lua_touserdata(passedState,9);
-	}
-	if (lua_tonumber(passedState,5)==-1){
-		if (passedAnimation->texture!=NULL){
-			passedAnimation->numberOfFrames = (vita2d_texture_get_width(passedAnimation->texture)/passedAnimation->width);
-		}else{
-			BasicMessage("No will work!");
-		}
-	}else{
-		passedAnimation->numberOfFrames = lua_tonumber(passedState,5);
-	}
-	return 0;
-}
-
-// GEt possible enemy
-// ARGS -
-// slot
-// RETURNS -
-// stats* happy
-int L_GetPossibleEnemies(lua_State* passedState){
-	// Possible enemy they want
-	int want = lua_tonumber(passedState,1);
-	lua_pushlightuserdata(passedState,&(possibleEnemies[want]));
-	return 1;
-}
-
-// Set party member data
-// ARGS -
-// partyMember* passedMember
-// stats* passedStats
-int L_SetPartyMember(lua_State* passedState){
-	partyMember* passedMember = lua_touserdata(passedState,1);
-	stats* passedStats = lua_touserdata(passedState,2);
-	passedMember->fighterStats = *passedStats;
-	return 0;
-}
-
-
-// Set stats data
-// ARGS -
-// stats* passedStats
-// char level;
-// short maxHp;
-// short maxMp;
-// unsigned char attack;
-// unsigned char defence;
-// unsigned char magicAttack;
-// unsigned char magicDefence;
-// unsigned char speed;
-// short exp;
-// char* name
-int L_SetStats(lua_State* passedState){
-	stats* passedMember = lua_touserdata(passedState,1);
-	char level = lua_tonumber(passedState,2);
-	short maxHp = lua_tonumber(passedState,3);
-	short maxMp = lua_tonumber(passedState,4);
-	unsigned char attack = lua_tonumber(passedState,5);
-	unsigned char defence = lua_tonumber(passedState,6);
-	unsigned char magicAttack = lua_tonumber(passedState,7);
-	unsigned char magicDefence = lua_tonumber(passedState,8);
-	unsigned char speed = lua_tonumber(passedState,9);
-	short exp = lua_tonumber(passedState,10);
-
-	passedMember->level=level;
-	passedMember->maxHp=maxHp;
-	passedMember->maxMp=maxMp;
-	passedMember->attack=attack;
-	passedMember->defence=defence;
-	passedMember->magicAttack=magicAttack;
-	passedMember->magicDefence=magicDefence;
-	passedMember->speed=speed;
-	passedMember->exp=exp;
-	if (lua_gettop(passedState)==11){
-		passedMember->name = (char*)lua_touserdata(passedState,11);
-	}
-	return 0;
-}
-
-// Get possible enemy animation
-// ARGS
-// slot
-// animation wanted 1 for idle else for attack
-int L_GetPossibleEnemyAnimation(lua_State* passedState){
-	int slot = lua_tonumber(passedState,1);
-	if (lua_tonumber(passedState,2)==1){
-		lua_pushlightuserdata(passedState,&(possibleEnemiesIdleAnimation[slot]));
-	}else{
-		lua_pushlightuserdata(passedState,&(possibleEnemiesAttackAnimation[slot]));
-	}
-	return 1;
-}
-
-// Changes the map
-// ARGS
-// mapfilename
-int L_ChangeMap(lua_State* passedState){
-	char* passedFilename = (char*)lua_tostring(passedState,1);
-	ChangeMap(passedFilename);
-	return 0;
-}
-
-// Adds spell to passed stats
-// ARGS
-// stats* passedMember
-// int passedSpellId
-int L_AddSpellToStats(lua_State* passedState){
-	stats* passedMember = lua_touserdata(passedState,1);
-	int passedSpellId = lua_tonumber(passedState,2);
-
-	AddSpellToStats(passedMember,passedSpellId);
-	return 0;
-}
-
-/*
-Returns the party's size
-RETURNS
-party's size
-*/
-int L_GetPartySize(lua_State* passedState){
-	lua_pushnumber(passedState,partySize);
-	return 1;
-}
-
-// Sets the party's size
-// ARGS
-// newsize
-int L_SetPartySize(lua_State* passedState){
-	partySize=lua_tonumber(passedState,1);
-	return 0;
-}
-
-/*
-Returns a party member's stats
-ARGS
-int partyMemberId
-
-// OR, if we're talking about the struct, pass a partyMember*
-*/
-int L_GetPartyMemberStats(lua_State* passedState){
-	if (lua_isnumber(passedState,1)){
-		int passedId = lua_tonumber(passedState,1);
-		lua_pushlightuserdata(passedState,&(party[passedId].fighterStats));
-	}else{
-		partyMember* passedMember = lua_touserdata(passedState,1);
-		lua_pushlightuserdata(passedState,&(passedMember->fighterStats));
-	}	
-	return 1;
-}
-
-// Starts a wild battle
-int L_StartWildBattle(lua_State* passedState){
-	InitWildBattle();
-	BattleInit();
-	place=3;
-	BattleLop(1);
-	return 0;
-}
-
-// Pass string and will malloc and put that string in that memory and return
-// light user data to that string
-int L_MallocString(lua_State* passedState){
-	const char* passedString = lua_tostring(passedState,1);
-	char* returnString = malloc(strlen(passedString)+1);
-	strcpy(returnString,passedString);
-	lua_pushlightuserdata(passedState,returnString);
-	return 1;
-}
-
-// Call before disposing images..actually, no.
-// you don't really need this.
-int L_PlzNoCrashOnDispose(lua_State* passedState){
-	PlzNoCrashOnDispose();
-	return 0;
-}
-
-// GETS A PARTY MEMBER'S ANIMATION
-// ARGS -
-// slot, whichone
-// whichone is 1 for idle and 2 for attack
-int L_GetPartyMemberAnimation(lua_State* passedState){
-	int whichone = lua_tonumber(passedState,2);
-	int passedSlot = lua_tonumber(passedState,1);
-
-	if (whichone==1){
-		lua_pushlightuserdata(passedState,&(partyIdleAnimation[passedSlot]));
-	}else{
-		lua_pushlightuserdata(passedState,&(partyAttackAnimation[passedSlot]));
-	}
-
-	return 1;
-}
-
-// Quick and ez debug message that doesn't display map in background
-int L_DebugMsg(lua_State* passedState){
-	BasicMessage((char*)lua_tostring(passedState,1));
-	return 0;
-}
-
-// Restores party member's health
-// ARGS
-// slot
-int L_RestorePartyMember(lua_State* passedState){
-	int passedSlot = lua_tonumber(passedState,1);
-	party[passedSlot].hp=party[passedSlot].fighterStats.maxHp;
-	party[passedSlot].mp=party[passedSlot].fighterStats.maxMp;
-	return 0;
-}
-
-// Return map stuff
-// ARGS
-// x, y
-// RETURN
-// tileimg, tileset, isSolid, blockevent
-int L_GetMap(lua_State* passedState){
-	int x = lua_tonumber(passedState,1);
-	int y = lua_tonumber(passedState,2);
-	int layer = lua_tonumber(passedState,3);
-	lua_pushnumber(passedState,GetMapImageData(x,y,layer)->tile);
-	lua_pushnumber(passedState,GetMapImageData(x,y,layer)->tileset);
-	lua_pushboolean(passedState,GetMapSpotData(x,y)->isSolid);
-	lua_pushnumber(passedState,GetMapSpotData(x,y)->event);
-	return 4;
-}
-
-// Set map stuff
-// ARGS
-// isSolid, blockEvent
-int L_SetMapOtherData(lua_State* passedState){
-	int x = lua_tonumber(passedState,1);
-	int y = lua_tonumber(passedState,2);
-	GetMapSpotData(x,y)->isSolid=lua_toboolean(passedState,3);
-	GetMapSpotData(x,y)->event=lua_tonumber(passedState,4);
-	return 0;
-}
-
-// Sets the player's position
-// ARGS
-// x, y
-// position is tiles
-int L_SetPlayerPosition(lua_State* passedState){
-	int x = lua_tonumber(passedState,1);
-	int y = lua_tonumber(passedState,2);
-	playerObject->x=x*32;
-	playerObject->y=y*32;
-	return 0;
-}
-
-// Wait a number of miliseconds
-// ARGS
-// miliseconds
-int L_Wait(lua_State* passedState){
-	int miliseconds = lua_tonumber(passedState,1);
-	Wait(miliseconds);
-	return 0;
-}
-
-// Redraws the map.
-// Honestly, this was just for torches part
-int L_RedrawMap(lua_State* passedState){
-	UpdateCameraValues(playerObject);
-
-	// Drawing
-	vita2d_start_drawing();
-	vita2d_clear_screen();
-
-	DrawMapThings();
-	//DrawText(60,60,"Hello world",2);
-
-	vita2d_end_drawing();
-	vita2d_swap_buffers();
-	vita2d_wait_rendering_done();
-	return 0;
-}
-
-// Set's teh encounter rate
-// ARGS
-// theAmount
-int L_SetEncounterRate(lua_State* passedState){
-	encounterRate = lua_tonumber(passedState,1);
-	nextEncounter = encounterRate+RandBetween(0,5);
-	return 0;
-}
-
-
-// Allocate memory.
-// ARGS
-// memorySize
-// ALT ARG
-// true, presetId
-// Presets will use certian sizes for you.
-// presetId list
-// 0 - animation
-// 1 - stats
-// 2 - partyMember
-// RETURN
-// void*
-// This actually uses calloc and not malloc.
-int L_Malloc(lua_State* passedState){
-	if (lua_gettop(passedState)==2){
-		if (lua_tonumber(passedState,2)==0){
-			lua_pushlightuserdata(passedState,calloc(1,sizeof(animation)));
-		}else if (lua_tonumber(passedState,2)==1){
-			lua_pushlightuserdata(passedState,calloc(1,sizeof(stats)));
-		}else if (lua_tonumber(passedState,2)==2){
-			lua_pushlightuserdata(passedState,calloc(1,sizeof(partyMember)));
-		}
-	}else if (lua_gettop(passedState)==1){
-		lua_pushlightuserdata(passedState,calloc(1,lua_tonumber(passedState,1)));
-	}else{
-		BasicMessage("Broken L_Malloc call, wrong args");
-	}
-	return 1;
-}
-
-
-// Free malloc memory
-// ARGS
-// void*
-int L_Free(lua_State* passedState){
-	free(lua_touserdata(passedState,1));
-	return 0;
-}
-
-// Frees an animation's image
-int L_FreeAnimationImage(lua_State* passedState){
-	animation* passedAnimation = lua_touserdata(passedState,1);
-	if (passedAnimation->texture!=NULL){
-		vita2d_free_texture(passedAnimation->texture);
-		passedAnimation->texture=NULL;
-	}
-	return 0;
-}
-
-int L_Level(lua_State* passedState){
-	int passedMemberId = lua_tonumber(passedState,1);
-	int numLevels = lua_tonumber(passedState,2);
-	int i=0;
-	for (i=0;i<numLevels;i++){
-		
-		party[passedMemberId].fighterStats.level++;
-		
-		party[passedMemberId].fighterStats.attack+=3;
-		party[passedMemberId].fighterStats.magicAttack+=3;
-		party[passedMemberId].fighterStats.defence+=3;
-		party[passedMemberId].fighterStats.magicDefence+=3;
-		party[passedMemberId].fighterStats.speed+=3;
-		party[passedMemberId].fighterStats.maxHp+=3;
-		party[passedMemberId].fighterStats.maxMp+=3;
-		party[passedMemberId].hp=party[passedMemberId].fighterStats.maxHp;
-		party[passedMemberId].mp=party[passedMemberId].fighterStats.maxMp;
-		
-	
-	}
-	return 0;
-}
-
-// Starts a battle with the enemies you want
-// ARGS
-// numberOfEnemies, enemyPartyMember 0, enemyIdleAnimation 0, enemyAttackAnimation 0, enemyStats 1, enemyIdleAnimation 1, enemyAttackAnimation 1, etc...
-// Max is 4 enemies
-// You may ommit args for enemies unused.
-// RETURN
-// didwin(bool)
-int L_StartSpecificBattle(lua_State* passedState){ 
-	int i=0;
-	// Current arg we're using. Start at 2 for first stats
-	int argI=2;
-	for (i=0;i<lua_tonumber(passedState,1);i++){
-		enemies[i]=*((partyMember*)lua_touserdata(passedState,argI));
-		enemies[i].hp=enemies[i].fighterStats.maxHp;
-		enemies[i].mp=enemies[i].fighterStats.maxMp;
-		argI++;
-		enemyIdleAnimation[i]=(lua_touserdata(passedState,argI));
-		argI++;
-		enemyAttackAnimation[i]=(lua_touserdata(passedState,argI));
-		argI++;
-	}
-
-	numberOfEnemies=lua_tonumber(passedState,1);
-
-	BattleInit();
-	place=3;
-	lua_pushboolean(passedState,BattleLop(0));
-	return 1;
-}
-
-// Sets spells
-// ARGS
-// stats*, spell 1, spell 2, etc
-int L_SetStatsSpells(lua_State* passedState){
-	stats* passedStats = lua_touserdata(passedState,1);
-	int i=0;
-	for (i=2;i<=lua_gettop(passedState);i++){
-		passedStats->spells[i-2]=lua_tonumber(passedState,i);
-	}
-	return 0;
-}
-
-int L_GetLevel(lua_State* passedState){
-	int passedMemberId = lua_tonumber(passedState,1);
-	lua_pushnumber(passedState,party[passedMemberId].fighterStats.level);
-	return 1;
-}
-
-int L_EndGame(lua_State* passedState){
-	//ThanksForPlaying
-	place=2;
-	if (LANGUAGE==LANG_ENGLISH){
-		ShowMessage("Thanks for playing!",0);
-	}else if (LANGUAGE==LANG_SPANISH){
-		ShowMessage("Gracias por jugar.",0);
-	}
-/*
-	FILE * fp;
-	// I don't know. You unlock the ability to save your language when you win??
-   fp = fopen ("savedata0:didWin.nathan", "w+");
-   fprintf(fp, "%d", LANGUAGE);
-   fclose(fp);
-   */
-   return 0;
-}
-
-int L_ToBlack(lua_State* passedState){
-	playerObject->x=1000;
-	playerObject->y=600;
-	int x,y,i;
-	for (i=0;i<numberOfLayers;i++){
-		for (y=0;y<tileOtherData.height;y++){
-			for (x=0;x<tileOtherData.width;x++){
-				GetMapImageData(x,y,i)->tile=1;
-			}
-		}
-	}
-	return 0;
-}
-
-// Makes Lua usefull.
-void PushCFunctions(){
-	lua_pushcfunction(L,L_SetMapImageData);
-	lua_setglobal(L,"SetMapImageData");
-	//
-	lua_pushcfunction(L,L_SetInt);
-	lua_setglobal(L,"SetInt");
-	//
-	lua_pushcfunction(L,L_ShowMessage);
-	lua_setglobal(L,"ShowMessage");
-	//
-	lua_pushcfunction(L,L_LoadPNG);
-	lua_setglobal(L,"LoadPNG");
-	//
-	lua_pushcfunction(L,L_UnloadTexture);
-	lua_setglobal(L,"UnloadTexture");
-	//
-	lua_pushcfunction(L,L_SetTileset);
-	lua_setglobal(L,"SetTileset");
-	//
-	lua_pushcfunction(L,L_GetSpell);
-	lua_setglobal(L,"GetSpell");
-	//
-	lua_pushcfunction(L,L_AddSpell);
-	lua_setglobal(L,"AddSpell");
-	//
-	lua_pushcfunction(L,L_SetSpell);
-	lua_setglobal(L,"SetSpell");
-	//
-	lua_pushcfunction(L,L_SetAnimation);
-	lua_setglobal(L,"SetAnimation");
-	//
-	lua_pushcfunction(L,L_GetSpellAnimation);
-	lua_setglobal(L,"GetSpellAnimation");
-	//
-	lua_pushcfunction(L,L_GetPossibleEnemies);
-	lua_setglobal(L,"GetMapEnemy");
-	//
-	lua_pushcfunction(L,L_GetPossibleEnemyAnimation);
-	lua_setglobal(L,"GetMapEnemyAnimation");
-	//
-	lua_pushcfunction(L,L_SetPartyMember);
-	lua_setglobal(L,"SetPartyMember");
-	//
-	lua_pushcfunction(L,L_SetStats);
-	lua_setglobal(L,"SetStats");
-	//
-	lua_pushcfunction(L,L_ShowMessageWithPortrait);
-	lua_setglobal(L,"ShowMessageWithPortrait");
-	//
-	lua_pushcfunction(L,L_ChangeMap);
-	lua_setglobal(L,"ChangeMap");
-	//
-	lua_pushcfunction(L,L_AddSpellToStats);
-	lua_setglobal(L,"AddSpellToStats");
-	//
-	lua_pushcfunction(L,L_GetPartyMemberStats);
-	lua_setglobal(L,"GetPartyMemberStats");
-	//
-	lua_pushcfunction(L,L_GetPartySize);
-	lua_setglobal(L,"GetPartySize");
-	//
-	lua_pushcfunction(L,L_StartWildBattle);
-	lua_setglobal(L,"StartWildBattle");
-	//
-	lua_pushcfunction(L,L_DestroyTileset);
-	lua_setglobal(L,"FreeTileset");
-	//
-	lua_pushcfunction(L,L_MallocString);
-	lua_setglobal(L,"MallocString");
-	//
-	lua_pushcfunction(L,L_PlzNoCrashOnDispose);
-	lua_setglobal(L,"PlzNoCrashOnDispose");
-	//
-	lua_pushcfunction(L,L_SetPartySize);
-	lua_setglobal(L,"SetPartySize");
-	//
-	lua_pushcfunction(L,L_GetPartyMemberAnimation);
-	lua_setglobal(L,"GetPartyMemberAnimation");
-	//
-	lua_pushcfunction(L,L_DebugMsg);
-	lua_setglobal(L,"DebugMsg");
-	//
-	lua_pushcfunction(L,L_RestorePartyMember);
-	lua_setglobal(L,"RestorePartyMember");
-	//
-	lua_pushcfunction(L,L_GetMap);
-	lua_setglobal(L,"GetMap");
-	//
-	lua_pushcfunction(L,L_SetMapOtherData);
-	lua_setglobal(L,"SetMapOtherData");
-	//
-	lua_pushcfunction(L,L_SetPlayerPosition);
-	lua_setglobal(L,"SetPlayerPosition");
-	//
-	lua_pushcfunction(L,L_Wait);
-	lua_setglobal(L,"Wait");
-	//
-	lua_pushcfunction(L,L_RedrawMap);
-	lua_setglobal(L,"RedrawMap");
-	//
-	lua_pushcfunction(L,L_SetEncounterRate);
-	lua_setglobal(L,"SetEncounterRate");
-	//
-	lua_pushcfunction(L,L_Malloc);
-	lua_setglobal(L,"Malloc");
-	//
-	lua_pushcfunction(L,L_Free);
-	lua_setglobal(L,"Free");
-	//
-	lua_pushcfunction(L,L_FreeAnimationImage);
-	lua_setglobal(L,"FreeAnimationImage");
-	//
-	lua_pushcfunction(L,L_StartSpecificBattle);
-	lua_setglobal(L,"StartSpecificBattle");
-	//
-	lua_pushcfunction(L,L_SetStatsSpells);
-	lua_setglobal(L,"SetStatsSpells");
-	//
-	lua_pushcfunction(L,L_Level);
-	lua_setglobal(L,"Level");
-	//
-	lua_pushcfunction(L,L_GetLevel);
-	lua_setglobal(L,"GetLevel");
-	//
-	lua_pushcfunction(L,L_EndGame);
-	lua_setglobal(L,"ThanksForPlaying");
-	//
-	lua_pushcfunction(L,L_ToBlack);
-	lua_setglobal(L,"ToBlack");
-}
+#include "LuaFunctions.h"
 
 
 /*
@@ -3153,16 +2781,34 @@ void PushCFunctions(){
 ///////////////////////////////////////
 */
 
-
 void Init(){
 	// Good stuff
 	spellLinkedListStart=malloc(sizeof(spellLinkedList));
 
-	// Init vita2d and set its clear color.
-	vita2d_init();
-	vita2d_set_clear_color(RGBA8(212, 208, 200, 0xFF));
-	// We love default fonts.
-	defaultPgf = vita2d_load_default_pgf();
+	#if PLATFORM == PLAT_VITA
+		// Init vita2d and set its clear color.
+		vita2d_init();
+		vita2d_set_clear_color(RGBA8(212, 208, 200, 0xFF));
+		// We love default fonts.
+		//defaultPgf = vita2d_load_default_pgf();
+	#elif PLATFORM == PLAT_WINDOWS
+
+		mainWindow = SDL_CreateWindow( "HappyWindo", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 960, 544, SDL_WINDOW_SHOWN );
+		ShowErrorIfNull(mainWindow);
+
+		if (0==1){
+			mainWindowRenderer = SDL_CreateRenderer( mainWindow, -1, SDL_RENDERER_ACCELERATED);
+		}else{
+			mainWindowRenderer = SDL_CreateRenderer( mainWindow, -1, SDL_RENDERER_PRESENTVSYNC);
+		}
+		ShowErrorIfNull(mainWindowRenderer);
+
+		// This is the default background color.
+		SDL_SetRenderDrawColor( mainWindowRenderer, 212, 208, 200, 255 );
+		// Check if this fails?
+		IMG_Init( IMG_INIT_PNG );
+
+	#endif
 
 	// ... I guess I have to do this? I'm... most probrablly not basing this off the sample.
 	memset(&pad, 0, sizeof(pad));
@@ -3174,30 +2820,33 @@ void Init(){
 	}
 
 	#if SHOWSPLASH==1
-		vita2d_texture* happy = vita2d_load_PNG_file("app0:OtherStuff/Splash.png");
-	
-		vita2d_start_drawing();
-		vita2d_clear_screen();
-	
-		vita2d_draw_texture(happy,0,0);
-	
-		vita2d_end_drawing();
-		vita2d_swap_buffers();
-		sceCtrlPeekBufferPositive(0, &pad, 1);
-		if (!((pad.buttons & SCE_CTRL_LTRIGGER) && (pad.buttons & SCE_CTRL_UP))){
-			Wait(700);
-		}
-	#endif
+		#if PLATFORM == PLAT_VITA
+			#if PLATFORM == PLAT_VITA
+				CrossTexture* happy = LoadPNG("app0:OtherStuff/Splash.png");
+			#elif PLATFORM == PLAT_WINDOWS
+				CrossTexture* happy = LoadPNG("./OtherStuff/Splash.png");
+			#endif
 
-	
-	if (pad.buttons & SCE_CTRL_RTRIGGER){
-		LANGUAGE=LANG_SPANISH;
-	}
+			StartDrawing();
+			DrawTexture(happy,0,0);
+			EndDrawing();
+			
+			StartFrameStuff();
+			//sceCtrlPeekBufferPositive(0, &pad, 1);
+			if (!(IsDown(SCE_CTRL_LTRIGGER))){
+				Wait(700);
+			}
+		#endif
+	#endif
 
 	// Init Lua
 	L = luaL_newstate();
 	luaL_openlibs(L);
 	PushCFunctions();
+
+	// Set platform lua variable
+	lua_pushnumber(L,PLATFORM);
+	lua_setglobal(L,"Platform");
 
 
 	// Set all enemy pointers to null
@@ -3211,25 +2860,51 @@ void Init(){
 		possibleEnemies[i].maxHp=-1;
 	}
 
+	#if PLATFORM == PLAT_VITA
+		// Load player frames
+		playerDown=LoadPNG("app0:Stuff/PlayerDown.png");
+		playerUp=LoadPNG("app0:Stuff/PlayerUp.png");
+		playerLeft=LoadPNG("app0:Stuff/PlayerLeft.png");
+		playerRight=LoadPNG("app0:Stuff/PlayerRight.png");
+		
+		// Load tilde
+		tilde_a = LoadPNG("app0:Stuff/Tilde/a.png");
+		tilde_e = LoadPNG("app0:Stuff/Tilde/e.png");
+		tilde_i = LoadPNG("app0:Stuff/Tilde/i.png");
+		tilde_o = LoadPNG("app0:Stuff/Tilde/o.png");
+		tilde_u = LoadPNG("app0:Stuff/Tilde/u.png");
+		tilde_n = LoadPNG("app0:Stuff/Tilde/n.png");
+		tilde_esclimationPoint = LoadPNG("app0:Stuff/Tilde/EsclimationPoint.png");
+		tilde_questionMark = LoadPNG("app0:Stuff/Tilde/QuestionMark.png");
+		
+		// Load what, I guess, could be called a font. It's just an image.
+		fontImage=LoadPNG("app0:Stuff/Font.png");
 
-	// Load player frames
-	playerDown=vita2d_load_PNG_file("app0:Stuff/PlayerDown.png");
-	playerUp=vita2d_load_PNG_file("app0:Stuff/PlayerUp.png");
-	playerLeft=vita2d_load_PNG_file("app0:Stuff/PlayerLeft.png");
-	playerRight=vita2d_load_PNG_file("app0:Stuff/PlayerRight.png");
+		// Selector animation for good looking menus
+		selectorAnimation.texture=LoadPNG("app0:Stuff/Selector.png");
+	#elif PLATFORM == PLAT_WINDOWS
+		// Load player frames
+		playerDown=LoadPNG("./Stuff/PlayerDown.png");
+		playerUp=LoadPNG("./Stuff/PlayerUp.png");
+		playerLeft=LoadPNG("./Stuff/PlayerLeft.png");
+		playerRight=LoadPNG("./Stuff/PlayerRight.png");
+		
+		// Load tilde
+		tilde_a = LoadPNG("./Stuff/Tilde/a.png");
+		tilde_e = LoadPNG("./Stuff/Tilde/e.png");
+		tilde_i = LoadPNG("./Stuff/Tilde/i.png");
+		tilde_o = LoadPNG("./Stuff/Tilde/o.png");
+		tilde_u = LoadPNG("./Stuff/Tilde/u.png");
+		tilde_n = LoadPNG("./Stuff/Tilde/n.png");
+		tilde_esclimationPoint = LoadPNG("./Stuff/Tilde/EsclimationPoint.png");
+		tilde_questionMark = LoadPNG("./Stuff/Tilde/QuestionMark.png");
 	
-	// Load tilde
-	tilde_a = vita2d_load_PNG_file("app0:Stuff/Tilde/a.png");
-	tilde_e = vita2d_load_PNG_file("app0:Stuff/Tilde/e.png");
-	tilde_i = vita2d_load_PNG_file("app0:Stuff/Tilde/i.png");
-	tilde_o = vita2d_load_PNG_file("app0:Stuff/Tilde/o.png");
-	tilde_u = vita2d_load_PNG_file("app0:Stuff/Tilde/u.png");
-	tilde_n = vita2d_load_PNG_file("app0:Stuff/Tilde/n.png");
-	tilde_esclimationPoint = vita2d_load_PNG_file("app0:Stuff/Tilde/EsclimationPoint.png");
-	tilde_questionMark = vita2d_load_PNG_file("app0:Stuff/Tilde/QuestionMark.png");
+		// Load what, I guess, could be called a font. It's just an image.
+		fontImage=LoadPNG("./Stuff/Font.png");
 
-	// Selector animation for good looking menus
-	selectorAnimation.texture=vita2d_load_PNG_file("app0:Stuff/Selector.png");
+		// Selector animation for good looking menus
+		selectorAnimation.texture=LoadPNG("./Stuff/Selector.png");
+	#endif
 	selectorAnimation.numberOfFrames=8;
 	selectorAnimation.width=22;
 	selectorAnimation.height=17;
@@ -3253,8 +2928,6 @@ void Init(){
 	(playerObject)=&(mapObjects[0]);
 	// Sets map scale and stuff.
 	SetCameraValues();
-	// Load what, I guess, could be called a font. It's just an image.
-	fontImage=vita2d_load_PNG_file("app0:Stuff/Font.png");
 	// Becuase I'm lazy and take the E-z way out
 	dummyMember.fighterStats.name="Dummy";
 	dummyMember.fighterStats.maxHp=1;
@@ -3266,29 +2939,27 @@ void Init(){
 	dummyMember.hp=01;
 	dummyMember.mp=01;
 
-	// Get touch
-	sceTouchPeek(SCE_TOUCH_PORT_FRONT, &currentTouch, 1);
-
-	// Magic line to fix touch. It's really magic, I promise.
-	sceTouchSetSamplingState(SCE_TOUCH_PORT_FRONT, 1);
+	#if PLATFORM == PLAT_VITA
+		// Get touch
+		sceTouchPeek(SCE_TOUCH_PORT_FRONT, &currentTouch, 1);
 	
+		// Magic line to fix touch. It's really magic, I promise.
+		sceTouchSetSamplingState(SCE_TOUCH_PORT_FRONT, 1);
+	#endif
+
 	place=5;
 
 	PlzNoCrashOnDispose();
 	#if SHOWSPLASH==1
-		vita2d_free_texture(happy);
+		#if PLATFORM == PLAT_VITA
+			FreeTexture(happy);
+		#endif
 	#endif
 }
 
-int main(){
+int main(int argc, char *argv[]){
 	srand(time(NULL));
 	Init();	
-	//tilesets[0] = vita2d_load_PNG_file("app0:Stuff/a.png");
-
-	//ChangeMap("app0:Stuff/test");
-	//ChangeMap("app0:Stuff/test");
-	//ChangeMap("app0:Stuff/test");
-	//ChangeMap("app0:Stuff/test");
 
 	/*
 		0 - Overworld
@@ -3317,9 +2988,21 @@ int main(){
 	
 
 	// End this stuff
-	vita2d_fini();
-	vita2d_free_pgf(defaultPgf);
-	// I really don't get why I need this when the user can just use the PS button.
-	sceKernelExitProcess(0);
+	#if PLATFORM == PLAT_VITA
+		vita2d_fini();
+		//vita2d_free_pgf(defaultPgf);
+		// I really don't get why I need this when the user can just use the PS button.
+		sceKernelExitProcess(0);
+	#elif PLATFORM == PLAT_WINDOWS
+		//Destroy window
+		SDL_DestroyRenderer( mainWindowRenderer );
+		SDL_DestroyWindow( mainWindow );
+		mainWindow = NULL;
+		mainWindowRenderer = NULL;
+		// QUit SDL subsystems
+		IMG_Quit();
+		SDL_Quit();
+		lua_close(L);
+	#endif
 	return 0;
 }

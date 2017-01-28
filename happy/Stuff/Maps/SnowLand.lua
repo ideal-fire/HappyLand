@@ -8,10 +8,10 @@ end
 
 function Event01()
 	SetPlayerPosition(13,14);
-	ChangeMap("app0:Stuff/Maps/StartTown");
+	ChangeMap(FixString("Stuff/Maps/StartTown"));
 end
 function Event02()
-	tempPort = LoadPNG("app0:Stuff/Portraits/Lump.png");
+	tempPort = LoadPNG(FixString("Stuff/Portraits/Lump.png"));
 
 	if (Lang==1) then
 		ShowMessageWithPortrait("It's a useless pile of snow clearly only there to make the area seem less empty.",false,tempPort,0);
@@ -23,7 +23,7 @@ function Event02()
 	tempPort=nil;
 end
 function Event03()
-	tempPort = LoadPNG("app0:Stuff/Portraits/Sign.png");
+	tempPort = LoadPNG(FixString("Stuff/Portraits/Sign.png"));
 
 	if (Lang==1) then
 		ShowMessageWithPortrait("Go up to get to Big Foot Land.",false,tempPort,0);
@@ -36,18 +36,18 @@ function Event03()
 end
 function Event04()
 	SetPlayerPosition(7,13);
-	ChangeMap("app0:Stuff/Maps/BigFootChamber");
+	ChangeMap(FixString("Stuff/Maps/BigFootChamber"));
 end
 
 
-tileset0=LoadPNG("app0:Stuff/Tilesets/SnowyTilesetA.png");
+tileset0=LoadPNG(FixString("Stuff/Tilesets/SnowyTilesetA.png"));
 SetTileset(tileset0,0);
 tileset0=nil;
 
 
 --
 battleEnemyLoadId=0;
-dofile("app0:Stuff/BattleLua/Snowman.lua");
+dofile(FixString("Stuff/BattleLua/Snowman.lua"));
 --
 SetEncounterRate(8);
 
