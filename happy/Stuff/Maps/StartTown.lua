@@ -273,3 +273,6 @@ dofile(FixString("Stuff/BattleLua/Slime.lua"));
 --
 
 SetEncounterRate(10);
+
+
+StartWildBattle();

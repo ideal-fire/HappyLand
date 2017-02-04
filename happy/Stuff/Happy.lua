@@ -1,11 +1,14 @@
-PLAT_VITA = 1
-PLAT_WINDOWS = 2
+PLAT_VITA = 1;
+PLAT_WINDOWS = 2;
+PLAT_3DS = 3;
 
 function FixString(passedString)
 	if (Platform==PLAT_VITA) then
 		return ("app0:" .. passedString);
 	elseif (Platform==PLAT_WINDOWS) then
 		return ("./" .. passedString);
+	elseif (Platform==PLAT_3DS) then
+		return ("/3ds/data/HappyLand/" .. passedString);
 	end
 end
 

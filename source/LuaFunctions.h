@@ -543,6 +543,8 @@ int L_StartSpecificBattle(lua_State* passedState){
 	BattleInit();
 	place=3;
 	lua_pushboolean(passedState,BattleLop(0));
+
+	EndFrameStuff();
 	return 1;
 }
 

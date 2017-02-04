@@ -26,7 +26,7 @@ end
 function Event02()
 	tempPort = LoadPNG(FixString("Stuff/Portraits/Player.png"));
 	if (Lang==1) then
-		ShowMessageWithPortrait("It's my fresh computer. I like to play my favorite game on it, Space Pinball. It came free with the XP version of my operating system. XP standing for" .. '"eXtra exPencive", of course.',false,tempPort,0);
+		ShowMessageWithPortrait("It's my fresh computer. I like to play my favorite game on it, Space Pinball. It came free with the XP version of my operating system. XP standing for " .. '"eXtra exPencive", of course.',false,tempPort,0);
 		ShowMessage("(The computer is just a monitor connected to a potato.)",false);
 	elseif (Lang==2) then
 		-- Does not include XP joke.

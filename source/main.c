@@ -1,6 +1,3 @@
-// Support acsents by using string similar to english international keyboard
-// 'a for acsent on a
-
 /*
 ---O---OO--OOOOO-O-OO-OOOOO----O---O
 --O-O-O-O--O---O-OO---O---O---O-O-O-
@@ -19,29 +16,110 @@ int LANGUAGE=LANG_ENGLISH;
 
 #define PLAT_VITA 1
 #define PLAT_WINDOWS 2
+#define PLAT_3DS 3
 
-#define PLATFORM PLAT_WINDOWS
+#define PLATFORM PLAT_3DS
 
 #if PLATFORM == PLAT_VITA
 	#define STARTINGMAP "app0:Stuff/Maps/NathansHouse"
 #elif PLATFORM == PLAT_WINDOWS
 	#define STARTINGMAP "./Stuff/Maps/NathansHouse"
+#elif PLATFORM == PLAT_3DS
+	#define STARTINGMAP "/3ds/data/HappyLand/Stuff/Maps/StartTown"
 #endif
 
 // Translatos for hardcoded strings
 #include "HardcodedLanguage.h"
 
-#define MAPXSCALE 2
-#define MAPYSCALE 2
-#define MAXOBJECTS 15
 
-#define SCREENWIDTH 960
-#define SCREENHEIGHT 544
+#define MAXOBJECTS 15
+#if PLATFORM==PLAT_VITA
+	#define SCREENWIDTH 960
+	#define SCREENHEIGHT 544
+	#define MAPXSCALE 2
+	#define MAPYSCALE 2
+	#define BATTLEENTITYSCALE 3
+	#define SPELLSCALE 4
+	// Minimum y position for an entity to be at during a battle.
+	// This is so they don't overlap the healthbar
+	#define MINYBATTLE 106
+	// This is so they don't overlap the selection buttons. Put as the screen height for no restriction
+	#define MAXYBATTLE 416
+
+	// CROSS TYPES
+	#define CrossTexture vita2d_texture
+	
+	// Textbox's y position
+	#define TEXTBOXY 420
+	
+	// Size of letters in textbox
+	#define TEXTBOXFONTSIZE 2.5
+
+	// Lines on one screen of textbox
+	#define LINESPERSCREEN 4
+	// w and height of portertit
+	#define DEFAULTPORTRAITSIZE 200
+	// You know how in the battle when you hit somebody it shows the damage
+	// well this is the scale of the text
+	#define DAMAGETEXTSIZE 8
+#elif PLATFORM==PLAT_WINDOWS
+	#define SCREENWIDTH 960
+	#define SCREENHEIGHT 544
+	#define MAPXSCALE 2
+	#define MAPYSCALE 2
+	#define BATTLEENTITYSCALE 3
+	#define SPELLSCALE 4
+	#define MINYBATTLE 106
+	#define MAXYBATTLE 416
+
+	#define CrossTexture SDL_Texture
+	#define TEXTBOXY 420
+	#define TEXTBOXFONTSIZE 2.5
+
+	// Lines on one screen of textbox
+	#define LINESPERSCREEN 4
+
+	#define DEFAULTPORTRAITSIZE 200
+
+	#define DAMAGETEXTSIZE 8
+#elif PLATFORM==PLAT_3DS
+	#define SCREENWIDTH 400
+	#define SCREENHEIGHT 240
+	#define MAPXSCALE 1
+	#define MAPYSCALE 1
+	
+	#define BATTLEENTITYSCALE 1
+	#define SPELLSCALE 2
+	// No need to restrict this as stuff is on bottom screen
+	#define MINYBATTLE 0
+	#define MAXYBATTLE SCREENHEIGHT
+
+	#define SCE_CTRL_CROSS KEY_A
+	#define SCE_CTRL_CIRCLE KEY_B
+	#define SCE_CTRL_UP KEY_UP
+	#define SCE_CTRL_DOWN KEY_DOWN
+	#define SCE_CTRL_LEFT KEY_LEFT
+	#define SCE_CTRL_RIGHT KEY_RIGHT
+	#define SCE_CTRL_TRIANGLE KEY_X
+	#define SCE_CTRL_SQUARE KEY_Y
+	#define SCE_CTRL_START KEY_START
+	
+	#define CrossTexture sf2d_texture
+	
+	#define TEXTBOXFONTSIZE 1.5
+	// SCREENHEIGHT - (Font*8)*desiredlines-5-5*desiredlines
+	#define TEXTBOXY 172
+	
+	#define LINESPERSCREEN 3
+
+	#define DEFAULTPORTRAITSIZE 100
+
+	#define DAMAGETEXTSIZE 2
+#endif
 
 // Not needed. Can use registry if you don't want to sleep.
 #define NOSLEEP 0
 
-#define TEXTBOXY 420
 
 // UNCHANGED BY SCALE
 int drawXOffset=0;
@@ -66,6 +144,15 @@ int drawYOffset=0;
 	#include <psp2/display.h>
 	
 	#include <vita2d.h>
+
+	typedef uint8_t 	u8;
+	typedef uint16_t 	u16;
+	typedef uint32_t	u32;
+	typedef uint64_t	u64;
+	typedef int8_t		s8;
+	typedef int16_t		s16;
+	typedef int32_t		s32;
+	typedef int64_t		s64;
 #elif PLATFORM == PLAT_WINDOWS
 	#include <time.h>
 
@@ -73,12 +160,12 @@ int drawYOffset=0;
 	#include <SDL2/SDL_image.h>
 
 	#define u64 unsigned long
-#endif
-
-#if PLATFORM == PLAT_VITA
-	#define CrossTexture vita2d_texture
-#elif PLATFORM == PLAT_WINDOWS
-	#define CrossTexture SDL_Texture
+#elif PLATFORM == PLAT_3DS
+	#include <3ds.h>
+	#include <stdio.h>
+	#include <sf2d.h>
+	#include <sfil.h>
+	#include <3ds/svc.h>
 #endif
 
 // Include stuff I made.
@@ -202,7 +289,9 @@ int drawYOffset=0;
 
 	char pad[19]={0};
 	char lastPad[19]={0};
-
+#elif PLATFORM==PLAT_3DS
+	u32 pad;
+	u32 wasJustPad;
 #endif
 
 #define unusedAreaColor 0,0,0,255
@@ -312,6 +401,8 @@ void DrawRectangle(int x, int y, int w, int h, int r, int g, int b, int a){
 		tempRect.w=w;
 		tempRect.h=h;
 		SDL_RenderFillRect(mainWindowRenderer,&tempRect);
+	#elif PLATFORM == PLAT_3DS
+		sf2d_draw_rectangle(x,y,w,h,RGBA8(r,g,b,a));
 	#endif
 }
 
@@ -342,12 +433,14 @@ void DrawTexture(CrossTexture* passedTexture, int _destX, int _destY){
 		_srcRect.y=0;
 	
 		SDL_RenderCopy(mainWindowRenderer, passedTexture, &_srcRect, &_destRect );
+	#elif PLATFORM == PLAT_3DS
+		sf2d_draw_texture(passedTexture,_destX,_destY);
 	#endif
 }
 
 void DrawTexturePartScale(CrossTexture* passedTexture, int destX, int destY, int texX, int texY, int texW, int texH, float texXScale, float texYScale){
 	#if PLATFORM == PLAT_VITA
-		vita2d_draw_texture_part_scale(passedTexture,destX,destY,texX,texY.texW, texH, texXScale, int textYScale);
+		vita2d_draw_texture_part_scale(passedTexture,destX,destY,texX,texY,texW, texH, texXScale, texYScale);
 	#elif PLATFORM == PLAT_WINDOWS
 		SDL_Rect _srcRect;
 		SDL_Rect _destRect;
@@ -364,12 +457,14 @@ void DrawTexturePartScale(CrossTexture* passedTexture, int destX, int destY, int
 		_destRect.y=destY;
 
 		SDL_RenderCopy(mainWindowRenderer, passedTexture, &_srcRect, &_destRect );
+	#elif PLATFORM==PLAT_3DS
+		sf2d_draw_texture_part_scale(passedTexture,destX,destY,texX,texY,texW, texH, texXScale, texYScale);
 	#endif
 }
 
 void DrawTextureScale(CrossTexture* passedTexture, int destX, int destY, float texXScale, float texYScale){
 	#if PLATFORM == PLAT_VITA
-		vita2d_draw_texture_scale(passedTexture,x,y,texXScale,textYScale);
+		vita2d_draw_texture_scale(passedTexture,destX,destY,texXScale,texYScale);
 	#elif PLATFORM == PLAT_WINDOWS
 		SDL_Rect _srcRect;
 		SDL_Rect _destRect;
@@ -385,6 +480,8 @@ void DrawTextureScale(CrossTexture* passedTexture, int destX, int destY, float t
 		_destRect.y=destY;
 
 		SDL_RenderCopy(mainWindowRenderer, passedTexture, &_srcRect, &_destRect );
+	#elif PLATFORM == PLAT_3DS
+		sf2d_draw_texture_scale(passedTexture,destX,destY,texXScale,texYScale);
 	#endif
 }
 
@@ -394,6 +491,8 @@ void DrawTexturePartScaleRotate(CrossTexture* texture, float x, float y, float t
 		vita2d_draw_texture_part_scale_rotate(texture,x,y,tex_x,tex_y,tex_w,tex_h,x_scale,y_scale,rad);
 	#elif PLATFORM == PLAT_WINDOWS
 		DrawTexturePartScale(texture,x,y,tex_x,tex_y,tex_w,tex_h,x_scale,y_scale);
+	#elif PLATFORM == PLAT_3DS
+		sf2d_draw_texture_part_rotate_scale(texture,x,y,rad,tex_x,tex_y,tex_w,tex_h,x_scale,y_scale);
 	#endif
 }
 
@@ -404,6 +503,8 @@ int GetTextureWidth(CrossTexture* passedTexture){
 		int w, h;
 		SDL_QueryTexture(passedTexture, NULL, NULL, &w, &h);
 		return w;
+	#elif PLATFORM == PLAT_3DS
+		return passedTexture->width;
 	#endif
 }
 
@@ -414,11 +515,13 @@ int GetTextureHeight(CrossTexture* passedTexture){
 		int w, h;
 		SDL_QueryTexture(passedTexture, NULL, NULL, &w, &h);
 		return h;
+	#elif PLATFORM == PLAT_3DS
+		return passedTexture->height;
 	#endif
 }
 
 char ShowErrorIfNull(void* _thingie){
-	#if PLATFORM == PLAT_VITA
+	#if PLATFORM == PLAT_VITA || PLATFORM == PLAT_3DS
 		if (_thingie==NULL){
 			printf("Some wacky thingie is null");
 			return 1;
@@ -439,8 +542,11 @@ void StartDrawing(){
 		vita2d_clear_screen();
 	#elif PLATFORM == PLAT_WINDOWS
 		SDL_RenderClear(mainWindowRenderer);
+	#elif PLATFORM == PLAT_3DS
+		sf2d_start_frame(GFX_TOP, GFX_LEFT);
 	#endif
 }
+
 void EndDrawing(){
 	#if PLATFORM == PLAT_VITA
 		vita2d_end_drawing();
@@ -448,6 +554,9 @@ void EndDrawing(){
 		vita2d_wait_rendering_done();
 	#elif PLATFORM == PLAT_WINDOWS
 		SDL_RenderPresent(mainWindowRenderer);
+	#elif PLATFORM == PLAT_3DS
+		sf2d_end_frame();
+		sf2d_swapbuffers();
 	#endif
 }
 
@@ -466,6 +575,8 @@ CrossTexture* LoadPNG(char* path){
 		// Free memori
 		SDL_FreeSurface(_tempSurface);
 		return _returnTexture;
+	#elif PLATFORM == PLAT_3DS
+		return sfil_load_PNG_file(path,SF2D_PLACE_RAM);
 	#endif
 }
 
@@ -475,6 +586,9 @@ void FreeTexture(CrossTexture* passedTexture){
 		passedTexture=NULL;
 	#elif PLATFORM == PLAT_WINDOWS
 		SDL_DestroyTexture(passedTexture);
+		passedTexture=NULL;
+	#elif PLATFORM == PLAT_3DS
+		sf2d_free_texture(passedTexture);
 		passedTexture=NULL;
 	#endif
 }
@@ -559,6 +673,8 @@ u64 GetTicks(){
 		return temp.tick;
 	#elif PLATFORM == PLAT_WINDOWS
 		return SDL_GetTicks();
+	#elif PLATFORM == PLAT_3DS
+		return svcGetSystemTick();
 	#endif
 }
 
@@ -631,6 +747,10 @@ void StartFrameStuff(){
 				}
 			}
 		}
+	#elif PLATFORM==PLAT_3DS
+		hidScanInput();
+		wasJustPad = hidKeysDown();
+		pad = hidKeysHeld();
 	#endif
 }
 void EndFrameStuff(){
@@ -732,7 +852,7 @@ void DrawUnusedAreaRect(){
 	// Left
 	DrawRectangle(0,0,drawXOffset,SCREENHEIGHT,unusedAreaColor);
 	// Right
-	DrawRectangle(SCREENWIDTH,0,drawXOffset,SCREENHEIGHT,unusedAreaColor);
+	DrawRectangle(SCREENWIDTH-drawXOffset,0,drawXOffset,SCREENHEIGHT,unusedAreaColor);
 }
 
 char checkCollision(int x, int y){
@@ -838,28 +958,33 @@ char WasJustPressed(int value){
 		if (pad.buttons & value && !(lastPad.buttons & value)){
 			return 1;
 		}
-		return 0;
 	#elif PLATFORM == PLAT_WINDOWS
 		if (pad[value]==1 && lastPad[value]==0){
 			return 1;
 		}
-		return 0;
+	#elif PLATFORM==PLAT_3DS
+		if (wasJustPad & value){
+			return 1;
+		}
 	#endif
+	return 0;
 }
-
 
 char IsDown(int value){
 	#if PLATFORM == PLAT_VITA
 		if (pad.buttons & value){
 			return 1;
 		}
-		return 0;
 	#elif PLATFORM == PLAT_WINDOWS
 		if (pad[value]==1){
 			return 1;
 		}
-		return 0;
+	#elif PLATFORM == PLAT_3DS
+		if (pad & value){
+			return 1;
+		}
 	#endif
+	return 0;
 }
 
 // Draws everything we draw on map.
@@ -870,19 +995,19 @@ void DrawMapThings(){
 }
 
 void BasicMessage(char* message){
-
-
 	// Letter we're currently displaying.
 	short currentLetter=0;
 
 	char quitTextbox=0;
 
 	// Letter scale is 2.5. 8*2.5=20.
-	unsigned char maxLetters=floor(960/(20));
+	unsigned char maxLetters=floor(SCREENWIDTH/(8*TEXTBOXFONTSIZE));
+
+	// 68/(8*2)
+	unsigned char linesPerScreen = LINESPERSCREEN;/*floor((SCREENHEIGHT-TEXTBOXY)/(8*TEXTBOXFONTSIZE));*/
 
 	short newlineSpaces[50];
 	char totalNewLines=0;
-
 
 	int i=0;
 	int j=0;
@@ -910,8 +1035,8 @@ void BasicMessage(char* message){
 	}
 	newlineSpaces[(int)totalNewLines]=strlen(message);
 
-	char sectionOfCurrentMessage=3;
-	if (totalNewLines<3){
+	char sectionOfCurrentMessage=linesPerScreen-1;
+	if (totalNewLines<linesPerScreen-1){
 		sectionOfCurrentMessage=totalNewLines;
 	}
 	short characterOffset=0;
@@ -926,11 +1051,11 @@ void BasicMessage(char* message){
 			
 			// ADVANCE TO NEXT MESSAGE
 			if (sectionOfCurrentMessage!=totalNewLines){
-				startSectionOfNewLine+=4;
+				startSectionOfNewLine+=linesPerScreen;
 				characterOffset=newlineSpaces[(int)sectionOfCurrentMessage];
 				currentLetter=newlineSpaces[(int)sectionOfCurrentMessage]+1;
-				if (sectionOfCurrentMessage+4<=totalNewLines){
-					sectionOfCurrentMessage+=4;
+				if (sectionOfCurrentMessage+linesPerScreen<=totalNewLines){
+					sectionOfCurrentMessage+=linesPerScreen;
 				}else{
 					sectionOfCurrentMessage=totalNewLines;
 				}
@@ -963,13 +1088,14 @@ void BasicMessage(char* message){
 				currentXPos++;
 			}
 			if (IsThisTilde(message,i)){
-				DrawTildeLetterUnscaled(message[i+1],currentXPos*20+5,TEXTBOXY+currentYPos*20+currentYPos*5+5,2.5);
+				DrawTildeLetterUnscaled(message[i+1],currentXPos*(TEXTBOXFONTSIZE*8)+5,TEXTBOXY+currentYPos*(TEXTBOXFONTSIZE*8)+currentYPos*5+5,2.5);
 				i++;
 				continue;
 			}
 			// currentXPos*20 has a +5 for offset so not at screen edge.
-			DrawLetterUnscaled(message[i],currentXPos*20+5,TEXTBOXY+currentYPos*20+currentYPos*5+5,2.5);
+			DrawLetterUnscaled(message[i],currentXPos*(TEXTBOXFONTSIZE*8)+5,TEXTBOXY+currentYPos*(TEXTBOXFONTSIZE*8)+currentYPos*5+5,TEXTBOXFONTSIZE);
 		}
+		//DrawTextAsISay(0,TEXTBO,"",TEXTBOXFONTSIZE); (TEXTBOXFONTSIZE*8)
 
 
 		EndDrawing();
@@ -981,7 +1107,7 @@ void BasicMessage(char* message){
 char ShowMessageWithPortrait(char* message, char isQuestion, CrossTexture* portrait, double portScale){
 	EndFrameStuff();
 	if (portScale==0 && portrait!=NULL){
-		portScale = floor((double)200/GetTextureWidth(portrait));
+		portScale = floor((double)DEFAULTPORTRAITSIZE/GetTextureWidth(portrait));
 	}
 
 	// We count frames, and show a new letter every certian amount of frames.
@@ -993,8 +1119,11 @@ char ShowMessageWithPortrait(char* message, char isQuestion, CrossTexture* portr
 
 	signed char currentSelected=defaultSelected;
 
+	// 68/(8*2)
+	unsigned char linesPerScreen = LINESPERSCREEN;/*floor((SCREENHEIGHT-TEXTBOXY)/(8*TEXTBOXFONTSIZE));*/
+
 	// Letter scale is 2.5. 8*2.5=20.
-	unsigned char maxLetters=floor(960/(20));
+	unsigned char maxLetters=floor(SCREENWIDTH/(8*TEXTBOXFONTSIZE));
 
 	short newlineSpaces[50];
 	char totalNewLines=0;
@@ -1006,6 +1135,7 @@ char ShowMessageWithPortrait(char* message, char isQuestion, CrossTexture* portr
 
 	int i=0;
 	int j=0;
+	char questionScale=1;
 	if (isQuestion==1){
 		if (LANGUAGE==LANG_ENGLISH){
 			#if PLATFORM == PLAT_VITA
@@ -1014,6 +1144,9 @@ char ShowMessageWithPortrait(char* message, char isQuestion, CrossTexture* portr
 			#elif PLATFORM == PLAT_WINDOWS
 				yesButtonTexture=LoadPNG("./Stuff/Yes.png");
 				noButtonTexture=LoadPNG("./Stuff/No.png");
+			#elif PLATFORM == PLAT_3DS
+				yesButtonTexture=LoadPNG("/3ds/data/HappyLand/Stuff/Yes.png");
+				noButtonTexture=LoadPNG("/3ds/data/HappyLand/Stuff/No.png");
 			#endif
 		}else if (LANGUAGE==LANG_SPANISH){
 			#if PLATFORM == PLAT_VITA
@@ -1022,10 +1155,20 @@ char ShowMessageWithPortrait(char* message, char isQuestion, CrossTexture* portr
 			#elif PLATFORM == PLAT_WINDOWS
 				yesButtonTexture=LoadPNG("./SpanishReplace/Yes.png");
 				noButtonTexture=LoadPNG("./SpanishReplace/No.png");
+			#elif PLATFORM == PLAT_3DS
+				yesButtonTexture=LoadPNG("/3ds/data/HappyLand/SpanishReplace/Yes.png");
+				noButtonTexture=LoadPNG("/3ds/data/HappyLand/SpanishReplace/No.png");
 			#endif
+		}
+
+		if (SCREENWIDTH/GetTextureWidth(yesButtonTexture)>=8){
+			questionScale=2;
+		}else{
+			questionScale=1;
 		}
 	}
 
+	
 	//I guess this adds the newline segments?
 	for (j = 1; j <= floor(strlen(message)/maxLetters)+1; j++){
 		if (j==1){
@@ -1049,8 +1192,8 @@ char ShowMessageWithPortrait(char* message, char isQuestion, CrossTexture* portr
 	}
 	newlineSpaces[(int)totalNewLines]=strlen(message);
 
-	char sectionOfCurrentMessage=3;
-	if (totalNewLines<3){
+	char sectionOfCurrentMessage=linesPerScreen-1;
+	if (totalNewLines<linesPerScreen-1){
 		sectionOfCurrentMessage=totalNewLines;
 	}
 	short characterOffset=0;
@@ -1062,11 +1205,11 @@ char ShowMessageWithPortrait(char* message, char isQuestion, CrossTexture* portr
 			if (currentLetter==newlineSpaces[(int)sectionOfCurrentMessage]){
 				// ADVANCE TO NEXT MESSAGE
 				if (sectionOfCurrentMessage!=totalNewLines){
-					startSectionOfNewLine+=4;
+					startSectionOfNewLine+=linesPerScreen;
 					characterOffset=newlineSpaces[(int)sectionOfCurrentMessage];
 					currentLetter=newlineSpaces[(int)sectionOfCurrentMessage]+1;
-					if (sectionOfCurrentMessage+4<=totalNewLines){
-						sectionOfCurrentMessage+=4;
+					if (sectionOfCurrentMessage+linesPerScreen<=totalNewLines){
+						sectionOfCurrentMessage+=linesPerScreen;
 					}else{
 						sectionOfCurrentMessage=totalNewLines;
 					}
@@ -1127,19 +1270,19 @@ char ShowMessageWithPortrait(char* message, char isQuestion, CrossTexture* portr
 				currentXPos++;
 			}
 			if (IsThisTilde(message,i)){
-				DrawTildeLetterUnscaled(message[i+1],currentXPos*20+5,TEXTBOXY+currentYPos*20+currentYPos*5+5,2.5);
+				DrawTildeLetterUnscaled(message[i+1],currentXPos*(TEXTBOXFONTSIZE*8)+5,TEXTBOXY+currentYPos*(TEXTBOXFONTSIZE*8)+currentYPos*5+5,2.5);
 				i++;
 				continue;
 			}
 			// currentXPos*20 has a +5 for offset so not at screen edge.
-			DrawLetterUnscaled(message[i],currentXPos*20+5,TEXTBOXY+currentYPos*20+currentYPos*5+5,2.5);
+			DrawLetterUnscaled(message[i],currentXPos*(TEXTBOXFONTSIZE*8)+5,TEXTBOXY+currentYPos*(TEXTBOXFONTSIZE*8)+currentYPos*5+5,TEXTBOXFONTSIZE);
 		}
 
 		// Draw questions
 		if (isQuestion==1){
-			DrawTextureScale(yesButtonTexture,SCREENWIDTH-GetTextureWidth(yesButtonTexture)*2,TEXTBOXY-GetTextureHeight(yesButtonTexture)*4,2,2);
-			DrawTextureScale(noButtonTexture,SCREENWIDTH-GetTextureWidth(noButtonTexture)*2,TEXTBOXY-GetTextureHeight(noButtonTexture)*2,2,2);
-			DrawAnimationAsISay(&selectorAnimation,SCREENWIDTH-GetTextureWidth(yesButtonTexture)*2-64,TEXTBOXY-(currentSelected)*64-50,3.7);
+			DrawTextureScale(yesButtonTexture,SCREENWIDTH-GetTextureWidth(yesButtonTexture)*questionScale,TEXTBOXY-GetTextureHeight(yesButtonTexture)*questionScale-GetTextureHeight(yesButtonTexture)*questionScale,questionScale,questionScale);
+			DrawTextureScale(noButtonTexture,SCREENWIDTH-GetTextureWidth(noButtonTexture)*questionScale,TEXTBOXY-GetTextureHeight(noButtonTexture)*questionScale,questionScale,questionScale);
+			DrawAnimationAsISay(&selectorAnimation,SCREENWIDTH-GetTextureWidth(yesButtonTexture)*questionScale-questionScale*22-5,TEXTBOXY-(currentSelected)*(GetTextureHeight(yesButtonTexture)*questionScale)-((GetTextureHeight(yesButtonTexture)*questionScale)/2),1);
 		}
 		
 		if (portrait!=NULL){
@@ -1384,18 +1527,17 @@ void InitWildBattle(){
 
 void BattleInit(){
 	//numberOfEnemies=1;
-
 	int i=0;
 	
 	// Generates random positions for characters.
 	
 	for (i=0;i<numberOfEnemies;i++){
-		enemies[i].y=RandBetween(106, 416-enemyIdleAnimation[i]->height*2);
-		enemies[i].x=RandBetween(SCREENWIDTH/2,SCREENWIDTH-enemyIdleAnimation[i]->width*2);
+		enemies[i].y=RandBetween(MINYBATTLE, MAXYBATTLE-enemyIdleAnimation[i]->height*BATTLEENTITYSCALE);
+		enemies[i].x=RandBetween(SCREENWIDTH/2,SCREENWIDTH-enemyIdleAnimation[i]->width*BATTLEENTITYSCALE);
 	}
 	for (i=0;i<partySize;i++){
-		party[i].y=RandBetween(106, 416-partyIdleAnimation[i].height*2);
-		party[i].x=RandBetween(64,SCREENWIDTH/2-partyIdleAnimation[i].width*2);
+		party[i].y=RandBetween(MINYBATTLE, MAXYBATTLE-partyIdleAnimation[i].height*BATTLEENTITYSCALE);
+		party[i].x=RandBetween(0,SCREENWIDTH/2-partyIdleAnimation[i].width*BATTLEENTITYSCALE);
 	}
 
 	for (i=partySize;i<4;i++){
@@ -1482,23 +1624,38 @@ signed char SelectSpell(partyMember member){
 			return -1;
 		}
 
-		StartDrawing();
-
-		DrawTextAsISay( CenterText(N_MAGICLIST,6),2,N_MAGICLIST,6);
-
 		
-		for (i=0;i<numberOfSkillsSelect;i++){
-			if (member.fighterStats.spells[i]!=0){
-				//ShowMessage("a",0);
-				spellLinkedList* tempList = GetSpellList(member.fighterStats.spells[i]-1);
-				sprintf((char*)tempMessage,"%s:%d",tempList->theSpell.name,tempList->theSpell.mpCost);
-				DrawTextAsISay(88,i*48+i*2+64,tempMessage,6);
-			}else{
-				break;
+		StartDrawing();
+		#if PLATFORM != PLAT_3DS
+
+			DrawTextAsISay( CenterText(N_MAGICLIST,6),2,N_MAGICLIST,6);
+	
+			for (i=0;i<numberOfSkillsSelect;i++){
+				if (member.fighterStats.spells[i]!=0){
+					//ShowMessage("a",0);
+					spellLinkedList* tempList = GetSpellList(member.fighterStats.spells[i]-1);
+					sprintf((char*)tempMessage,"%s:%d",tempList->theSpell.name,tempList->theSpell.mpCost);
+					DrawTextAsISay(88,i*48+i*2+64,tempMessage,6);
+				}else{
+					break;
+				}
 			}
-		}
-		//ShowMessage("b",0);
-		DrawAnimationAsISay(&selectorAnimation,0,selected*48+selected*2+64-10,4);
+			DrawAnimationAsISay(&selectorAnimation,0,selected*48+selected*2+64-10,4);
+		#else
+			DrawTextAsISay( CenterText(N_MAGICLIST,2),2,N_MAGICLIST,2);
+	
+			for (i=0;i<numberOfSkillsSelect;i++){
+				if (member.fighterStats.spells[i]!=0){
+					//ShowMessage("a",0);
+					spellLinkedList* tempList = GetSpellList(member.fighterStats.spells[i]-1);
+					sprintf((char*)tempMessage,"%s:%d",tempList->theSpell.name,tempList->theSpell.mpCost);
+					DrawTextAsISay(88,i*48+i*2+64,tempMessage,2);
+				}else{
+					break;
+				}
+			}
+			DrawAnimationAsISay(&selectorAnimation,0,selected*48+selected*2+64-10,2);
+		#endif
 
 		EndDrawing();
 
@@ -1538,6 +1695,8 @@ char DidJustTouch(){
 	}
 	#elif PLATFORM == PLAT_WINDOWS
 		printf("DidJustTOuch not yet for Windows.");
+	#elif PLATFORM == PLAT_3DS
+		return 0;
 	#endif
 }
 
@@ -1759,7 +1918,6 @@ void MenuLop(){
 }
 
 void Overworld(){
-	EndFrameStuff();
 	StartFrameStuff();
 	// Main logic
 
@@ -1874,6 +2032,7 @@ void Overworld(){
 	}
 
 	if (WasJustPressed(SCE_CTRL_START)){// TODO - PLAY SOUND
+		printf("ISSTart");
 		place=1;
 	}
 
@@ -1887,6 +2046,7 @@ void Overworld(){
 	//DrawText(60,60,"Hello world",2);
 
 	EndDrawing();
+	EndFrameStuff();
 }
 
 char BattleLop(char canRun){
@@ -2004,6 +2164,20 @@ char BattleLop(char canRun){
 			itemButton = LoadPNG("./Stuff/ItemIcon.png");
 			winTexture = LoadPNG("./SpanishReplace/Battle/Win.png");
 		}
+	#elif PLATFORM == PLAT_3DS
+		if (LANGUAGE==LANG_ENGLISH){
+			attackButton = LoadPNG("/3ds/data/HappyLand/Stuff/AttackIcon.png");
+			magicButton = LoadPNG("/3ds/data/HappyLand/Stuff/MagicIcon.png");
+			runButton= LoadPNG("/3ds/data/HappyLand/Stuff/RunIcon.png");
+			itemButton = LoadPNG("/3ds/data/HappyLand/Stuff/ItemIcon.png");
+			winTexture = LoadPNG("/3ds/data/HappyLand/Stuff/Battle/Win.png");
+		}else if (LANGUAGE==LANG_SPANISH){
+			attackButton = LoadPNG("/3ds/data/HappyLand/SpanishReplace/AttackIcon.png");
+			magicButton = LoadPNG("/3ds/data/HappyLand/SpanishReplace/MagicIcon.png");
+			runButton= LoadPNG("/3ds/data/HappyLand/SpanishReplace/RunIcon.png");
+			itemButton = LoadPNG("/3ds/data/HappyLand/Stuff/ItemIcon.png");
+			winTexture = LoadPNG("/3ds/data/HappyLand/SpanishReplace/Battle/Win.png");
+		}
 	#endif
 
 	spell* selectedSpell=&(GetSpellList(0)->theSpell);
@@ -2067,12 +2241,12 @@ char BattleLop(char canRun){
 					continue;
 				}
 				if (GetBattlerById(i)->x==xPositions[i-1]  || (addPerFrame[i-1]<0 && xPositions[i-1]<=GetBattlerById(i)->x)  || (addPerFrame[i-1]>0 && xPositions[i-1]>=GetBattlerById(i)->x)   ){
-					DrawAnimationAsISay((GetBattlerAnimationById(i,0)),xPositions[i-1],yPositions[i-1],3);
+					DrawAnimationAsISay((GetBattlerAnimationById(i,0)),xPositions[i-1],yPositions[i-1],BATTLEENTITYSCALE);
 					continue;
 				}
 				xPositions[i-1]+=addPerFrame[i-1];
 
-				DrawAnimationAsISay((GetBattlerAnimationById(i,0)),xPositions[i-1],yPositions[i-1],3);
+				DrawAnimationAsISay((GetBattlerAnimationById(i,0)),xPositions[i-1],yPositions[i-1],BATTLEENTITYSCALE);
 			}
 			EndDrawing();
 
@@ -2179,15 +2353,31 @@ char BattleLop(char canRun){
 					
 						DrawTextureScale(winTexture,CenterSomething(GetTextureWidth(winTexture)*2),3,2,2);
 						//DrawTextAsISay(SCREENWIDTH/2-(strlen(N_WIN)*64/2),3,N_WIN,8)CenterSomething;
-						DrawTextAsISay(0,206+64,"EXP:",8);
-						DrawTextAsISay(256,206+64,temp2,8);
-				
-						for (i=0;i<partySize;i++){
-							if (didLevelUp[i]==1){
-								DrawTextAsISay(0,300+i*32+i*5+64,party[i].fighterStats.name,4);
-								DrawTextAsISay(strlen(party[i].fighterStats.name)*32+32,300+i*32+i*5+64,N_LEVELEDUP,4);
+						
+						#if PLATFORM != PLAT_3DS
+							DrawTextAsISay(0,206+64,"EXP:",8);
+							DrawTextAsISay(256,206+64,temp2,8);
+					
+							for (i=0;i<partySize;i++){
+								if (didLevelUp[i]==1){
+									DrawTextAsISay(0,300+i*32+i*5+64,party[i].fighterStats.name,4);
+									DrawTextAsISay(strlen(party[i].fighterStats.name)*32+32,300+i*32+i*5+64,N_LEVELEDUP,4);
+								}
 							}
-						}
+						#else
+							EndDrawing();
+							sf2d_start_frame(GFX_BOTTOM, GFX_LEFT);
+
+							DrawTextAsISay(CenterSomething((8*4*5)+(8*4*(strlen(temp2)))),5,"EXP:",4);
+							DrawTextAsISay(CenterSomething((8*4*5)+(8*4*(strlen(temp2))))+(8*4*5),5,temp2,4);
+					
+							for (i=0;i<partySize;i++){
+								if (didLevelUp[i]==1){
+									DrawTextAsISay(0,42+i*24+i*5+64,party[i].fighterStats.name,3);
+									DrawTextAsISay(strlen(party[i].fighterStats.name)*24+24,42+i*24+i*5+64,N_LEVELEDUP,3);
+								}
+							}
+						#endif
 				
 						EndDrawing();
 				
@@ -2247,11 +2437,11 @@ char BattleLop(char canRun){
 						originalX=GetBattlerById(orderOfAction[currentOrder])->x;
 	
 						moveXPerFrame=3;
-						moveXPerFrame=floor((GetBattlerById(target)->x - GetBattlerById(orderOfAction[currentOrder])->x - GetBattlerAnimationById(orderOfAction[currentOrder],2)->width*3+32 )/30);
+						moveXPerFrame=floor((GetBattlerById(target)->x - GetBattlerById(orderOfAction[currentOrder])->x - GetBattlerAnimationById(orderOfAction[currentOrder],2)->width*BATTLEENTITYSCALE+32 )/30);
 						moveYPerFrame=floor((GetBattlerById(target)->y - GetBattlerById(orderOfAction[currentOrder])->y + GetBattlerAnimationById(target,1)->height/4)/30);
 		
 						if (moveXPerFrame==0){
-							moveXPerFrame=ceil((GetBattlerById(target)->x - GetBattlerById(orderOfAction[currentOrder])->x - GetBattlerAnimationById(orderOfAction[currentOrder],2)->width*3+32 )/30);
+							moveXPerFrame=ceil((GetBattlerById(target)->x - GetBattlerById(orderOfAction[currentOrder])->x - GetBattlerAnimationById(orderOfAction[currentOrder],2)->width*BATTLEENTITYSCALE+32 )/30);
 						}
 						if (moveYPerFrame==0){
 							moveYPerFrame=ceil((GetBattlerById(target)->y - GetBattlerById(orderOfAction[currentOrder])->y + GetBattlerAnimationById(target,1)->height/4)/30);
@@ -2264,7 +2454,12 @@ char BattleLop(char canRun){
 				}
 			}
 		}else if (battleStatus==1)/*Choosing type of move*/{
-			if (WasJustPressed(SCE_CTRL_RIGHT)){
+			#if PLATFORM != PLAT_3DS
+			if (WasJustPressed(SCE_CTRL_RIGHT))
+			#else
+			if (WasJustPressed(SCE_CTRL_DOWN))
+			#endif
+			{
 				selected++;
 				if (canRun==1){
 					if (selected==3){
@@ -2276,7 +2471,12 @@ char BattleLop(char canRun){
 					}
 				}
 			}
-			if (WasJustPressed(SCE_CTRL_LEFT)){
+			#if PLATFORM!=PLAT_3DS
+			if (WasJustPressed(SCE_CTRL_LEFT))
+			#else
+			if (WasJustPressed(SCE_CTRL_UP))
+			#endif
+			{
 				selected--;
 				if (selected<0){
 					if (canRun==1){
@@ -2310,6 +2510,7 @@ char BattleLop(char canRun){
 					}
 				}else if (selected==1){
 					// Magic
+					EndFrameStuff();
 					int selectedSpellId = SelectSpell(*GetBattlerById(orderOfAction[currentOrder]));
 					if (selectedSpellId!=-1){
 						target=5;
@@ -2400,11 +2601,11 @@ char BattleLop(char canRun){
 					originalX=GetBattlerById(orderOfAction[currentOrder])->x;
 	
 					moveXPerFrame=3;
-					moveXPerFrame=floor((GetBattlerById(target)->x - GetBattlerById(orderOfAction[currentOrder])->x - GetBattlerAnimationById(orderOfAction[currentOrder],2)->width*3+32 )/30);
+					moveXPerFrame=floor((GetBattlerById(target)->x - GetBattlerById(orderOfAction[currentOrder])->x - GetBattlerAnimationById(orderOfAction[currentOrder],2)->width*BATTLEENTITYSCALE+32 )/30);
 					moveYPerFrame=floor((GetBattlerById(target)->y - GetBattlerById(orderOfAction[currentOrder])->y + GetBattlerAnimationById(target,1)->height/4)/30);
 	
 					if (moveXPerFrame==0){
-						moveXPerFrame=ceil((GetBattlerById(target)->x - GetBattlerById(orderOfAction[currentOrder])->x - GetBattlerAnimationById(orderOfAction[currentOrder],2)->width*3+32 )/30);
+						moveXPerFrame=ceil((GetBattlerById(target)->x - GetBattlerById(orderOfAction[currentOrder])->x - GetBattlerAnimationById(orderOfAction[currentOrder],2)->width*BATTLEENTITYSCALE+32 )/30);
 					}
 					if (moveYPerFrame==0){
 						moveYPerFrame=ceil((GetBattlerById(target)->y - GetBattlerById(orderOfAction[currentOrder])->y + GetBattlerAnimationById(target,1)->height/4)/30);
@@ -2418,10 +2619,10 @@ char BattleLop(char canRun){
 			GetBattlerById(orderOfAction[currentOrder])->x=GetBattlerById(orderOfAction[currentOrder])->x+moveXPerFrame;
 			GetBattlerById(orderOfAction[currentOrder])->y=GetBattlerById(orderOfAction[currentOrder])->y+moveYPerFrame;
 			
-			if (moveXPerFrame>=0 && GetBattlerById(orderOfAction[currentOrder])->x>=GetBattlerById(target)->x-GetBattlerAnimationById(orderOfAction[currentOrder],2)->width*3){
+			if (moveXPerFrame>=0 && GetBattlerById(orderOfAction[currentOrder])->x>=GetBattlerById(target)->x-GetBattlerAnimationById(orderOfAction[currentOrder],2)->width*BATTLEENTITYSCALE){
 				moveXPerFrame=0;
 			}
-			if (moveXPerFrame<=0 && GetBattlerById(orderOfAction[currentOrder])->x<=GetBattlerById(target)->x+GetBattlerAnimationById(orderOfAction[currentOrder],2)->width*3){
+			if (moveXPerFrame<=0 && GetBattlerById(orderOfAction[currentOrder])->x<=GetBattlerById(target)->x+GetBattlerAnimationById(orderOfAction[currentOrder],2)->width*BATTLEENTITYSCALE){
 				moveXPerFrame=0;
 			}
 			if (moveYPerFrame>=0 && GetBattlerById(orderOfAction[currentOrder])->y>=GetBattlerById(target)->y){
@@ -2431,32 +2632,32 @@ char BattleLop(char canRun){
 				moveYPerFrame=0;
 			}
 			if (moveXPerFrame==0 && moveYPerFrame==0){
-					//ShowMessage("Hurt enemy now.",0);
-					
-					// TODO - Use weapon attack
-					temp = Damage(GetBattlerById(orderOfAction[currentOrder]),GetBattlerById(target),8,0,0);
+				//ShowMessage("Hurt enemy now.",0);
+				
+				// TODO - Use weapon attack
+				temp = Damage(GetBattlerById(orderOfAction[currentOrder]),GetBattlerById(target),8,0,0);
 
-					moveXPerFrame=floor((originalX - GetBattlerById(orderOfAction[currentOrder])->x)/30);
-					moveYPerFrame=floor((originalY - GetBattlerById(orderOfAction[currentOrder])->y)/30);
-					
-					if (moveXPerFrame==0){
-						if (originalX<GetBattlerById(orderOfAction[currentOrder])->x){
-							moveXPerFrame=-1;
-						}else{
-							moveXPerFrame=1;
-						}
+				moveXPerFrame=floor((originalX - GetBattlerById(orderOfAction[currentOrder])->x)/30);
+				moveYPerFrame=floor((originalY - GetBattlerById(orderOfAction[currentOrder])->y)/30);
+				
+				if (moveXPerFrame==0){
+					if (originalX<GetBattlerById(orderOfAction[currentOrder])->x){
+						moveXPerFrame=-1;
+					}else{
+						moveXPerFrame=1;
 					}
-					if (moveYPerFrame==0){
-						if (originalY<GetBattlerById(orderOfAction[currentOrder])->y){
-							moveYPerFrame=-1;
-						}else{
-							moveYPerFrame=1;
-						}
+				}
+				if (moveYPerFrame==0){
+					if (originalY<GetBattlerById(orderOfAction[currentOrder])->y){
+						moveYPerFrame=-1;
+					}else{
+						moveYPerFrame=1;
 					}
+				}
 
-					sprintf((char*)&temp2,"%d",temp);
+				sprintf((char*)&temp2,"%d",temp);
 
-					battleStatus=4;
+				battleStatus=4;
 			}
 		}else if (battleStatus==4)/*Moving back from target*/{
 			GetBattlerById(orderOfAction[currentOrder])->x=GetBattlerById(orderOfAction[currentOrder])->x+moveXPerFrame;
@@ -2503,15 +2704,18 @@ char BattleLop(char canRun){
 
 		// Draw selection buttons
 		if (battleStatus==1){
-			// Draw UI and selector
-			DrawTextureScale(attackButton,32,SCREENHEIGHT-GetTextureHeight(attackButton)*2,2,2);
-			DrawTextureScale(magicButton,264,SCREENHEIGHT-GetTextureHeight(magicButton)*2,2,2);
-			//DrawTextureScale(itemButton,496,SCREENHEIGHT-GetTextureHeight(itemButton)*2,2,2);
-			if (canRun==1){
-				DrawTextureScale(runButton,/*728*/496,SCREENHEIGHT-GetTextureHeight(itemButton)*2,2,2);
-			}
-			UpdateAnimationIfNeed(&selectorAnimation);
-			DrawTexturePartScaleRotate(selectorAnimation.texture,selected*200+selected*32+132,SCREENHEIGHT-128,selectorAnimation.currentFrame*selectorAnimation.width,0,selectorAnimation.width,selectorAnimation.height,3.7,3.7,1.57);
+			// Draw later on the bottom screen if on 3ds
+			#if PLATFORM != PLAT_3DS
+				// Draw UI and selector
+				DrawTextureScale(attackButton,32,SCREENHEIGHT-GetTextureHeight(attackButton)*2,2,2);
+				DrawTextureScale(magicButton,264,SCREENHEIGHT-GetTextureHeight(magicButton)*2,2,2);
+				//DrawTextureScale(itemButton,496,SCREENHEIGHT-GetTextureHeight(itemButton)*2,2,2);
+				if (canRun==1){
+					DrawTextureScale(runButton,/*728*/496,SCREENHEIGHT-GetTextureHeight(itemButton)*2,2,2);
+				}
+				UpdateAnimationIfNeed(&selectorAnimation);
+				DrawTexturePartScaleRotate(selectorAnimation.texture,selected*200+selected*32+132,SCREENHEIGHT-128,selectorAnimation.currentFrame*selectorAnimation.width,0,selectorAnimation.width,selectorAnimation.height,3.7,3.7,1.57);
+			#endif
 		}
 		// Draw the good stuff.
 		for (i=0;i<partySize;i++){
@@ -2520,26 +2724,27 @@ char BattleLop(char canRun){
 				continue;
 			}
 
-			// Draw health and MP bar for party member
-			// hp
-			DrawRectangle(32+i*128+i*16,16,128,32,0,0,0,255);
-			if (party[i].hp>=party[i].fighterStats.maxHp+15){
-				// Draw more red rectangle if overheal
-				DrawRectangle(32+i*128+i*16,16,floor(128*(((double)party[i].hp)/party[i].fighterStats.maxHp)),32,255,0,0,255);
-			}else{
-				// Draw normal health red
-				DrawRectangle(32+i*128+i*16,16,floor(128*(((double)party[i].hp)/party[i].fighterStats.maxHp)),32,190,0,0,255);
-			}
-			// mp
-			DrawRectangle(32+i*128+i*16,48,128,32,0,0,0,255);
-			DrawRectangle(32+i*128+i*16,48,floor(128*(((double)party[i].mp)/party[i].fighterStats.maxMp)),32,0,0,190,255);
-			// name
-			DrawTextAsISay(32+i*128+i*16,90,party[i].fighterStats.name,2);
-
+			#if PLATFORM==PLAT_WINDOWS || PLATFORM==PLAT_VITA
+				// Draw health and MP bar for party member
+				// hp
+				DrawRectangle(32+i*128+i*16,16,128,32,0,0,0,255);
+				if (party[i].hp>=party[i].fighterStats.maxHp+15){
+					// Draw more red rectangle if overheal
+					DrawRectangle(32+i*128+i*16,16,floor(128*(((double)party[i].hp)/party[i].fighterStats.maxHp)),32,255,0,0,255);
+				}else{
+					// Draw normal health red
+					DrawRectangle(32+i*128+i*16,16,floor(128*(((double)party[i].hp)/party[i].fighterStats.maxHp)),32,190,0,0,255);
+				}
+				// mp
+				DrawRectangle(32+i*128+i*16,48,128,32,0,0,0,255);
+				DrawRectangle(32+i*128+i*16,48,floor(128*(((double)party[i].mp)/party[i].fighterStats.maxMp)),32,0,0,190,255);
+				// name
+				DrawTextAsISay(32+i*128+i*16,90,party[i].fighterStats.name,2);
+			#endif
 			// Draws attack animation for person moving to attack
 			if (battleStatus==3){
 				if (i+1==orderOfAction[currentOrder]){
-					DrawAnimationAsISay(&(partyAttackAnimation[i]),party[i].x,party[i].y,3);
+					DrawAnimationAsISay(&(partyAttackAnimation[i]),party[i].x,party[i].y,BATTLEENTITYSCALE);
 					continue;
 				}
 			}else if (battleStatus==1 || battleStatus==2){
@@ -2559,12 +2764,12 @@ char BattleLop(char canRun){
 						temp4=-1;
 					}
 					
-					DrawAnimationAsISay(&(partyIdleAnimation[i]),party[i].x,party[i].y,3);
+					DrawAnimationAsISay(&(partyIdleAnimation[i]),party[i].x,party[i].y,BATTLEENTITYSCALE);
 					continue;
 				}
 				
 			}
-			DrawAnimationAsISay(&(partyIdleAnimation[i]),party[i].x,party[i].y,3);			
+			DrawAnimationAsISay(&(partyIdleAnimation[i]),party[i].x,party[i].y,BATTLEENTITYSCALE);			
 		}
 		for (i=0;i<numberOfEnemies;i++){
 			if (enemies[i].hp==0){
@@ -2573,33 +2778,28 @@ char BattleLop(char canRun){
 
 			if (battleStatus==3){
 				if (i+5==orderOfAction[currentOrder]){
-					DrawAnimationAsISay((enemyAttackAnimation[i]),enemies[i].x,enemies[i].y,3);
+					DrawAnimationAsISay((enemyAttackAnimation[i]),enemies[i].x,enemies[i].y,BATTLEENTITYSCALE);
 					continue;
 				}
 			}
-			DrawAnimationAsISay(enemyIdleAnimation[i],enemies[i].x,enemies[i].y,3);
+			DrawAnimationAsISay(enemyIdleAnimation[i],enemies[i].x,enemies[i].y,BATTLEENTITYSCALE);
 		}
 
-		if (battleStatus==5){
+		if (battleStatus==5){// SPELL
 			temp=selectedSpell->theAnimation.currentFrame;
-			DrawAnimationAsISay(&(selectedSpell->theAnimation),GetBattlerById(target)->x,GetBattlerById(target)->y,4);
-			if (GetBattlerById(target)->y-70>=0){
-				DrawTextAsISay(GetBattlerById(target)->x-floor(strlen(temp2)/2)*64,GetBattlerById(target)->y-70,temp2,8);
+			DrawAnimationAsISay(&(selectedSpell->theAnimation),GetBattlerById(target)->x,GetBattlerById(target)->y,SPELLSCALE);
+			if (GetBattlerById(target)->y-(8*DAMAGETEXTSIZE)-drawYOffset>=0){
+				DrawTextAsISay(GetBattlerById(target)->x-floor(strlen(temp2)/2)*(8*DAMAGETEXTSIZE),GetBattlerById(target)->y-(8*DAMAGETEXTSIZE),temp2,DAMAGETEXTSIZE);
 			}else{
-				DrawTextAsISay(GetBattlerById(target)->x-floor(strlen(temp2)/2)*64,GetBattlerById(target)->y+ GetBattlerAnimationById(target,1)->height+70,temp2,8);
+				DrawTextAsISay(GetBattlerById(target)->x-floor(strlen(temp2)/2)*(8*DAMAGETEXTSIZE),GetBattlerById(target)->y+ GetBattlerAnimationById(target,1)->height+70,temp2,DAMAGETEXTSIZE);
 			}
-		}else if (battleStatus==4 || battleStatus==5){
-			if (GetBattlerById(target)->y-70>=0){
-				DrawTextAsISay(GetBattlerById(target)->x-floor(strlen(temp2)/2)*64,GetBattlerById(target)->y-70,temp2,8);
+		}else if (battleStatus==4){ // BACK FROM ATTACK
+			if (GetBattlerById(target)->y-(8*DAMAGETEXTSIZE)-drawYOffset>=0){
+				DrawTextAsISay(GetBattlerById(target)->x-floor(strlen(temp2)/2)*(8*DAMAGETEXTSIZE),GetBattlerById(target)->y-(8*DAMAGETEXTSIZE),temp2,DAMAGETEXTSIZE);
 			}else{
-				DrawTextAsISay(GetBattlerById(target)->x-floor(strlen(temp2)/2)*64,GetBattlerById(target)->y+ GetBattlerAnimationById(target,1)->height+70,temp2,8);
+				DrawTextAsISay(GetBattlerById(target)->x-floor(strlen(temp2)/2)*(8*DAMAGETEXTSIZE),GetBattlerById(target)->y+ GetBattlerAnimationById(target,1)->height+(8*DAMAGETEXTSIZE),temp2,DAMAGETEXTSIZE);
 			}
 		}else if (battleStatus==2){
-			// hp
-			DrawRectangle(GetBattlerById(target)->x,GetBattlerById(target)->y-32,128,32,0,0,0,255);
-			DrawRectangle(GetBattlerById(target)->x,GetBattlerById(target)->y-32,floor(128*(((double)GetBattlerById(target)->hp)/GetBattlerById(target)->fighterStats.maxHp)),32,190,0,0,255);
-
-			
 			// Fix cursor if selecting dead person.
 			if (GetBattlerById(target)->hp==0){
 				for (i=target;i<=10;i++){
@@ -2613,24 +2813,67 @@ char BattleLop(char canRun){
 					}
 				}
 			}
+
+			// hp
+			DrawRectangle(GetBattlerById(target)->x,GetBattlerById(target)->y-32,64*BATTLEENTITYSCALE,32,0,0,0,255);
+			DrawRectangle(GetBattlerById(target)->x,GetBattlerById(target)->y-32,floor(64*BATTLEENTITYSCALE*(((double)GetBattlerById(target)->hp)/GetBattlerById(target)->fighterStats.maxHp)),32,190,0,0,255);
+
 			// Draw the target selector
-			DrawAnimationAsISay(&selectorAnimation,GetBattlerById(target)->x-64,GetBattlerById(target)->y + GetBattlerAnimationById(target,1)->height ,3.7);
-			
+			DrawAnimationAsISay(&selectorAnimation,GetBattlerById(target)->x-22*DAMAGETEXTSIZE,GetBattlerById(target)->y,DAMAGETEXTSIZE);
 		}
 		EndDrawing();
 	
+		// Draw bottom screen stuff on 3ds
+		#if PLATFORM == PLAT_3DS
+			sf2d_start_frame(GFX_BOTTOM, GFX_LEFT);
+			if (battleStatus==1){
+				// Draw UI and selector
+				DrawTextureScale(attackButton,100,48,1,1);
+				DrawTextureScale(magicButton,100,112,1,1);
+				if (canRun==1){
+					DrawTextureScale(runButton,100,176,1,1);
+				}
+				
+				//DrawAnimationAsISay(animation* animationToDraw, int destX, int destY, int scale)
+				DrawAnimationAsISay(&selectorAnimation,73,selected*64+48+22,1);
+				//(selectorAnimation.texture,73,selected*64+15+32,selectorAnimation.currentFrame*selectorAnimation.width,0,selectorAnimation.width,selectorAnimation.height,3.7,3.7,1.57);
+			
+				// Draw health and MP bar for party member and also name
+				for (i=0;i<partySize;i++){
+		
+					if (party[i].hp==0){
+						continue;
+					}
+					// hp
+					DrawRectangle((i+1)*10+i*70,2,70,15,0,0,0,255);
+					if (party[i].hp>=party[i].fighterStats.maxHp+15){
+						// Draw more red rectangle if overheal
+						DrawRectangle((i+1)*10+i*70,2,floor(70*(((double)party[i].hp)/party[i].fighterStats.maxHp)),2150,0,0,0,255);
+					}else{
+						// Draw normal health red
+						DrawRectangle((i+1)*10+i*70,2,floor(70*(((double)party[i].hp)/party[i].fighterStats.maxHp)),15,190,0,0,255);
+					}
+					// mp
+					DrawRectangle((i+1)*10+i*70,17,70,15,0,0,0,255);
+					DrawRectangle((i+1)*10+i*70,17,floor(70*(((double)party[i].mp)/party[i].fighterStats.maxMp)),15,0,0,190,255);
+					// name
+					DrawTextAsISay((i+1)*10+i*70,34,party[i].fighterStats.name,1);		
+				}
+
+			}
+			sf2d_end_frame();
+			sf2d_swapbuffers();
+		#endif
+
 		EndFrameStuff();
 	}
-
 	PlzNoCrashOnDispose();
 	FreeTexture(attackButton);
 	FreeTexture(magicButton);
 	FreeTexture(itemButton);
 	FreeTexture(runButton);
 	FreeTexture(winTexture);
-
 	DisposeAllLoadedSpellImages();
-
 	if (isOneAlive==0){
 		if (canRun==1){
 			ShowMessage(N_DEADMESSAGE,0);
@@ -2641,6 +2884,8 @@ char BattleLop(char canRun){
 				ChangeMap("app0:Stuff/Maps/NathansHouse");
 			#elif PLATFORM == PLAT_WINDOWS
 				ChangeMap("./Stuff/Maps/NathansHouse");
+			#elif PLATFORM == PLAT_3DS
+				ChangeMap("/3ds/data/HappyLand/Stuff/Maps/NathansHouse");
 			#endif
 		}else{
 			place=0;
@@ -2662,9 +2907,11 @@ void TitleLoop(){
 		CrossTexture* titleImage = LoadPNG("app0:Stuff/title.png");
 	#elif PLATFORM == PLAT_WINDOWS
 		CrossTexture* titleImage = LoadPNG("./Stuff/title.png");
+	#elif PLATFORM == PLAT_3DS
+		CrossTexture* titleImage = LoadPNG("/3ds/data/HappyLand/Stuff/title.png");
 	#endif
 	
-	while (1){
+	while (place!=2){
 		StartFrameStuff();
 
 		if (IsDown(aButton)){
@@ -2682,6 +2929,8 @@ void TitleLoop(){
 				luaL_dofile(L,"app0:Stuff/Happy.lua");
 			#elif PLATFORM == PLAT_WINDOWS
 				luaL_dofile(L,"./Stuff/Happy.lua");
+			#elif PLATFORM==PLAT_3DS
+				luaL_dofile(L,"/3ds/data/HappyLand/Stuff/Happy.lua");
 			#endif
 			LoadMap(STARTINGMAP);
 			place=0;
@@ -2713,9 +2962,15 @@ void TitleLoop(){
 				}
 			#elif PLATFORM == PLAT_WINDOWS
 				if (LANGUAGE==LANG_ENGLISH){
-					titleImage = LoadPNG("app0:Stuff/title.png");
+					titleImage = LoadPNG("./Stuff/title.png");
 				}else if (LANGUAGE==LANG_SPANISH){
-					titleImage = LoadPNG("app0:SpanishReplace/title.png");
+					titleImage = LoadPNG("./SpanishReplace/title.png");
+				}
+			#elif PLATFORM == PLAT_3DS
+				if (LANGUAGE==LANG_ENGLISH){
+					titleImage = LoadPNG("/3ds/data/HappyLand/Stuff/title.png");
+				}else if (LANGUAGE==LANG_SPANISH){
+					titleImage = LoadPNG("/3ds/data/HappyLand/SpanishReplace/title.png");
 				}
 			#endif
 		}
@@ -2731,8 +2986,8 @@ void TitleLoop(){
 
 		StartDrawing();
 
-		DrawTexture(titleImage,0,0);
-
+		//DrawTexture(titleImage,0,0);
+		DrawTextureScale(titleImage,0,0,(float)SCREENWIDTH/GetTextureWidth(titleImage),(float)SCREENHEIGHT/GetTextureHeight(titleImage));
 
 		if (LANGUAGE==LANG_ENGLISH){
 			//DrawTextAsISay(int x, int y, const char* text, int size
@@ -2774,7 +3029,6 @@ void TitleLoop(){
 
 #include "LuaFunctions.h"
 
-
 /*
 ///////////////////////////////////////
 // LUA FUNCTIONS END
@@ -2783,7 +3037,7 @@ void TitleLoop(){
 
 void Init(){
 	// Good stuff
-	spellLinkedListStart=malloc(sizeof(spellLinkedList));
+	spellLinkedListStart=calloc(1,sizeof(spellLinkedList));
 
 	#if PLATFORM == PLAT_VITA
 		// Init vita2d and set its clear color.
@@ -2793,7 +3047,7 @@ void Init(){
 		//defaultPgf = vita2d_load_default_pgf();
 	#elif PLATFORM == PLAT_WINDOWS
 
-		mainWindow = SDL_CreateWindow( "HappyWindo", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 960, 544, SDL_WINDOW_SHOWN );
+		mainWindow = SDL_CreateWindow( "HappyWindo", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, SCREENWIDTH, SCREENHEIGHT, SDL_WINDOW_SHOWN );
 		ShowErrorIfNull(mainWindow);
 
 		if (0==1){
@@ -2807,17 +3061,23 @@ void Init(){
 		SDL_SetRenderDrawColor( mainWindowRenderer, 212, 208, 200, 255 );
 		// Check if this fails?
 		IMG_Init( IMG_INIT_PNG );
-
+	#elif PLATFORM == PLAT_3DS
+		sf2d_init();
+		sf2d_set_clear_color(RGBA8(212, 208, 200, 0xFF));
 	#endif
 
-	// ... I guess I have to do this? I'm... most probrablly not basing this off the sample.
-	memset(&pad, 0, sizeof(pad));
+	#if PLATFORM == PLAT_VITA
+		// ... I guess I have to do this? I'm... most probrablly not basing this off the sample.
+		memset(&pad, 0, sizeof(pad));
+	#endif
 
 	InitGoodArray(&tileOtherData);
 	int i=0;
 	for (i=0;i<5;i++){
 		InitGoodArray(&(layers[i]));
 	}
+
+	
 
 	#if SHOWSPLASH==1
 		#if PLATFORM == PLAT_VITA
@@ -2904,6 +3164,28 @@ void Init(){
 
 		// Selector animation for good looking menus
 		selectorAnimation.texture=LoadPNG("./Stuff/Selector.png");
+	#elif PLATFORM == PLAT_3DS
+		// Load player frames
+		playerDown=LoadPNG("/3ds/data/HappyLand/Stuff/PlayerDown.png");
+		playerUp=LoadPNG("/3ds/data/HappyLand/Stuff/PlayerUp.png");
+		playerLeft=LoadPNG("/3ds/data/HappyLand/Stuff/PlayerLeft.png");
+		playerRight=LoadPNG("/3ds/data/HappyLand/Stuff/PlayerRight.png");
+		
+		// Load tilde
+		tilde_a = LoadPNG("/3ds/data/HappyLand/Stuff/Tilde/a.png");
+		tilde_e = LoadPNG("/3ds/data/HappyLand/Stuff/Tilde/e.png");
+		tilde_i = LoadPNG("/3ds/data/HappyLand/Stuff/Tilde/i.png");
+		tilde_o = LoadPNG("/3ds/data/HappyLand/Stuff/Tilde/o.png");
+		tilde_u = LoadPNG("/3ds/data/HappyLand/Stuff/Tilde/u.png");
+		tilde_n = LoadPNG("/3ds/data/HappyLand/Stuff/Tilde/n.png");
+		tilde_esclimationPoint = LoadPNG("/3ds/data/HappyLand/Stuff/Tilde/EsclimationPoint.png");
+		tilde_questionMark = LoadPNG("/3ds/data/HappyLand/Stuff/Tilde/QuestionMark.png");
+	
+		// Load what, I guess, could be called a font. It's just an image.
+		fontImage=LoadPNG("/3ds/data/HappyLand/Stuff/Font.png");
+
+		// Selector animation for good looking menus
+		selectorAnimation.texture=LoadPNG("/3ds/data/HappyLand/Stuff/Selector.png");
 	#endif
 	selectorAnimation.numberOfFrames=8;
 	selectorAnimation.width=22;
@@ -2970,6 +3252,7 @@ int main(int argc, char *argv[]){
 	
 	//BattleInit();
 
+
 	while (1){
 		if (place==0){
 			Overworld();
@@ -2979,6 +3262,7 @@ int main(int argc, char *argv[]){
 			break;
 		}else if (place==3){
 			BattleLop(1);
+			EndFrameStuff();
 		}else if (place==4){
 			StatusLoop();
 		}else if (place==5){
