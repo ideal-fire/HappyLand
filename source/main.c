@@ -18,7 +18,7 @@ int LANGUAGE=LANG_ENGLISH;
 #define PLAT_WINDOWS 2
 #define PLAT_3DS 3
 
-#define PLATFORM PLAT_3DS
+#define PLATFORM PLAT_WINDOWS
 
 #if PLATFORM == PLAT_VITA
 	#define STARTINGMAP "app0:Stuff/Maps/NathansHouse"
@@ -311,6 +311,9 @@ unsigned char place=0;
 
 spellLinkedList* spellLinkedListStart={0};
 unsigned short spellLinkedListSize=1;
+
+char* currentMapFilepath;
+
 
 /*
 ==================
@@ -753,6 +756,7 @@ void StartFrameStuff(){
 		pad = hidKeysHeld();
 	#endif
 }
+
 void EndFrameStuff(){
 	#if PLATFORM == PLAT_VITA
 		previousTouchData=currentTouch;
@@ -976,6 +980,7 @@ char IsDown(int value){
 			return 1;
 		}
 	#elif PLATFORM == PLAT_WINDOWS
+
 		if (pad[value]==1){
 			return 1;
 		}
@@ -1044,6 +1049,7 @@ void BasicMessage(char* message){
 
 	currentLetter=newlineSpaces[(int)sectionOfCurrentMessage];
 
+	EndFrameStuff();
 	while (!quitTextbox){
 		StartFrameStuff();
 			
@@ -1270,7 +1276,7 @@ char ShowMessageWithPortrait(char* message, char isQuestion, CrossTexture* portr
 				currentXPos++;
 			}
 			if (IsThisTilde(message,i)){
-				DrawTildeLetterUnscaled(message[i+1],currentXPos*(TEXTBOXFONTSIZE*8)+5,TEXTBOXY+currentYPos*(TEXTBOXFONTSIZE*8)+currentYPos*5+5,2.5);
+				DrawTildeLetterUnscaled(message[i+1],currentXPos*(TEXTBOXFONTSIZE*8)+5,TEXTBOXY+currentYPos*(TEXTBOXFONTSIZE*8)+currentYPos*5+5,TEXTBOXFONTSIZE);
 				i++;
 				continue;
 			}
@@ -1371,6 +1377,10 @@ void LoadMap(char* path){
 	sprintf(withDotLua,"%s%s",path,".lua");
 	luaL_dofile(L,withDotLua);
 
+
+	free(currentMapFilepath);
+	currentMapFilepath = malloc(strlen(path)+1);
+	strcpy(currentMapFilepath,path);
 
 	//((tileImageData*)GetGoodArray(&layers[0],1,1))->tile=1;
 	//
@@ -1495,6 +1505,7 @@ void InitWildBattle(){
 	int i=0;
 
 	int firstRandomA = RandBetween(1,4);
+	numberOfEnemies=firstRandomA;
 	if (firstRandomA>2){
 		int firstRandomB = RandBetween(2,4);
 		numberOfEnemies=firstRandomB;
@@ -1506,7 +1517,6 @@ void InitWildBattle(){
 	}else{
 		numberOfEnemies=firstRandomA;
 	}
-
 
 	int numberOfPossibleEnemies=10;
 	for (i=0;i<10;i++){
@@ -1530,7 +1540,6 @@ void BattleInit(){
 	int i=0;
 	
 	// Generates random positions for characters.
-	
 	for (i=0;i<numberOfEnemies;i++){
 		enemies[i].y=RandBetween(MINYBATTLE, MAXYBATTLE-enemyIdleAnimation[i]->height*BATTLEENTITYSCALE);
 		enemies[i].x=RandBetween(SCREENWIDTH/2,SCREENWIDTH-enemyIdleAnimation[i]->width*BATTLEENTITYSCALE);
@@ -1649,12 +1658,12 @@ signed char SelectSpell(partyMember member){
 					//ShowMessage("a",0);
 					spellLinkedList* tempList = GetSpellList(member.fighterStats.spells[i]-1);
 					sprintf((char*)tempMessage,"%s:%d",tempList->theSpell.name,tempList->theSpell.mpCost);
-					DrawTextAsISay(88,i*48+i*2+64,tempMessage,2);
+					DrawTextAsISay(88,i*16+i*2+20,tempMessage,2);
 				}else{
 					break;
 				}
 			}
-			DrawAnimationAsISay(&selectorAnimation,0,selected*48+selected*2+64-10,2);
+			DrawAnimationAsISay(&selectorAnimation,0,selected*16+selected*2+20-10,2);
 		#endif
 
 		EndDrawing();
@@ -1723,6 +1732,201 @@ char GetNumberOfSpells(stats* passedStats){
 	}
 	return numberOfSpells;
 }
+
+void ClearBottomScreen(){
+	#if PLATFORM == PLAT_3DS
+		sf2d_start_frame(GFX_BOTTOM, GFX_LEFT);
+		EndDrawing();
+	#endif
+}
+
+
+void LevelUp(partyMember* passedMember, int removexp){
+	if (removexp==1){
+		passedMember->fighterStats.exp-=passedMember->fighterStats.level*5+10;
+	}
+	passedMember->fighterStats.level++;
+	
+	passedMember->fighterStats.attack+=3;
+	passedMember->fighterStats.magicAttack+=3;
+	passedMember->fighterStats.defence+=3;
+	passedMember->fighterStats.magicDefence+=3;
+	passedMember->fighterStats.speed+=3;
+	passedMember->fighterStats.maxHp+=3;
+	passedMember->fighterStats.maxMp+=3;
+	passedMember->hp=passedMember->fighterStats.maxHp;
+	passedMember->mp=passedMember->fighterStats.maxMp;
+}
+// DOES NOT CHANGE EXP
+void LevelDown(partyMember* passedMember){
+	passedMember->fighterStats.level--;
+	
+	passedMember->fighterStats.attack-=3;
+	passedMember->fighterStats.magicAttack-=3;
+	passedMember->fighterStats.defence-=3;
+	passedMember->fighterStats.magicDefence-=3;
+	passedMember->fighterStats.speed-=3;
+	passedMember->fighterStats.maxHp-=3;
+	passedMember->fighterStats.maxMp-=3;
+	passedMember->hp=passedMember->fighterStats.maxHp;
+	passedMember->mp=passedMember->fighterStats.maxMp;
+}
+
+void Save(){
+	int i=0;
+	FILE* fp;
+
+	#if PLATFORM == PLAT_WINDOWS
+		fp = fopen ("./savefile", "w");
+	#elif PLATFORM == PLAT_VITA
+		fp = fopen ("savedata0:savefile", "w");
+	#elif PLATFORM == PLAT_3DS
+		fp = fopen ("/3ds/data/HappyLand/savefile", "w");
+	#endif
+
+	short pathLength = strlen(currentMapFilepath);
+
+	fwrite(&(pathLength),2,1,fp);
+	fwrite((currentMapFilepath),pathLength,1,fp);
+	fwrite(&(playerObject->x),2,1,fp);
+	fwrite(&(playerObject->y),2,1,fp);
+	fwrite(&(partySize),1,1,fp);
+	for (i=0;i<4;i++){
+		fwrite(&(party[i].fighterStats.level),2,1,fp);
+		fwrite(&(party[i].fighterStats.exp),2,1,fp);
+		fwrite(&(party[i].hp),2,1,fp);
+		fwrite(&(party[i].mp),2,1,fp);
+	}
+
+	// Write flags
+
+	char passedNumberOfFlags;
+	lua_getglobal(L,"numberOfFlags");
+	passedNumberOfFlags = (char)lua_tonumber(L,-1);
+	fwrite(&(passedNumberOfFlags),1,1,fp);
+	printf("numberofflags: %d\n", passedNumberOfFlags);
+	for (i=1;i<passedNumberOfFlags;i++){
+		lua_getglobal(L,"flags");
+		lua_pushnumber(L,i);
+		lua_gettable(L,-2);
+		// get flag value
+		char got = lua_tonumber(L,-1);
+		// Pop table
+		lua_pop(L,-1);
+		fwrite(&(got),1,1,fp);
+		printf("wrote %d\n",got);
+	}
+
+
+	fclose(fp);
+}
+
+void Load(){
+	int i=0;
+	int j=0;
+
+	FILE* fp;
+
+	#if PLATFORM == PLAT_WINDOWS
+		fp = fopen ("./savefile", "r");
+	#elif PLATFORM == PLAT_VITA
+		fp = fopen ("savedata0:savefile", "r");
+	#elif PLATFORM == PLAT_3DS
+		fp = fopen ("/3ds/data/HappyLand/savefile", "r");
+	#endif
+	//fprintf(fp, "%s\n", currentMapFilepath);
+	////fread
+	//fwrite(playerObject->x,2,1,fp);
+	//fwrite(playerObject->y,2,1,fp);
+
+	free(currentMapFilepath);
+
+	// All your memories
+	// Levels
+	// I'll bring them all back to zero.
+	for (j=2;j<=party[i].fighterStats.level;j++){
+		printf("Leveled down %d/%d\n",j-1,party[i].fighterStats.level);
+		LevelDown(&(party[i]));
+	}
+
+	short pathLength;
+
+	fread(&pathLength,2,1,fp);
+	currentMapFilepath = malloc(pathLength+1);
+	currentMapFilepath[pathLength]='\0';
+	fread(currentMapFilepath,pathLength,1,fp);
+
+	fread(&(playerObject->x),2,1,fp);
+	fread(&(playerObject->y),2,1,fp);
+
+	unsigned short readLevels[4];
+	short readHp[4];
+	short readMp[4];
+
+	char newPartySize;
+	fread(&(newPartySize),1,1,fp);
+
+	printf("party size is %d\n", newPartySize);
+
+	char happy[17];
+	if (newPartySize>partySize){
+		for (i=partySize+1;i<=newPartySize;i++){
+			sprintf((char*)(&happy),"AddPartyMember%d",i);
+			lua_getglobal(L,happy);
+			lua_call(L,0,0);
+		}
+	}
+
+
+
+	for (i=0;i<4;i++){
+		fread(&(readLevels[i]),2,1,fp);
+		fread(&(party[i].fighterStats.exp),2,1,fp);
+		fread(&(readHp[i]),2,1,fp);
+		fread(&(readMp[i]),2,1,fp);
+	}
+
+	// READ FLAGS
+	char numberOfFlags;
+	fread(&(numberOfFlags),1,1,fp);
+	lua_getglobal(L,"flags");
+	for (i=1;i<numberOfFlags+1;i++){
+		lua_pushnumber(L,i);
+		char justReadValue;
+		fread(&(justReadValue),1,1,fp);
+		lua_pushnumber(L,justReadValue);
+		lua_settable(L,-3);
+	}
+	lua_pop(L,-1);
+
+	// TODO - saving and loading skills.
+	// ugh.
+	// But I kind of like working on saving and loading.
+	// I think I should've added it before the game was released.
+
+
+
+	fclose(fp);
+
+	for (i=0;i<4;i++){
+		
+		for (j=1;j<readLevels[i];j++){
+			//printf("Leveled up %d\n",j);
+			LevelUp(&(party[i]),0);
+		}
+		party[i].hp=readHp[i];
+		party[i].mp=readMp[i];
+	}
+
+	printf("pathlength: %d\n", pathLength);
+	printf("Mappath: %s\n", currentMapFilepath);
+	printf("x: %d, y: %d\n",playerObject->x,playerObject->y);
+
+
+	ChangeMap(currentMapFilepath);
+}
+
+
 
 /*
 ========================================================
@@ -2036,6 +2240,14 @@ void Overworld(){
 		place=1;
 	}
 
+
+	if (WasJustPressed(SCE_CTRL_TRIANGLE)){
+		Save();
+	}
+	if (WasJustPressed(SCE_CTRL_SQUARE)){
+		Load();
+	}
+
 	UpdateCameraValues(playerObject);
 
 
@@ -2324,18 +2536,7 @@ char BattleLop(char canRun){
 					// level*5+10
 					for (i=0;i<partySize;i++){
 						while (party[i].fighterStats.exp>=party[i].fighterStats.level*5+10){
-							party[i].fighterStats.exp-=party[i].fighterStats.level*5+10;
-							party[i].fighterStats.level++;
-				
-							party[i].fighterStats.attack+=3;
-							party[i].fighterStats.magicAttack+=3;
-							party[i].fighterStats.defence+=3;
-							party[i].fighterStats.magicDefence+=3;
-							party[i].fighterStats.speed+=3;
-							party[i].fighterStats.maxHp+=3;
-							party[i].fighterStats.maxMp+=3;
-							party[i].hp=party[i].fighterStats.maxHp;
-							party[i].mp=party[i].fighterStats.maxMp;
+							LevelUp(&(party[i]),1);
 				
 							didLevelUp[i]=1;
 						}
@@ -2348,13 +2549,10 @@ char BattleLop(char canRun){
 						if (WasJustPressed(aButton)){
 							break;
 						}
-				
-						StartDrawing();
-					
-						DrawTextureScale(winTexture,CenterSomething(GetTextureWidth(winTexture)*2),3,2,2);
-						//DrawTextAsISay(SCREENWIDTH/2-(strlen(N_WIN)*64/2),3,N_WIN,8)CenterSomething;
-						
 						#if PLATFORM != PLAT_3DS
+							StartDrawing();
+							DrawTextureScale(winTexture,CenterSomething(GetTextureWidth(winTexture)*2),3,2,2);
+
 							DrawTextAsISay(0,206+64,"EXP:",8);
 							DrawTextAsISay(256,206+64,temp2,8);
 					
@@ -2365,16 +2563,18 @@ char BattleLop(char canRun){
 								}
 							}
 						#else
+							StartDrawing();
+								DrawTextureScale(winTexture,CenterSomething(GetTextureWidth(winTexture)*1.8),3,1.8,1.8);
 							EndDrawing();
 							sf2d_start_frame(GFX_BOTTOM, GFX_LEFT);
 
-							DrawTextAsISay(CenterSomething((8*4*5)+(8*4*(strlen(temp2)))),5,"EXP:",4);
-							DrawTextAsISay(CenterSomething((8*4*5)+(8*4*(strlen(temp2))))+(8*4*5),5,temp2,4);
+							DrawTextAsISay(5,5,"EXP:",4);
+							DrawTextAsISay(8*4*5+5,5,temp2,4);
 					
 							for (i=0;i<partySize;i++){
 								if (didLevelUp[i]==1){
-									DrawTextAsISay(0,42+i*24+i*5+64,party[i].fighterStats.name,3);
-									DrawTextAsISay(strlen(party[i].fighterStats.name)*24+24,42+i*24+i*5+64,N_LEVELEDUP,3);
+									DrawTextAsISay(5,40+i*24+i*5,party[i].fighterStats.name,2);
+									DrawTextAsISay(5+strlen(party[i].fighterStats.name)*16+16,40+i*24+i*5,N_LEVELEDUP,2);
 								}
 							}
 						#endif
@@ -2857,7 +3057,7 @@ char BattleLop(char canRun){
 					DrawRectangle((i+1)*10+i*70,17,70,15,0,0,0,255);
 					DrawRectangle((i+1)*10+i*70,17,floor(70*(((double)party[i].mp)/party[i].fighterStats.maxMp)),15,0,0,190,255);
 					// name
-					DrawTextAsISay((i+1)*10+i*70,34,party[i].fighterStats.name,1);		
+					DrawTextAsISay((i+1)*10+i*70,34,party[i].fighterStats.name,1);
 				}
 
 			}
@@ -2874,6 +3074,9 @@ char BattleLop(char canRun){
 	FreeTexture(runButton);
 	FreeTexture(winTexture);
 	DisposeAllLoadedSpellImages();
+
+	ClearBottomScreen();
+
 	if (isOneAlive==0){
 		if (canRun==1){
 			ShowMessage(N_DEADMESSAGE,0);
@@ -2932,17 +3135,20 @@ void TitleLoop(){
 			#elif PLATFORM==PLAT_3DS
 				luaL_dofile(L,"/3ds/data/HappyLand/Stuff/Happy.lua");
 			#endif
-			LoadMap(STARTINGMAP);
-			place=0;
 
-			if (IsDown(SCE_CTRL_UP) && IsDown(SCE_CTRL_CROSS) && IsDown(SCE_CTRL_CIRCLE)){
+
+			if (IsDown(SCE_CTRL_UP)==1 && IsDown(SCE_CTRL_CROSS)==1 && IsDown(SCE_CTRL_CIRCLE)==1){
 				BasicMessage("You activated the top secret key combo. You will get a high level. Restart the game to play normally");
 				party[0].fighterStats.maxHp=999;
 				party[0].fighterStats.speed=999;
 				party[0].fighterStats.attack=999;
 				party[0].fighterStats.defence=999;
 				party[0].fighterStats.magicDefence=999;
+				party[0].fighterStats.level=100;
 			}
+
+			LoadMap(STARTINGMAP);
+			place=0;	
 
 			break;
 		}
@@ -3076,6 +3282,8 @@ void Init(){
 	for (i=0;i<5;i++){
 		InitGoodArray(&(layers[i]));
 	}
+
+	currentMapFilepath = malloc(1);
 
 	
 
@@ -3287,6 +3495,11 @@ int main(int argc, char *argv[]){
 		IMG_Quit();
 		SDL_Quit();
 		lua_close(L);
+	#elif PLATFORM == PLAT_3DS
+		// TODO 3ds cleanup.
+		// This may actually be used.
+
+		sf2d_fini();
 	#endif
 	return 0;
 }

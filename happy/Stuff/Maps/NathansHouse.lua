@@ -82,7 +82,7 @@ function Event06()
 	tempPort=nil;
 end
 function Event07()
-	if (flags[1]==0) then
+	if (flags[2]==0) then
 		signport = LoadPNG(FixString("Stuff/Portraits/Matt.png"));
 		nathanport = LoadPNG(FixString("Stuff/Portraits/Player.png"));
 		if (Lang==1) then
@@ -103,21 +103,10 @@ function Event07()
 			end
 
 			-- Party slots are 0 based, party size isn't.
-			mattslot = GetPartySize();
-			tempidle = GetPartyMemberAnimation(mattslot,1)
-			tempatk = GetPartyMemberAnimation(mattslot,2)
+			AddPartyMember2();
+			AddPartyMember2=nil;
 
-			SetAnimation(tempidle,30,29,68,-1,false,0,0,LoadPNG(FixString("Stuff/Battle/MattIdle.png")));
-			SetAnimation(tempatk,10,56,68,-1,true,0,0,LoadPNG(FixString("Stuff/Battle/MattAttack.png")));
-			SetStats(GetPartyMemberStats(mattslot),1,35,20,8,8,15,15,7,0,MallocString("Matt"));
-			SetPartySize(mattslot+1);
-			RestorePartyMember(mattslot);
-
-			tempidle=nil;
-			tempatk=nil;
-			mattslot=nil;
-
-			flags[1]=1;
+			flags[2]=1;
 			-- Hide Matt
 			SetMapOtherData(6,12,false,0);
 			SetMapImageData(6,12,1,0,0);
@@ -145,7 +134,7 @@ function Event07()
 end
 -- Matt
 function Event08()
-	if (flags[1]==0) then
+	if (flags[2]==0) then
 		signport = LoadPNG(FixString("Stuff/Portraits/Matt.png"));
 		if (Lang==1) then
 			questionanswer = ShowMessageWithPortrait("Can I come?", true, signport, 0);
@@ -175,7 +164,7 @@ function Event08()
 			tempatk=nil;
 			mattslot=nil;
 
-			flags[1]=1;
+			flags[2]=1;
 			-- Hide Matt
 			SetMapOtherData(6,12,false,0);
 			SetMapImageData(6,12,1,0,0);
@@ -211,7 +200,7 @@ function Event09()
 end
 
 
-if (flags[1]==1) then
+if (flags[2]==1) then
 	-- Hide Matt
 	SetMapOtherData(6,12,false,0);
 	SetMapImageData(6,12,1,0,0);

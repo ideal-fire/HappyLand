@@ -2,6 +2,10 @@ PLAT_VITA = 1;
 PLAT_WINDOWS = 2;
 PLAT_3DS = 3;
 
+function SetFlag(index,val)
+	flags[index]=val;
+end
+
 function FixString(passedString)
 	if (Platform==PLAT_VITA) then
 		return ("app0:" .. passedString);
@@ -12,6 +16,22 @@ function FixString(passedString)
 	end
 end
 
+function AddPartyMember2()
+	mattslot = GetPartySize();
+	tempidle = GetPartyMemberAnimation(mattslot,1)
+	tempatk = GetPartyMemberAnimation(mattslot,2)
+
+	SetAnimation(tempidle,30,29,68,-1,false,0,0,LoadPNG(FixString("Stuff/Battle/MattIdle.png")));
+	SetAnimation(tempatk,10,56,68,-1,true,0,0,LoadPNG(FixString("Stuff/Battle/MattAttack.png")));
+	SetStats(GetPartyMemberStats(mattslot),1,35,20,8,8,15,15,7,0,MallocString("Matt"));
+	SetPartySize(mattslot+1);
+	RestorePartyMember(mattslot);
+
+	tempidle=nil;
+	tempatk=nil;
+	mattslot=nil;
+end
+
 print("platform is " .. Platform);
 
 -- Called when game starts
@@ -20,13 +40,15 @@ print("platform is " .. Platform);
 ]]
 flags = {};
 -- Blottle used
-flags[0]=0;
--- Matt hiered
 flags[1]=0;
--- tree fought
+-- Matt hiered
 flags[2]=0;
--- noob bigfoot beat
+-- tree fought
 flags[3]=0;
+-- noob bigfoot beat
+flags[4]=0;
+
+numberOfFlags=#flags+1;
 
 -- MAKE NATHAN
 tempidle = GetPartyMemberAnimation(0,1)

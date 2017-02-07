@@ -30,8 +30,8 @@ include $(DEVKITARM)/3ds_rules
 TARGET		:=	sf2d_sample
 BUILD		:=	_3dsBuild
 SOURCES		:=	source
-DATA		:=	data
-INCLUDES	:=	include
+DATA		:=	
+INCLUDES	:=	
 #ROMFS		:=	romfs
 
 APP_TITLE		:= Happy Land

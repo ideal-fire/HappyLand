@@ -10,6 +10,7 @@ function MapDispose()
 	Event08=nil;
 	Event09=nil;
 	Event10=nil;
+	Event11=nil;
 end
 
 function Event01()
@@ -47,7 +48,7 @@ function Event02()
 end
 function Event03()
 	signport = LoadPNG(FixString("Stuff/Portraits/WaterBottle.png"));
-	if (flags[0]==0) then
+	if (flags[1]==0) then
 		if (Lang==1) then
 			ShowMessageWithPortrait("I'm Infinite Big Water Bottle. I can teach you how to use the spell 'Drink Water'.", false, signport, 0);
 			questionanswer = ShowMessageWithPortrait('Want to learn how to use it?', true, signport, 0);
@@ -65,7 +66,7 @@ function Event03()
 			elseif (Lang==2) then
 				ShowMessageWithPortrait("'!T'u ense'naste " .. '"Beber Agua"!', false, signport, 0);
 			end
-			flags[0]=1;
+			flags[1]=1;
 			StartWildBattle();
 		elseif (questionanswer==false) then
 			if (Lang==1) then
@@ -74,7 +75,7 @@ function Event03()
 				ShowMessageWithPortrait("Bueno.", false, signport, 0);
 			end
 		end
-	elseif (flags[0]==1) then
+	elseif (flags[1]==1) then
 		if (Lang==1) then
 			ShowMessageWithPortrait("Take a hike, freeloader.", false, signport, 0);
 		elseif (Lang==2) then
@@ -118,7 +119,7 @@ function Event07()
 	treeport = LoadPNG(FixString("Stuff/Portraits/AngryTree.png"));
 	smileyplayer = LoadPNG(FixString("Stuff/Portraits/Player.png"));
 	
-	if (flags[2]==0) then
+	if (flags[3]==0) then
 
 		if (Lang==1) then
 			ShowMessageWithPortrait("You look angry.", false, smileyplayer, 0);
@@ -154,7 +155,7 @@ function Event07()
 
 			didWin = StartSpecificBattle(1,WierdSlimeHybridMember,enemyidle0,enemyatk0);
 			if (didWin==true) then
-				flags[2]=1;
+				flags[3]=1;
 			else
 				if (Lang==1) then
 					ShowMessageWithPortrait("Hahahaha! I'm more angry than you!",false,treeport,0);
@@ -203,53 +204,6 @@ function Event08()
 end
 -- Matt
 function Event09()
-	if (flags[1]==0) then
-		signport = LoadPNG(FixString("Stuff/Portraits/Matt.png"));
-		if (Lang==1) then
-			questionanswer = ShowMessageWithPortrait("Can I come?", true, signport, 0);
-		elseif (Lang==2) then
-			questionanswer = ShowMessageWithPortrait("'?Puedo ir contigo?", true, signport, 0);
-		end
-		if (questionanswer==true) then
-
-			-- Don't know if I need to or how to translate these
-			if (Lang==1) then
-				questionanswer = ShowMessageWithPortrait("o0o0oOOo, okay!!", false, signport, 0);
-				ShowMessage("Matt joined the party!",false);
-			end
-
-			-- Party slots are 0 based, party size isn't.
-			mattslot = GetPartySize();
-			tempidle = GetPartyMemberAnimation(mattslot,1)
-			tempatk = GetPartyMemberAnimation(mattslot,2)
-
-			SetAnimation(tempidle,30,29,68,-1,false,0,0,LoadPNG(FixString("Stuff/Battle/MattIdle.png")));
-			SetAnimation(tempatk,10,56,68,-1,true,0,0,LoadPNG(FixString("Stuff/Battle/MattAttack.png")));
-			SetStats(GetPartyMemberStats(mattslot),1,35,30,8,8,15,15,7,0,MallocString("Matt"));
-			SetPartySize(mattslot+1);
-			RestorePartyMember(mattslot);
-
-			tempidle=nil;
-			tempatk=nil;
-			mattslot=nil;
-
-			flags[1]=1;
-			-- Hide Matt
-			SetMapOtherData(4,9,false,0);
-			SetMapImageData(4,9,1,0,0);
-		elseif (questionanswer==false) then
-			if (Lang==1) then
-				questionanswer = ShowMessageWithPortrait("k, fiiiine", false, signport, 0);
-			elseif (Lang==2) then
-				questionanswer = ShowMessageWithPortrait("'!NOo0oo0oOo!", false, signport, 0);
-			end
-		end
-		UnloadTexture(signport);
-		questionanswer=nil;
-		signport=nil;
-	else
-		DebugMsg("I'm not here.");
-	end
 end
 function Event10()
 	signport = LoadPNG(FixString("Stuff/Portraits/Sign.png"));
@@ -260,6 +214,18 @@ function Event10()
 	end
 	UnloadTexture(signport);
 	signport=nil;
+end
+function Event11()
+	tempPort = LoadPNG(FixString("Stuff/Portraits/Note.png"));
+
+	if (Lang==1) then
+		ShowMessageWithPortrait("All your potato are belong to us. - Big Foot",false,tempPort,0);
+	elseif (Lang==2) then
+		ShowMessageWithPortrait("Todos tu papa son pertenece a nosotros. - Pie Grande",false,tempPort,0);
+	end
+
+	UnloadTexture(tempPort);
+	tempPort=nil;
 end
 
 
@@ -273,6 +239,3 @@ dofile(FixString("Stuff/BattleLua/Slime.lua"));
 --
 
 SetEncounterRate(10);
-
-
-StartWildBattle();

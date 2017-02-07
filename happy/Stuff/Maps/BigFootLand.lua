@@ -199,9 +199,9 @@ function Event04()
 			end
 		elseif (didWin==false) then
 			if (Lang==1) then
-					ShowMessageWithPortrait("Hahahaha! I have less names than you!",false,BlueBigFootPortrait,0);
+					ShowMessageWithPortrait("Hahahaha! I have less names than you!",false,NamelessPortrait,0);
 			elseif (Lang==2) then
-				ShowMessageWithPortrait("'!Jajajaja! '!You tengo menos nombres que t'u!",false,BlueBigFootPortrait,0);
+				ShowMessageWithPortrait("'!Jajajaja! '!You tengo menos nombres que t'u!",false,NamelessPortrait,0);
 				ShowMessage("Fin. [Fin F'acil]",false);
 			end
 		end

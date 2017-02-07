@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <map version="1.0" orientation="orthogonal" renderorder="right-down" width="15" height="15" tilewidth="32" tileheight="32" nextobjectid="1">
- <tileset firstgid="1" name="Town1" tilewidth="32" tileheight="32" tilecount="21" columns="21">
-  <image source="../Stuff/Tilesets/Town1.png" width="672" height="32"/>
+ <tileset firstgid="1" name="Town1" tilewidth="32" tileheight="32" tilecount="22" columns="22">
+  <image source="../happy/Stuff/Tilesets/Town1.png" width="704" height="32"/>
  </tileset>
- <tileset firstgid="22" name="SolidTileset" tilewidth="32" tileheight="32" tilecount="1" columns="1">
+ <tileset firstgid="23" name="SolidTileset" tilewidth="32" tileheight="32" tilecount="1" columns="1">
   <image source="../../../C#/NewHappyLandMapConverter/bin/SolidTileset.png" width="32" height="32"/>
  </tileset>
- <tileset firstgid="23" name="BlockEvent" tilewidth="32" tileheight="32" tilecount="10" columns="10">
-  <image source="../../../C#/NewHappyLandMapConverter/bin/BlockEvent.png" width="320" height="32"/>
+ <tileset firstgid="24" name="BlockEvent" tilewidth="32" tileheight="32" tilecount="11" columns="11">
+  <image source="../../../C#/NewHappyLandMapConverter/bin/BlockEvent.png" width="352" height="32"/>
  </tileset>
  <layer name="VisualA" width="15" height="15">
   <data encoding="csv">
@@ -30,7 +30,7 @@
  </layer>
  <layer name="VisualB" width="15" height="15">
   <data encoding="csv">
-0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,22,0,0,0,0,0,0,0,
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 0,0,0,0,0,0,0,0,0,0,0,0,3,0,0,
@@ -47,42 +47,42 @@
 11,9,0,0,0,0,0,0,0,0,0,0,0,0,8
 </data>
  </layer>
- <layer name="BlockEvents" width="15" height="15" opacity="0.37">
+ <layer name="BlockEvents" width="15" height="15">
   <data encoding="csv">
-0,0,0,0,0,0,0,0,0,30,0,0,0,0,0,
+0,0,0,0,0,0,0,34,0,31,0,0,0,0,0,
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-0,0,0,0,0,0,0,0,0,0,0,0,24,0,0,
-0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-29,0,0,0,0,0,23,0,0,0,32,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,25,0,0,
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+30,0,0,0,0,0,24,0,0,0,33,0,0,0,0,
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-0,0,0,0,0,25,0,0,0,0,0,0,0,0,0,
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-28,27,0,0,0,0,0,0,0,0,0,0,0,0,26
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,26,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+29,28,0,0,0,0,0,0,0,0,0,0,0,0,27
 </data>
  </layer>
- <layer name="Solid" width="15" height="15">
+ <layer name="Solid" width="15" height="15" opacity="0">
   <data encoding="csv">
-0,0,0,0,0,0,0,0,0,22,0,0,0,0,0,
+0,0,0,0,0,0,0,23,0,23,0,0,0,0,0,
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-0,0,0,22,22,22,22,22,22,22,0,0,0,0,0,
-0,0,0,22,22,22,22,22,22,22,0,0,22,0,0,
-0,0,0,22,22,22,22,22,22,22,0,0,0,0,0,
-0,0,0,22,22,22,22,22,22,22,0,0,0,0,0,
-0,0,0,22,22,22,22,22,22,22,0,0,0,0,0,
-22,0,0,22,22,22,0,22,22,22,22,0,0,0,0,
-0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,23,23,23,23,23,23,23,0,0,0,0,0,
+0,0,0,23,23,23,23,23,23,23,0,0,23,0,0,
+0,0,0,23,23,23,23,23,23,23,0,0,0,0,0,
+0,0,0,23,23,23,23,23,23,23,0,0,0,0,0,
+0,0,0,23,23,23,23,23,23,23,0,0,0,0,0,
+23,0,0,23,23,23,0,23,23,23,23,0,0,0,0,
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-0,0,0,0,0,22,0,0,0,0,0,0,0,0,0,
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-22,22,0,0,0,0,0,0,0,0,0,0,0,0,0
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,23,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+23,23,0,0,0,0,0,0,0,0,0,0,0,0,0
 </data>
  </layer>
 </map>

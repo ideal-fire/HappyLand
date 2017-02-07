@@ -52,7 +52,7 @@ function Event03()
 end
 function Event04()
 	--DebugMsg("Big conversation");
-	if (flags[3]==0) then
+	if (flags[4]==0) then
 
 		-- Load needed portraits
 		bigfootport = LoadPNG(FixString("Stuff/Portraits/BigFoot.png"));
@@ -107,7 +107,7 @@ function Event04()
 
 			didWin = StartSpecificBattle(1,WierdSlimeHybridMember,enemyidle0,enemyatk0);
 			if (didWin==true) then
-				flags[3]=1;
+				flags[4]=1;
 			else
 				if (Lang==1) then
 					ShowMessageWithPortrait("Hahahaha! I'm more big than you!",false,bigfootport,0);
@@ -138,7 +138,7 @@ function Event04()
 		SetMapImageData(7,4,1,0,4);
 		SetMapImageData(8,4,1,0,5);
 		-- After you've killed bigfoot
-		if (flags[3]==1) then
+		if (flags[4]==1) then
 	
 			tempx=0;
 			tempy=5;
@@ -186,7 +186,7 @@ function Event04()
 	end
 end
 function Event05()
-	if (flags[3]==1) then
+	if (flags[4]==1) then
 		SetPlayerPosition(7,13);
 		ChangeMap(FixString("Stuff/Maps/BigFootLand"));
 	else
@@ -211,7 +211,7 @@ tileset0=LoadPNG(FixString("Stuff/Tilesets/BigFootChamber.png"));
 SetTileset(tileset0,0);
 tileset0=nil;
 
-if (flags[3]==1) then
+if (flags[4]==1) then
 	tempx=0;
 	tempy=5;
 	while (true) do
