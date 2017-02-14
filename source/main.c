@@ -18,14 +18,14 @@ int LANGUAGE=LANG_ENGLISH;
 #define PLAT_WINDOWS 2
 #define PLAT_3DS 3
 
-#define PLATFORM PLAT_WINDOWS
+#define PLATFORM PLAT_3DS
 
 #if PLATFORM == PLAT_VITA
 	#define STARTINGMAP "app0:Stuff/Maps/NathansHouse"
 #elif PLATFORM == PLAT_WINDOWS
 	#define STARTINGMAP "./Stuff/Maps/NathansHouse"
 #elif PLATFORM == PLAT_3DS
-	#define STARTINGMAP "/3ds/data/HappyLand/Stuff/Maps/StartTown"
+	#define STARTINGMAP "/3ds/data/HappyLand/Stuff/Maps/NathansHouse"
 #endif
 
 // Translatos for hardcoded strings
@@ -85,6 +85,8 @@ int LANGUAGE=LANG_ENGLISH;
 #elif PLATFORM==PLAT_3DS
 	#define SCREENWIDTH 400
 	#define SCREENHEIGHT 240
+	#define BOTTOMSCREENWIDTH 320
+	#define BOTTOMSCREENHEIGHT 240
 	#define MAPXSCALE 1
 	#define MAPYSCALE 1
 	
@@ -806,7 +808,7 @@ void DrawAnimation(animation* animationToDraw, int destX, int destY){
 	DrawTexturePartScale(animationToDraw->texture,FixX(destX+animationToDraw->drawXOffset),FixY(destY+animationToDraw->drawYOffset),animationToDraw->width*animationToDraw->currentFrame,0,animationToDraw->width,animationToDraw->height,MAPXSCALE,MAPYSCALE);
 }
 // Draws it as given in arguments. No scaling or position changes.
-void DrawAnimationAsISay(animation* animationToDraw, int destX, int destY, int scale){
+void DrawAnimationAsISay(animation* animationToDraw, int destX, int destY, float scale){
 	UpdateAnimationIfNeed(animationToDraw);
 	DrawTexturePartScale(animationToDraw->texture,(destX+animationToDraw->drawXOffset),(destY+animationToDraw->drawYOffset),animationToDraw->width*animationToDraw->currentFrame,0,animationToDraw->width,animationToDraw->height,scale,scale);
 }
@@ -1581,9 +1583,18 @@ int CenterSomething(int width){
 	return (SCREENWIDTH/2-floor(((double)width)/2));
 }
 
+int CenterSomethingCustomWidth(int width, int customScreenWidth){
+	return (customScreenWidth/2-floor(((double)width)/2));
+}
+
 // Returns x position for this to be centered
 int CenterText(char* text, char scale){
 	return CenterSomething(strlen(text)*(scale*8));
+}
+
+// Returns x position for this to be centered
+int CenterTextCustomWidth(char* text, char scale, int customScreenWidth){
+	return CenterSomethingCustomWidth(strlen(text)*(scale*8),customScreenWidth);
 }
 
 // Returns spell id selected
@@ -1774,6 +1785,7 @@ void LevelDown(partyMember* passedMember){
 
 void Save(){
 	int i=0;
+	int j=0;
 	FILE* fp;
 
 	#if PLATFORM == PLAT_WINDOWS
@@ -1804,7 +1816,7 @@ void Save(){
 	lua_getglobal(L,"numberOfFlags");
 	passedNumberOfFlags = (char)lua_tonumber(L,-1);
 	fwrite(&(passedNumberOfFlags),1,1,fp);
-	printf("numberofflags: %d\n", passedNumberOfFlags);
+	//printf("numberofflags: %d\n", passedNumberOfFlags);
 	for (i=1;i<passedNumberOfFlags;i++){
 		lua_getglobal(L,"flags");
 		lua_pushnumber(L,i);
@@ -1814,8 +1826,25 @@ void Save(){
 		// Pop table
 		lua_pop(L,-1);
 		fwrite(&(got),1,1,fp);
-		printf("wrote %d\n",got);
+		//printf("wrote %d\n",got);
 	}
+
+	char zero=0;
+	// Save the skills of the party members
+	// Write 0 at the end
+	for (j=0;j<4;j++){
+		for (i=0;i<20;i++){
+			if (party[j].fighterStats.spells[i]!=0){
+				printf("Wrote %d for party member %d\n",party[j].fighterStats.spells[i],j);
+				fwrite(&(party[j].fighterStats.spells[i]),1,1,fp);
+			}else{
+				printf("Stopped as %d has %d.",j,i);
+				break;
+			}
+		}
+		fwrite(&(zero),1,1,fp);
+	}
+
 
 
 	fclose(fp);
@@ -1889,8 +1918,10 @@ void Load(){
 	// READ FLAGS
 	char numberOfFlags;
 	fread(&(numberOfFlags),1,1,fp);
+	printf("Totalflags: %d\n",numberOfFlags);
 	lua_getglobal(L,"flags");
-	for (i=1;i<numberOfFlags+1;i++){
+	for (i=1;i<numberOfFlags;i++){
+		printf("LOAD FLAG\n");
 		lua_pushnumber(L,i);
 		char justReadValue;
 		fread(&(justReadValue),1,1,fp);
@@ -1903,6 +1934,19 @@ void Load(){
 	// ugh.
 	// But I kind of like working on saving and loading.
 	// I think I should've added it before the game was released.
+
+	char lastRead;
+	for (j=0;j<4;j++){
+		for (i=0;i<20;i++){
+			fread(&lastRead,1,1,fp);
+			if (lastRead!=0){
+				printf("Spell %d for party %d is %d\n",i,j,lastRead);
+				party[j].fighterStats.spells[i]=lastRead;
+			}else{
+				break;
+			}
+		}
+	}
 
 
 
@@ -1958,37 +2002,90 @@ void StatusLoop(){
 		}
 		StartDrawing();
 
-		DrawTextAsISay(SCREENWIDTH/2-strlen(party[selectedMember].fighterStats.name)*64/2,3,party[selectedMember].fighterStats.name,8);
-		DrawTextAsISay(3,69,N_ATK,4);
-		sprintf((char*)&statNumberString,"%d",party[selectedMember].fighterStats.attack);
-		DrawTextAsISay(strlen(N_ATK)*32+32,69,statNumberString,4);
-		DrawTextAsISay(3,106,N_MATK,4);
-		sprintf((char*)&statNumberString,"%d",party[selectedMember].fighterStats.magicAttack);
-		DrawTextAsISay(strlen(N_MATK)*32+32,106,statNumberString,4);
-		DrawTextAsISay(3,143,N_DEF,4);
-		sprintf((char*)&statNumberString,"%d",party[selectedMember].fighterStats.defence);
-		DrawTextAsISay(strlen(N_DEF)*32+32,143,statNumberString,4);
-		DrawTextAsISay(3,180,N_MDEF,4);
-		sprintf((char*)&statNumberString,"%d",party[selectedMember].fighterStats.magicDefence);
-		DrawTextAsISay(strlen(N_MDEF)*32+32,180,statNumberString,4);
-		DrawTextAsISay(3,217,N_SPEED,4);
-		sprintf((char*)&statNumberString,"%d",party[selectedMember].fighterStats.speed);
-		DrawTextAsISay(strlen(N_SPEED)*32+32,217,statNumberString,4);
+		#if PLATFORM != PLAT_3DS
+			DrawTextAsISay(SCREENWIDTH/2-strlen(party[selectedMember].fighterStats.name)*64/2,3,party[selectedMember].fighterStats.name,8);
+			DrawTextAsISay(3,69,N_ATK,4);
+			sprintf((char*)&statNumberString,"%d",party[selectedMember].fighterStats.attack);
+			DrawTextAsISay(strlen(N_ATK)*32+32,69,statNumberString,4);
+			DrawTextAsISay(3,106,N_MATK,4);
+			sprintf((char*)&statNumberString,"%d",party[selectedMember].fighterStats.magicAttack);
+			DrawTextAsISay(strlen(N_MATK)*32+32,106,statNumberString,4);
+			DrawTextAsISay(3,143,N_DEF,4);
+			sprintf((char*)&statNumberString,"%d",party[selectedMember].fighterStats.defence);
+			DrawTextAsISay(strlen(N_DEF)*32+32,143,statNumberString,4);
+			DrawTextAsISay(3,180,N_MDEF,4);
+			sprintf((char*)&statNumberString,"%d",party[selectedMember].fighterStats.magicDefence);
+			DrawTextAsISay(strlen(N_MDEF)*32+32,180,statNumberString,4);
+			DrawTextAsISay(3,217,N_SPEED,4);
+			sprintf((char*)&statNumberString,"%d",party[selectedMember].fighterStats.speed);
+			DrawTextAsISay(strlen(N_SPEED)*32+32,217,statNumberString,4);
+	
+			sprintf((char*)&statNumberString,"%d/%d",party[selectedMember].hp,party[selectedMember].fighterStats.maxHp);
+			DrawTextAsISay(strlen(N_HP)*32+32,254,statNumberString,4);
+			DrawTextAsISay(3,254,N_HP,4);
+			sprintf((char*)&statNumberString,"%d/%d",party[selectedMember].mp,party[selectedMember].fighterStats.maxMp);
+			DrawTextAsISay(strlen(N_MP)*32+32,291,statNumberString,4);
+			DrawTextAsISay(3,291,N_MP,4);
+			
+			sprintf((char*)&statNumberString,"%d",party[selectedMember].fighterStats.level);
+			DrawTextAsISay(strlen(N_LV)*32+32,328,statNumberString,4);
+			DrawTextAsISay(3,328,N_LV,4);
+			
+			double animationScale=(SCREENHEIGHT-180)/ partyIdleAnimation[selectedMember].height;
+			DrawAnimationAsISay(&partyIdleAnimation[selectedMember],SCREENWIDTH-partyIdleAnimation[selectedMember].width*animationScale-100,180,animationScale);
+		#elif PLATFORM == PLAT_3DS
+			DrawMapThings();
+			EndDrawing();
+			sf2d_start_frame(GFX_BOTTOM, GFX_LEFT);
+			
+			// Draw name
+			DrawTextAsISay(CenterTextCustomWidth(party[selectedMember].fighterStats.name,3,BOTTOMSCREENWIDTH),3,party[selectedMember].fighterStats.name,3);
+			
+			int i=0;
+			// Draw attack
+			i++;
+			DrawTextAsISay(3,20*i+2*i+10,N_ATK,2);
+			sprintf((char*)&statNumberString,"%d",party[selectedMember].fighterStats.attack);
+			DrawTextAsISay(strlen(N_ATK)*16+16,20*i+2*i+10,statNumberString,2);
 
-		sprintf((char*)&statNumberString,"%d/%d",party[selectedMember].hp,party[selectedMember].fighterStats.maxHp);
-		DrawTextAsISay(strlen(N_HP)*32+32,254,statNumberString,4);
-		DrawTextAsISay(3,254,N_HP,4);
-		sprintf((char*)&statNumberString,"%d/%d",party[selectedMember].mp,party[selectedMember].fighterStats.maxMp);
-		DrawTextAsISay(strlen(N_MP)*32+32,291,statNumberString,4);
-		DrawTextAsISay(3,291,N_MP,4);
-		
-		sprintf((char*)&statNumberString,"%d",party[selectedMember].fighterStats.level);
-		DrawTextAsISay(strlen(N_LV)*32+32,328,statNumberString,4);
-		DrawTextAsISay(3,328,N_LV,4);
-		
-		double animationScale=(SCREENHEIGHT-180)/ partyIdleAnimation[selectedMember].height;
-		DrawAnimationAsISay(&partyIdleAnimation[selectedMember],SCREENWIDTH-partyIdleAnimation[selectedMember].width*animationScale-100,180,animationScale);
+			i++;
+			DrawTextAsISay(3,20*i+2*i+10,N_MATK,2);
+			sprintf((char*)&statNumberString,"%d",party[selectedMember].fighterStats.magicAttack);
+			DrawTextAsISay(strlen(N_MATK)*16+16,20*i+2*i+10,statNumberString,2);
 
+			i++;
+			DrawTextAsISay(3,20*i+2*i+10,N_DEF,2);
+			sprintf((char*)&statNumberString,"%d",party[selectedMember].fighterStats.defence);
+			DrawTextAsISay(strlen(N_DEF)*16+16,20*i+2*i+10,statNumberString,2);
+
+			i++;
+			DrawTextAsISay(3,20*i+2*i+10,N_MDEF,2);
+			sprintf((char*)&statNumberString,"%d",party[selectedMember].fighterStats.magicDefence);
+			DrawTextAsISay(strlen(N_MDEF)*16+16,20*i+2*i+10,statNumberString,2);
+
+			i++;
+			DrawTextAsISay(3,20*i+2*i+10,N_SPEED,2);
+			sprintf((char*)&statNumberString,"%d",party[selectedMember].fighterStats.speed);
+			DrawTextAsISay(strlen(N_SPEED)*16+16,20*i+2*i+10,statNumberString,2);
+			
+			i++;
+			sprintf((char*)&statNumberString,"%d/%d",party[selectedMember].hp,party[selectedMember].fighterStats.maxHp);
+			DrawTextAsISay(strlen(N_HP)*16+16,20*i+2*i+10,statNumberString,2);
+			DrawTextAsISay(3,20*i+2*i+10,N_HP,2);
+
+			i++;
+			sprintf((char*)&statNumberString,"%d/%d",party[selectedMember].mp,party[selectedMember].fighterStats.maxMp);
+			DrawTextAsISay(strlen(N_MP)*16+16,20*i+2*i+10,statNumberString,2);
+			DrawTextAsISay(3,20*i+2*i+10,N_MP,2);
+			
+			i++;
+			sprintf((char*)&statNumberString,"%d",party[selectedMember].fighterStats.level);
+			DrawTextAsISay(strlen(N_LV)*16+32,20*i+2*i+10,statNumberString,2);
+			DrawTextAsISay(3,20*i+2*i+10,N_LV,2);			
+			
+			double animationScale=(BOTTOMSCREENHEIGHT-120)/ (double)partyIdleAnimation[selectedMember].height;
+			DrawAnimationAsISay(&partyIdleAnimation[selectedMember],BOTTOMSCREENWIDTH-partyIdleAnimation[selectedMember].width*animationScale-32,120,animationScale);
+		#endif
 
 		EndDrawing();
 		EndFrameStuff();
@@ -2009,36 +2106,41 @@ void MenuLop(){
 		if (WasJustPressed(aButton)){
 			if (subspot==0){
 				switch(selected){
+					// 	Resume
 					case 0:
 						place=0;
 						return;
 					break;
+					// Status
 					case 1:
 						place=4;
 						return;
 					break;
-					case 3:
-						if (LANGUAGE==LANG_ENGLISH){
-							LANGUAGE=LANG_SPANISH;
-						}else if (LANGUAGE==LANG_SPANISH){
-							LANGUAGE=LANG_ENGLISH;
-						}
-						SetupHardcodedLanguage();
-						if (LANGUAGE == LANG_ENGLISH){
-							lua_pushnumber(L,1);
-						}else if (LANGUAGE==LANG_SPANISH){
-							lua_pushnumber(L,2);
-						}
-						lua_setglobal(L,"Lang");
-
-						break;
-					case 4:
-						subspot=1;
-						selected=0;
-					break;
+					// SAVE
 					case 2:
+						Save();
+						return;
+					break;
+					// LOAD
+					case 3:
+						subspot=1;
+						selected=1;
+					break;
+					// QUIT
+					case 4:
 						place=2;
 						return;
+					break;
+				}
+			}else if (subspot==1){
+				switch(selected){
+					case 0:
+						Load();
+						place=0;
+						return;
+					break;
+					case 1:
+						subspot=0;
 					break;
 				}
 			}
@@ -2048,38 +2150,31 @@ void MenuLop(){
 		}else if (WasJustPressed(bButton)){
 			if (subspot==0){
 				place=0;
+				return;
 			}else{
 				subspot=0;
 			}
-			return;
 		}
 		if (WasJustPressed(SCE_CTRL_DOWN)){
 			selected++;
-			if (selected>2){
-				selected=0;
+			if (subspot==0){
+				if (selected>4){
+					selected=0;
+				}
+			}else if (subspot==1){
+				if (selected>1){
+					selected=0;
+				}
 			}
 		}else if (WasJustPressed(SCE_CTRL_UP)){
 			selected--;
-			if (selected<0){
-				selected=2;
-			}
-		}else if (WasJustPressed(SCE_CTRL_RIGHT)){
-			if (subspot==1){
-				if (selected==0){
-					textboxNewCharSpeed--;
-					if (textboxNewCharSpeed==0){
-						textboxNewCharSpeed=1;
-					}
+			if (subspot==0){
+				if (selected<0){
+					selected=4;
 				}
-
-			}
-		}else if (WasJustPressed(SCE_CTRL_LEFT)){
-			if (subspot==1){
-				if (selected==0){
-					textboxNewCharSpeed++;
-					if (textboxNewCharSpeed==0){
-						textboxNewCharSpeed=1;
-					}
+			}else if (subspot==1){
+				if (selected<0){
+					selected=0;
 				}
 			}
 		}
@@ -2088,32 +2183,72 @@ void MenuLop(){
 		StartDrawing();
 	
 		DrawMapThings();
-		// Draw fancy shade thingie
-		DrawRectangle(720,136,5,272,0,0,0,255);
-		DrawRectangle(240,408,485,5,0,0,0,255);
-		// Draw border
-		DrawRectangle(240,136,480,272,0,255,0,255);
-		// Draw real rectangle
-		DrawRectangle(245,141,470,262,252,255,255,255);
 
-		if (subspot==0){
-			DrawTextAsISay(CenterText(N_HAPPYMENU,4),146,N_HAPPYMENU,4);
-			DrawTextAsISay(287,183,N_RESUME,4);
-			DrawTextAsISay(287,183+32+5,playerName,4);
-			//DrawTextAsISay(287,183+64+10,N_OPTIONS,4);
-			/*if (LANGUAGE==LANG_ENGLISH){
-				DrawTextAsISay(287,183+64+15,"Espa'nol",4);
-			}else if (LANGUAGE==LANG_SPANISH){
-				DrawTextAsISay(287,183+64+15,"English",4);
-			}*/
-			DrawTextAsISay(287,183+64+15,N_QUIT,4);
-		}else if (subspot==1){
-			/*DrawTextAsISay(320+32,146,N_OPTIONS,4);
-			DrawTextAsISay(287,183,N_TEXTSPEED,4);
-			sprintf((char*)&tempStringAssembly,"%d",255-textboxNewCharSpeed);
-			DrawTextAsISay(287+strlen(N_TEXTSPEED)*32+32,183,tempStringAssembly,4);*/
-		}
-		DrawAnimationAsISay(&selectorAnimation,245,selected*32+183+selected*5,2);
+
+		#if PLATFORM!=PLAT_3DS
+			// Draw fancy shade thingie
+			DrawRectangle(720,136,5,272,0,0,0,255);
+			DrawRectangle(240,408,485,5,0,0,0,255);
+			// Draw border
+			DrawRectangle(240,136,480,272,0,255,0,255);
+			// Draw real rectangle
+			DrawRectangle(245,141,470,262,252,255,255,255);
+	
+			if (subspot==0){
+				DrawTextAsISay(CenterText(N_HAPPYMENU,4),146,N_HAPPYMENU,4);
+				// 0
+				DrawTextAsISay(287,183,N_RESUME,4);
+				// 1
+				DrawTextAsISay(287,183+32+5,playerName,4);
+				// 2
+				DrawTextAsISay(287,183+32+32+5+5,N_SAVE,4);
+				// 3
+				DrawTextAsISay(287,183+32+32+32+5+5+5,N_LOAD,4);
+				// 4
+				DrawTextAsISay(287,183+32+32+32+32+5+5+5+5,N_QUIT,4);
+			}else if (subspot==1){
+				if (LANGUAGE==LANG_SPANISH){
+					DrawTextAsISay(CenterText("?Quieres cargar?",4),146,"'?Quieres cargar?",4);
+					DrawTextAsISay(287,183,"S'i.",4);
+					DrawTextAsISay(287,183+32+5,"No.",4);
+				}else if (LANGUAGE==LANG_ENGLISH){
+					DrawTextAsISay(CenterText("Really load?",4),146,"Really load?",4);
+					DrawTextAsISay(287,183,"Yes.",4);
+					DrawTextAsISay(287,183+32+5,"No.",4);
+				}
+			}
+			DrawAnimationAsISay(&selectorAnimation,245,selected*32+183+selected*5,2);
+		#elif PLATFORM == PLAT_3DS
+			EndDrawing();
+			sf2d_start_frame(GFX_BOTTOM, GFX_LEFT);
+			// Draw real rectangle
+			DrawRectangle(0,0,320,240,252,255,255,255);
+	
+			if (subspot==0){
+				DrawTextAsISay(0,0,N_HAPPYMENU,3.5);
+				// 0
+				DrawTextAsISay(30,32+24+5,N_RESUME,3);
+				// 1
+				DrawTextAsISay(30,32+24+24+5+5,playerName,3);
+				// 2
+				DrawTextAsISay(30,32+24+24+24+5+5+5,N_SAVE,3);
+				// 3
+				DrawTextAsISay(30,32+24+24+24+24+5+5+5+5,N_LOAD,3);
+				// 4
+				DrawTextAsISay(30,32+24+24+24+24+24+5+5+5+5+5,N_QUIT,3);
+			}else if (subspot==1){
+				if (LANGUAGE==LANG_SPANISH){
+					DrawTextAsISay(0,0,"'?Quieres cargar?",3.5);
+					DrawTextAsISay(30,32+24+5,"S'i.",3);
+					DrawTextAsISay(30,32+24+25+5+5,"No.",3);
+				}else if (LANGUAGE==LANG_ENGLISH){
+					DrawTextAsISay(0,0,"Really load?",3.5);
+					DrawTextAsISay(30,32+24+5,"Yes.",3);
+					DrawTextAsISay(30,32+24+25+5+5,"No.",3);
+				}
+			}
+			DrawAnimationAsISay(&selectorAnimation,0,selected*24+32+24+selected*5+5,1);
+		#endif
 
 
 		EndDrawing();
@@ -2121,8 +2256,7 @@ void MenuLop(){
 	}
 }
 
-void Overworld(){
-	StartFrameStuff();
+void Overworld(){StartFrameStuff();
 	// Main logic
 
 	// Controls only if not walking
@@ -2236,16 +2370,7 @@ void Overworld(){
 	}
 
 	if (WasJustPressed(SCE_CTRL_START)){// TODO - PLAY SOUND
-		printf("ISSTart");
 		place=1;
-	}
-
-
-	if (WasJustPressed(SCE_CTRL_TRIANGLE)){
-		Save();
-	}
-	if (WasJustPressed(SCE_CTRL_SQUARE)){
-		Load();
 	}
 
 	UpdateCameraValues(playerObject);
@@ -3083,6 +3208,12 @@ char BattleLop(char canRun){
 			place=0;
 			playerObject->x=64;
 			playerObject->y=64;
+
+			RestorePartyMember(0);
+			RestorePartyMember(1);
+			RestorePartyMember(2);
+			RestorePartyMember(3);
+
 			#if PLATFORM == PLAT_VITA
 				ChangeMap("app0:Stuff/Maps/NathansHouse");
 			#elif PLATFORM == PLAT_WINDOWS
@@ -3466,6 +3597,7 @@ int main(int argc, char *argv[]){
 			Overworld();
 		}else if (place==1){
 			MenuLop();
+			ClearBottomScreen();
 		}else if (place==2){
 			break;
 		}else if (place==3){
@@ -3498,7 +3630,6 @@ int main(int argc, char *argv[]){
 	#elif PLATFORM == PLAT_3DS
 		// TODO 3ds cleanup.
 		// This may actually be used.
-
 		sf2d_fini();
 	#endif
 	return 0;

@@ -18,6 +18,8 @@ char* N_SPEED;
 char* N_HP;
 char* N_MP;
 char* N_LV;
+char* N_SAVE;
+char* N_LOAD;
 
 void SetupHardcodedLanguage(){
 	if (LANGUAGE==LANG_ENGLISH){
@@ -38,6 +40,9 @@ void SetupHardcodedLanguage(){
 		N_HP = "Health";
 		N_MP = "MP";
 		N_LV = "Level";
+
+		N_SAVE = "Save";
+		N_LOAD = "Load";
 	}
 	if (LANGUAGE==LANG_SPANISH){
 		// NEed acsent on a;
@@ -72,6 +77,9 @@ void SetupHardcodedLanguage(){
 		N_LEVELEDUP = "es m'as fuerte!";
 		
 		N_LV = "LV";
+
+		N_SAVE = "Guardar";
+		N_LOAD = "Cargar";
 	}
 }
 
