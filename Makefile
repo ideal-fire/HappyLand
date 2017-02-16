@@ -27,16 +27,18 @@ include $(DEVKITARM)/3ds_rules
 #     - icon.png
 #     - <libctru folder>/default_icon.png
 #---------------------------------------------------------------------------------
+NO_SMDH		:= nob
 TARGET		:=	sf2d_sample
-BUILD		:=	_3dsBuild
+BUILD		:=	BuildMoronFiles
 SOURCES		:=	source
 DATA		:=	
 INCLUDES	:=	
+ICON        := _NOSEND/Icon48x48.png
 #ROMFS		:=	romfs
 
 APP_TITLE		:= Happy Land
-APP_DESCRIPTION	:= Happy Land
-APP_AUTHOR		:= MyLegGuy
+APP_DESCRIPTION	:= Happy Land: Quest For Potatoes
+APP_AUTHOR		:= MyLeGguy
 
 #---------------------------------------------------------------------------------
 # options for code generation

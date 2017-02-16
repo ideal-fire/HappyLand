@@ -1,0 +1,1 @@
+I doubt I'll get any noobs asking questions because my thread will be buried in a few days, but you better read the readme first if you're going to ask a question.

@@ -1,0 +1,6 @@
+Uses Lua
+Uses LibVita2d
+
+
+http://www.publicdomainpictures.net/view-image.php?image=174627&picture=hand-with-thumb-up
+http://www.publicdomainpictures.net/view-image.php?image=131480&picture=potato-in-3d

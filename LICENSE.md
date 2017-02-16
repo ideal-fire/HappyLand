@@ -5,4 +5,4 @@ All of the files in the following directories are licensed under Attribution 4.0
 ./happy/SpanishReplace
 ./source
 
-Any file not in one of those directories is not under that license.
+Any file not in one of those directories is not under that license and may be under a different one.

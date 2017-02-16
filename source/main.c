@@ -629,6 +629,7 @@ int FixY(int x){
 int FixXObjects(int x){
 	return FixX(x-cameraWholeOffsetX*32-cameraPartialOffsetX);
 }
+
 int FixYObjects(int x){
 	return FixY(x-cameraWholeOffsetY*32-cameraPartialOffsetY);
 }
@@ -636,6 +637,7 @@ int FixYObjects(int x){
 tileImageData* GetMapImageData(short x, short y, short layer){
 	return (tileImageData*)GetGoodArray(&(layers[layer]),x,y);
 }
+
 tileSpotData* GetMapSpotData(short x, short y){
 	return (tileSpotData*)GetGoodArray(&(tileOtherData),x,y);
 }
@@ -668,6 +670,8 @@ void Wait(int miliseconds){
 		sceKernelDelayThread(miliseconds*1000);
 	#elif PLATFORM == PLAT_WINDOWS
 		SDL_Delay(miliseconds);
+	#elif PLATFORM == PLAT_3DS
+		svcSleepThread(miliseconds*1000000);
 	#endif
 }
 
@@ -679,7 +683,7 @@ u64 GetTicks(){
 	#elif PLATFORM == PLAT_WINDOWS
 		return SDL_GetTicks();
 	#elif PLATFORM == PLAT_3DS
-		return svcGetSystemTick();
+		return osGetTime();
 	#endif
 }
 
@@ -2225,7 +2229,7 @@ void MenuLop(){
 			DrawRectangle(0,0,320,240,252,255,255,255);
 	
 			if (subspot==0){
-				DrawTextAsISay(0,0,N_HAPPYMENU,3.5);
+				DrawTextAsISay(5,0,N_HAPPYMENU,3.5);
 				// 0
 				DrawTextAsISay(30,32+24+5,N_RESUME,3);
 				// 1
@@ -2238,11 +2242,11 @@ void MenuLop(){
 				DrawTextAsISay(30,32+24+24+24+24+24+5+5+5+5+5,N_QUIT,3);
 			}else if (subspot==1){
 				if (LANGUAGE==LANG_SPANISH){
-					DrawTextAsISay(0,0,"'?Quieres cargar?",3.5);
+					DrawTextAsISay(5,0,"'?Quieres cargar?",3.5);
 					DrawTextAsISay(30,32+24+5,"S'i.",3);
 					DrawTextAsISay(30,32+24+25+5+5,"No.",3);
 				}else if (LANGUAGE==LANG_ENGLISH){
-					DrawTextAsISay(0,0,"Really load?",3.5);
+					DrawTextAsISay(5,0,"Really load?",3.5);
 					DrawTextAsISay(30,32+24+5,"Yes.",3);
 					DrawTextAsISay(30,32+24+25+5+5,"No.",3);
 				}
@@ -2256,7 +2260,8 @@ void MenuLop(){
 	}
 }
 
-void Overworld(){StartFrameStuff();
+void Overworld(){
+	StartFrameStuff();
 	// Main logic
 
 	// Controls only if not walking
@@ -3281,6 +3286,7 @@ void TitleLoop(){
 			LoadMap(STARTINGMAP);
 			place=0;	
 
+			ClearBottomScreen();
 			break;
 		}
 		if (WasJustPressed(SCE_CTRL_TRIANGLE)){
@@ -3312,13 +3318,15 @@ void TitleLoop(){
 			#endif
 		}
 		if (WasJustPressed(SCE_CTRL_SQUARE)){
-			if (aButton==SCE_CTRL_CROSS){
-				aButton=SCE_CTRL_CIRCLE;
-				bButton=SCE_CTRL_CROSS;
-			}else{
-				bButton=SCE_CTRL_CIRCLE;
-				aButton=SCE_CTRL_CROSS;
-			}
+			#if PLATFORM != PLAT_VITA
+				if (aButton==SCE_CTRL_CROSS){
+					aButton=SCE_CTRL_CIRCLE;
+					bButton=SCE_CTRL_CROSS;
+				}else{
+					bButton=SCE_CTRL_CIRCLE;
+					aButton=SCE_CTRL_CROSS;
+				}
+			#endif
 		}
 
 		StartDrawing();
@@ -3326,26 +3334,36 @@ void TitleLoop(){
 		//DrawTexture(titleImage,0,0);
 		DrawTextureScale(titleImage,0,0,(float)SCREENWIDTH/GetTextureWidth(titleImage),(float)SCREENHEIGHT/GetTextureHeight(titleImage));
 
-		if (LANGUAGE==LANG_ENGLISH){
-			//DrawTextAsISay(int x, int y, const char* text, int size
-			DrawTextAsISay(49+8,495,"Espa'nol",5.875);
-		}else if (LANGUAGE==LANG_SPANISH){
-			DrawTextAsISay(49+8,495,"English",5.875);
-		}
-
-		if (aButton==SCE_CTRL_CROSS){
+		#if PLATFORM != PLAT_3DS
 			if (LANGUAGE==LANG_ENGLISH){
-				DrawTextAsISay(51+8,443+15,"X and O: Not Japan",3.5);
+				//DrawTextAsISay(int x, int y, const char* text, int size
+				DrawTextAsISay(49+8,495,"Espa'nol",5.875);
 			}else if (LANGUAGE==LANG_SPANISH){
-				DrawTextAsISay(51+8,443+15,"X y O: NO Jap'on",3.5);
+				DrawTextAsISay(49+8,495,"English",5.875);
 			}
-		}else{
+	
+			if (aButton==SCE_CTRL_CROSS){
+				if (LANGUAGE==LANG_ENGLISH){
+					DrawTextAsISay(51+8,443+15,"X and O: Not Japan",3.5);
+				}else if (LANGUAGE==LANG_SPANISH){
+					DrawTextAsISay(51+8,443+15,"X y O: NO Jap'on",3.5);
+				}
+			}else{
+				if (LANGUAGE==LANG_ENGLISH){
+					DrawTextAsISay(51+8,443+15,"X and O: Japan",3.5);
+				}else if (LANGUAGE==LANG_SPANISH){
+					DrawTextAsISay(51+8,443+15,"X y O: Jap'on",3.5);
+				}
+			}
+		#elif PLATFORM == PLAT_3DS
+			EndDrawing();
+			sf2d_start_frame(GFX_BOTTOM, GFX_LEFT);
 			if (LANGUAGE==LANG_ENGLISH){
-				DrawTextAsISay(51+8,443+15,"X and O: Japan",3.5);
+				DrawTextAsISay(0,0,"X: Espa'nol",2);
 			}else if (LANGUAGE==LANG_SPANISH){
-				DrawTextAsISay(51+8,443+15,"X y O: Jap'on",3.5);
+				DrawTextAsISay(0,0,"X: English",2);
 			}
-		}
+		#endif
 
 		EndDrawing();
 		
@@ -3590,7 +3608,6 @@ int main(int argc, char *argv[]){
 	*/
 	
 	//BattleInit();
-
 
 	while (1){
 		if (place==0){
