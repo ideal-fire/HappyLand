@@ -1097,10 +1097,12 @@ void LoadMap(char* path){
 	sprintf(withDotLua,"%s%s",path,".lua");
 	luaL_dofile(L,withDotLua);
 
-
+	// The reason we need this temp buffer stupidity is because I tried to pass currentMapFilepath to this function, which makes this function strcpy with dest and src the same
+	char _tempBuf[strlen(path)+1];
+	strcpy(_tempBuf,path);
 	free(currentMapFilepath);
-	currentMapFilepath = malloc(strlen(path)+1);
-	strcpy(currentMapFilepath,path);
+	currentMapFilepath = malloc(strlen(_tempBuf)+1);
+	strcpy(currentMapFilepath,_tempBuf);
 
 	//((tileImageData*)GetGoodArray(&layers[0],1,1))->tile=1;
 	//
@@ -1131,6 +1133,7 @@ void UnloadMap(){
 				possibleEnemiesIdleAnimation[i].texture=NULL;
 			}
 		}
+		possibleEnemies[i].maxHp=-1;
 	}
 	
 	// Set all enemy pointers to null
@@ -1138,10 +1141,6 @@ void UnloadMap(){
 		enemies[i].hp=-1;
 		enemyIdleAnimation[i]=NULL;
 		enemyAttackAnimation[i]=NULL;
-	}
-	for (i=0;i<10;i++){
-		// -1 maxHp means that the slot isn't used.
-		possibleEnemies[i].maxHp=-1;
 	}
 }
 
@@ -1506,13 +1505,14 @@ void Save(){
 	#if PLATFORM == PLAT_WINDOWS
 		fp = fopen ("./savefile", "w");
 	#elif PLATFORM == PLAT_VITA
-		fp = fopen ("savedata0:savefile", "w");
+		//Can use
+		//https://github.com/vitasdk/vita-headers/blob/236582e4aef188071dc83c9e8338282b12ab1731/include/psp2/apputil.h
+		fp = fopen ("ux0:data/MYLEGNOOB/savefile", "w");
 	#elif PLATFORM == PLAT_3DS
 		fp = fopen ("/3ds/data/HappyLand/savefile", "w");
 	#endif
 
 	short pathLength = strlen(currentMapFilepath);
-
 	fwrite(&(pathLength),2,1,fp);
 	fwrite((currentMapFilepath),pathLength,1,fp);
 	fwrite(&(playerObject->x),2,1,fp);
@@ -1563,7 +1563,9 @@ void Save(){
 
 
 	fclose(fp);
+	ShowMessage("Saved.",0);
 }
+
 
 void Load(){
 	int i=0;
@@ -1574,7 +1576,7 @@ void Load(){
 	#if PLATFORM == PLAT_WINDOWS
 		fp = fopen ("./savefile", "r");
 	#elif PLATFORM == PLAT_VITA
-		fp = fopen ("savedata0:savefile", "r");
+		fp = fopen ("ux0:data/MYLEGNOOB/savefile", "r");
 	#elif PLATFORM == PLAT_3DS
 		fp = fopen ("/3ds/data/HappyLand/savefile", "r");
 	#endif
@@ -1583,25 +1585,27 @@ void Load(){
 	//fwrite(playerObject->x,2,1,fp);
 	//fwrite(playerObject->y,2,1,fp);
 
-	free(currentMapFilepath);
+	
 
-	// All your memories
-	// Levels
-	// I'll bring them all back to zero.
+	// Remove levels
 	for (j=2;j<=party[i].fighterStats.level;j++){
 		printf("Leveled down %d/%d\n",j-1,party[i].fighterStats.level);
 		LevelDown(&(party[i]));
 	}
 
 	short pathLength;
-
 	fread(&pathLength,2,1,fp);
+	free(currentMapFilepath);
 	currentMapFilepath = malloc(pathLength+1);
-	currentMapFilepath[pathLength]='\0';
+	memset(currentMapFilepath, 0, pathLength+1);
 	fread(currentMapFilepath,pathLength,1,fp);
 
 	fread(&(playerObject->x),2,1,fp);
 	fread(&(playerObject->y),2,1,fp);
+
+	// Fixes the player's position if they saved while walking
+	playerObject->x = ceil(playerObject->x/32)*32;
+	playerObject->y = ceil(playerObject->y/32)*32;
 
 	unsigned short readLevels[4];
 	short readHp[4];
@@ -1677,7 +1681,7 @@ void Load(){
 		party[i].mp=readMp[i];
 	}
 
-	printf("pathlength: %d\n", pathLength);
+	printf("pathLength: %d\n", pathLength);
 	printf("Mappath: %s\n", currentMapFilepath);
 	printf("x: %d, y: %d\n",playerObject->x,playerObject->y);
 
@@ -1808,7 +1812,8 @@ void StatusLoop(){
 void MenuLop(){
 	signed char selected=0;
 	// 0 - menu
-	// 1 - options
+	// 1 - load confirmation
+	// 2 - save confirmation
 	char subspot=0;
 
 	//char tempStringAssembly[5];
@@ -1831,8 +1836,8 @@ void MenuLop(){
 					break;
 					// SAVE
 					case 2:
-						Save();
-						return;
+						subspot=2;
+						selected=1;
 					break;
 					// LOAD
 					case 3:
@@ -1849,6 +1854,17 @@ void MenuLop(){
 				switch(selected){
 					case 0:
 						Load();
+						place=0;
+						return;
+					break;
+					case 1:
+						subspot=0;
+					break;
+				}
+			}else if (subspot==2){
+				switch(selected){
+					case 0:
+						Save();
 						place=0;
 						return;
 					break;
@@ -1874,7 +1890,7 @@ void MenuLop(){
 				if (selected>4){
 					selected=0;
 				}
-			}else if (subspot==1){
+			}else if (subspot==1 || subspot==2){
 				if (selected>1){
 					selected=0;
 				}
@@ -1885,7 +1901,7 @@ void MenuLop(){
 				if (selected<0){
 					selected=4;
 				}
-			}else if (subspot==1){
+			}else if (subspot==1 || subspot==2){
 				if (selected<0){
 					selected=0;
 				}
@@ -1909,15 +1925,10 @@ void MenuLop(){
 	
 			if (subspot==0){
 				DrawText(CenterText(N_HAPPYMENU,4),146,N_HAPPYMENU,4);
-				// 0
 				DrawText(287,183,N_RESUME,4);
-				// 1
 				DrawText(287,183+32+5,playerName,4);
-				// 2
 				DrawText(287,183+32+32+5+5,N_SAVE,4);
-				// 3
 				DrawText(287,183+32+32+32+5+5+5,N_LOAD,4);
-				// 4
 				DrawText(287,183+32+32+32+32+5+5+5+5,N_QUIT,4);
 			}else if (subspot==1){
 				if (LANGUAGE==LANG_SPANISH){
@@ -1926,6 +1937,16 @@ void MenuLop(){
 					DrawText(287,183+32+5,"No.",4);
 				}else if (LANGUAGE==LANG_ENGLISH){
 					DrawText(CenterText("Really load?",4),146,"Really load?",4);
+					DrawText(287,183,"Yes.",4);
+					DrawText(287,183+32+5,"No.",4);
+				}
+			}else if (subspot==2){
+				if (LANGUAGE==LANG_SPANISH){
+					DrawText(CenterText("?Quieres Salvar?",4),146,"'?Quieres Salvar?",4);
+					DrawText(287,183,"S'i.",4);
+					DrawText(287,183+32+5,"No.",4);
+				}else if (LANGUAGE==LANG_ENGLISH){
+					DrawText(CenterText("Really save?",4),146,"Really save?",4);
 					DrawText(287,183,"Yes.",4);
 					DrawText(287,183+32+5,"No.",4);
 				}
@@ -1956,6 +1977,16 @@ void MenuLop(){
 					DrawText(30,32+24+25+5+5,"No.",3);
 				}else if (LANGUAGE==LANG_ENGLISH){
 					DrawText(5,0,"Really load?",3.5);
+					DrawText(30,32+24+5,"Yes.",3);
+					DrawText(30,32+24+25+5+5,"No.",3);
+				}
+			}else if (subspot==2){
+				if (LANGUAGE==LANG_SPANISH){
+					DrawText(5,0,"'?Quieres salvar?",3.5);
+					DrawText(30,32+24+5,"S'i.",3);
+					DrawText(30,32+24+25+5+5,"No.",3);
+				}else if (LANGUAGE==LANG_ENGLISH){
+					DrawText(5,0,"Really save?",3.5);
 					DrawText(30,32+24+5,"Yes.",3);
 					DrawText(30,32+24+25+5+5,"No.",3);
 				}
@@ -2970,17 +3001,9 @@ void TitleLoop(){
 
 		#if PLATFORM != PLAT_3DS
 			if (aButton==SCE_CTRL_CROSS){
-				if (LANGUAGE==LANG_ENGLISH){
-					DrawText(51+8,443+15,"X and O: Not Japan",3.5);
-				}else if (LANGUAGE==LANG_SPANISH){
-					DrawText(51+8,443+15,"X y O: NO Jap'on",3.5);
-				}
+				DrawText(51+8,443+15,"Select Button: X",3.5);
 			}else{
-				if (LANGUAGE==LANG_ENGLISH){
-					DrawText(51+8,443+15,"X and O: Japan",3.5);
-				}else if (LANGUAGE==LANG_SPANISH){
-					DrawText(51+8,443+15,"X y O: Jap'on",3.5);
-				}
+				DrawText(51+8,443+15,"Select Button: O",3.5);
 			}
 		#elif PLATFORM == PLAT_3DS
 			EndDrawing();

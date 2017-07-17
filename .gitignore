@@ -51,3 +51,11 @@ Temporary Items
 *.vpk
 *.elf
 *.velf
+*.3dsx
+*.dll
+*.bat
+
+/BuildMoronFiles/
+/happy/
+/NoGithub/
+/copyrite/
