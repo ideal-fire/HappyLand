@@ -1,6 +1,9 @@
 #ifndef HAPPYLUAFUNCTIONS
 #define HAPPYLUAFUNCTIONS
 	
+	#define LUAREGISTER(x,y) lua_pushcfunction(L,x);\
+	lua_setglobal(L,y);
+
 	// X, Y, layer, Tileset, Tile
 	int L_SetMapImageData(lua_State* passedState){
 		tileImageData* _theChosenData = GetMapImageData(lua_tonumber(passedState,1),lua_tonumber(passedState,2),lua_tonumber(passedState,3));
@@ -69,7 +72,6 @@
 	// ARGS - 
 	// some_imgage_pointer
 	int L_UnloadTexture(lua_State* passedState){
-		PlzNoCrashOnDispose();
 		FreeTexture(lua_touserdata(passedState,1));
 		return 0;
 	}
@@ -87,8 +89,6 @@
 	// slot
 	int L_DestroyTileset(lua_State* passedState){
 		int passedNumber = lua_tonumber(passedState,1);
-	
-		PlzNoCrashOnDispose();
 		FreeTexture(tilesets[passedNumber]);
 		return 0;
 	}
@@ -334,10 +334,8 @@
 		return 1;
 	}
 	
-	// Call before disposing images..actually, no.
-	// you don't really need this.
+	// Only here for compatibility with old scripts
 	int L_PlzNoCrashOnDispose(lua_State* passedState){
-		PlzNoCrashOnDispose();
 		return 0;
 	}
 	
@@ -547,7 +545,8 @@
 		place=3;
 		lua_pushboolean(passedState,BattleLop(0));
 	
-		EndFrameStuff();
+		ControlsEnd();
+		FpsCapWait();
 		return 1;
 	}
 	
@@ -601,7 +600,7 @@
 		return 0;
 	}
 	
-	// Makes Lua usefull.
+	// Makes Lua useful.
 	void PushCFunctions(){
 		LUAREGISTER(L_SetMapImageData,"SetMapImageData");
 		LUAREGISTER(L_SetInt,"SetInt");

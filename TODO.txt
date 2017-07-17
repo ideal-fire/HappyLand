@@ -1,0 +1,9 @@
+* Mobile controls
+	* Tap where you want to go.
+		* Use that pathfinder I made.
+		* If you tap a solid block, you'll interact with it.
+* Make enemy setup preset thingies and use those.
+	* Similar to RPG Maker encounter maker thing where you can insert enemies into a battle and move them around.
+* Add gold
+* Add shop
+* Better menus

@@ -5,42 +5,21 @@
 O---O---O--OOOOO-O----OOOOO-O---O---
 */
 
+#include "Config.h"
+
 // Only turned off when I'm working on my game. Needs to be set to 1 before release
 #define SHOWSPLASH 1
 
-#define LUAREGISTER(x,y) lua_pushcfunction(L,x);\
-	lua_setglobal(L,y);
+// Temp
+#define StartFrameStuff(); FpsCapStart(); \
+	ControlsStart();
+#define EndFrameStuff(); ControlsEnd(); \
+	FpsCapWait();
 
 //#define LANGUAGE LANG_SPANISH
 #define LANG_ENGLISH 1
 #define LANG_SPANISH 2
 int LANGUAGE=LANG_ENGLISH;
-
-#define PLAT_VITA 1
-#define PLAT_WINDOWS 2
-#define PLAT_3DS 3
-
-#define PLATFORM PLAT_WINDOWS
-
-#define SUB_ANDROID 1
-#define SUBPLATFORM SUB_NONE
-
-#define SND_SDL 1
-#define SOUNDPLAYER SND_SDL
-
-#define REND_UNDEFINED 0
-#define REND_SDL 1
-#define REND_VITA2D 2
-#define REND_SF2D 3
-
-#define RENDERER REND_SDL
-
-#define TEXT_UNDEFINED 0
-#define TEXT_DEBUG 1
-#define TEXT_VITA2D 2
-#define TEXT_FONTCACHE 3
-
-#define TEXTRENDERER TEXT_FONTCACHE
 
 #define TYPE_UNDEFINED 0
 #define TYPE_DATA 1
@@ -54,13 +33,7 @@ int LANGUAGE=LANG_ENGLISH;
 #define PLACE_STATUS 4
 #define PLACE_TITLE 5
 
-#if PLATFORM == PLAT_VITA
-	#define STARTINGMAP "app0:Stuff/Maps/NathansHouse"
-#elif PLATFORM == PLAT_WINDOWS
-	#define STARTINGMAP "./Stuff/Maps/TestLand"
-#elif PLATFORM == PLAT_3DS
-	#define STARTINGMAP "/3ds/data/HappyLand/Stuff/Maps/NathansHouse"
-#endif
+#define STARTINGMAP "Stuff/Maps/NathansHouse"
 
 // Translatos for hardcoded strings
 #include "HardcodedLanguage.h"
@@ -79,9 +52,6 @@ int LANGUAGE=LANG_ENGLISH;
 	// This is so they don't overlap the selection buttons. Put as the screen height for no restriction
 	#define MAXYBATTLE 416
 
-	// CROSS TYPES
-	#define CrossTexture vita2d_texture
-	
 	// Textbox's y position
 	#define TEXTBOXY 420
 	
@@ -105,7 +75,7 @@ int LANGUAGE=LANG_ENGLISH;
 	#define MINYBATTLE 106
 	#define MAXYBATTLE 416
 
-	#define CrossTexture SDL_Texture
+	//#define CrossTexture SDL_Texture
 	#define TEXTBOXY 420
 	#define TEXTBOXFONTSIZE 2.5
 
@@ -138,9 +108,7 @@ int LANGUAGE=LANG_ENGLISH;
 	#define SCE_CTRL_TRIANGLE KEY_X
 	#define SCE_CTRL_SQUARE KEY_Y
 	#define SCE_CTRL_START KEY_START
-	
-	#define CrossTexture sf2d_texture
-	
+
 	#define TEXTBOXFONTSIZE 1.5
 	// SCREENHEIGHT - (Font*8)*desiredlines-5-5*desiredlines
 	#define TEXTBOXY 172
@@ -151,10 +119,6 @@ int LANGUAGE=LANG_ENGLISH;
 
 	#define DAMAGETEXTSIZE 2
 #endif
-
-// Not needed. Can use registry if you don't want to sleep.
-#define NOSLEEP 0
-
 
 // UNCHANGED BY SCALE
 int drawXOffset=0;
@@ -177,9 +141,6 @@ int drawYOffset=0;
 	#include <psp2/types.h>
 	#include <psp2/touch.h>
 	#include <psp2/display.h>
-	
-	#include <vita2d.h>
-
 	typedef uint8_t 	u8;
 	typedef uint16_t 	u16;
 	typedef uint32_t	u32;
@@ -190,9 +151,6 @@ int drawYOffset=0;
 	typedef int64_t		s64;
 #elif PLATFORM == PLAT_WINDOWS
 	#include <time.h>
-
-	#include <SDL2/SDL.h>
-	#include <SDL2/SDL_image.h>
 
 	#include <dirent.h>
 #elif PLATFORM == PLAT_3DS
@@ -206,51 +164,19 @@ int drawYOffset=0;
 // Include stuff I made.
 #include "GoodArray.h"
 
-
-//vita2d_pgf* defaultPgf;
-
-#if PLATFORM == PLAT_VITA
-	// Controls at start of frame.
-	SceCtrlData pad;
-	// Controls from start of last frame.
-	SceCtrlData lastPad;
-
-	SceTouchData currentTouch;
-	SceTouchData previousTouchData;
-#elif PLATFORM == PLAT_WINDOWS
-	//The window we'll be rendering to
-	SDL_Window* mainWindow;
-	
-	//The window renderer
-	SDL_Renderer* mainWindowRenderer;
-
-#elif PLATFORM==PLAT_3DS
-	u32 pad;
-	u32 wasJustPad;
-#endif
-
 #define unusedAreaColor 0,0,0,255
 //unsigned int unusedAreaColor = RGBA8(0,0,0,255);
 
 char tempPathFixBuffer[256];
-
-void FixPath(char* filename,unsigned char _buffer[], char type);
-char ShowMessageWithPortrait(char* _tempMsg, char isQuestion, CrossTexture* portrait, double portScale);
 
 #include "GeneralGoodExtended.h"
 #include "FpsCapper.h"
 //TODO - Make this
 // main.h
 	// Make stuff fresh
-	//typedef int8_t		s8;
-	//typedef int16_t		s16;
-	//typedef int32_t		s32;
-	//typedef int64_t		s64;
-	//typedef uint8_t 	u8;
-	//typedef uint16_t 	u16;
-	//typedef uint32_t	u32;
-	//typedef uint64_t	u64;
 	void BasicMessage(char* message);
+	void FixPath(char* filename,unsigned char _buffer[], char type);
+	char ShowMessageWithPortrait(char* _tempMsg, char isQuestion, CrossTexture* portrait, double portScale);
 
 	typedef struct Q_tileImageData{
 		char tile;
@@ -330,6 +256,8 @@ unsigned short spellLinkedListSize=1;
 
 char* currentMapFilepath;
 
+int currentTextHeight=0;
+
 /*
 ====================================================
 == OPTIONS
@@ -389,25 +317,33 @@ animation possibleEnemiesIdleAnimation[10];
 animation possibleEnemiesAttackAnimation[10];
 
 /*
-//////////////////////////////////////
-// CROSS PLATFORM SUPPORT
-///////////////////////////////////////
-*/
-
-void StartDrawing(){
-	StartDrawingA();
-}
-
-void EndDrawing(){
-	EndDrawingA();
-}
-
-
-/*
 ////////////////////////////////////////////////
 // 
 ///////////////////////////////////////////////
 */
+
+// Same as fixing a path and then loading a PNG
+CrossTexture* LoadEmbeddedPNG(char* filename){
+	FixPath(filename,tempPathFixBuffer,TYPE_EMBEDDED);
+	return LoadPNG(tempPathFixBuffer);
+}
+
+void LoadFont(){
+	#if TEXTRENDERER == TEXT_DEBUG
+		fontImage=LoadEmbeddedPNG("Stuff/Font.png");
+	#elif TEXTRENDERER == TEXT_FONTCACHE
+		FC_FreeFont(fontImage);
+		fontImage = NULL;
+		fontImage = FC_CreateFont();
+		FixPath("Stuff/LiberationSans-Regular.ttf",tempPathFixBuffer,TYPE_EMBEDDED);
+		FC_LoadFont(fontImage, mainWindowRenderer, tempPathFixBuffer, fontSize, FC_MakeColor(0,0,0,255), TTF_STYLE_NORMAL);
+	#elif TEXTRENDERER == TEXT_VITA2D
+		// TODO - Change this
+		FixPath("Stuff/LiberationSans-Regular.ttf",tempPathFixBuffer,TYPE_EMBEDDED);
+		fontImage=LoadPNG(tempPathFixBuffer);
+	#endif
+	currentTextHeight = TextHeight(fontSize);
+}
 
 void FixPath(char* filename,unsigned char _buffer[], char type){
 	#if SUBPLATFORM == SUB_ANDROID
@@ -438,14 +374,6 @@ void RestorePartyMember(int id){
 	int passedSlot = id;
 	party[passedSlot].hp=party[passedSlot].fighterStats.maxHp;
 	party[passedSlot].mp=party[passedSlot].fighterStats.maxMp;
-}
-
-// pl0x, I beg you, don't crash when I'm disposing textures.
-void PlzNoCrashOnDispose(){
-	#if PLATFORM == PLAT_VITA
-		vita2d_wait_rendering_done();
-		sceDisplayWaitVblankStart();
-	#endif
 }
 
 // Fix x that needs to be applied on ALL drawing
@@ -505,78 +433,6 @@ void SetCameraValues(){
 	// Centers it
 	drawXOffset=((SCREENWIDTH-cameraWidth*32*MAPXSCALE)/2);
 	drawYOffset=((SCREENHEIGHT-cameraHeight*32*MAPYSCALE)/2);
-}
-
-void StartFrameStuff(){
-	FpsCapStart();
-	#if PLATFORM == PLAT_VITA
-		lastPad=pad;
-		sceCtrlPeekBufferPositive(0, &pad, 1);
-		sceTouchPeek(SCE_TOUCH_PORT_FRONT, &currentTouch, 1);
-	#elif PLATFORM == PLAT_WINDOWS
-		// Update keyboard stuff
-		SDL_Event e;
-		while( SDL_PollEvent( &e ) != 0 ){
-			if( e.type == SDL_QUIT ){
-				place=2;
-			}
-
-			if( e.type == SDL_KEYDOWN ){
-				if (e.key.keysym.sym==SDLK_z){ /* X */
-					pad[SCE_CTRL_CROSS]=1;
-				}else if (e.key.keysym.sym==SDLK_x){/* O */
-					pad[SCE_CTRL_CIRCLE]=1;
-				}else if (e.key.keysym.sym==SDLK_LEFT){/* Left */
-					pad[SCE_CTRL_LEFT]=1;
-				}else if (e.key.keysym.sym==SDLK_RIGHT){ /* Right */
-					pad[SCE_CTRL_RIGHT]=1;
-				}else if (e.key.keysym.sym==SDLK_DOWN){ /* Down */
-					pad[SCE_CTRL_DOWN]=1;
-				}else if (e.key.keysym.sym==SDLK_UP){ /* Up */
-					pad[SCE_CTRL_UP]=1;
-				}else if (e.key.keysym.sym==SDLK_a){ /* Square */
-					pad[SCE_CTRL_SQUARE]=1;
-				}else if (e.key.keysym.sym==SDLK_s){ /* Triangle */
-					pad[SCE_CTRL_TRIANGLE]=1;
-				}else if (e.key.keysym.sym==SDLK_ESCAPE){ /* Start */
-					pad[SCE_CTRL_START]=1;
-				}
-			}else if (e.type == SDL_KEYUP){
-				if (e.key.keysym.sym==SDLK_z){ /* X */
-					pad[SCE_CTRL_CROSS]=0;
-				}else if (e.key.keysym.sym==SDLK_x){/* O */
-					pad[SCE_CTRL_CIRCLE]=0;
-				}else if (e.key.keysym.sym==SDLK_LEFT){/* Left */
-					pad[SCE_CTRL_LEFT]=0;
-				}else if (e.key.keysym.sym==SDLK_RIGHT){ /* Right */
-					pad[SCE_CTRL_RIGHT]=0;
-				}else if (e.key.keysym.sym==SDLK_DOWN){ /* Down */
-					pad[SCE_CTRL_DOWN]=0;
-				}else if (e.key.keysym.sym==SDLK_UP){ /* Up */
-					pad[SCE_CTRL_UP]=0;
-				}else if (e.key.keysym.sym==SDLK_a){ /* Square */
-					pad[SCE_CTRL_SQUARE]=0;
-				}else if (e.key.keysym.sym==SDLK_s){ /* Triangle */
-					pad[SCE_CTRL_TRIANGLE]=0;
-				}else if (e.key.keysym.sym==SDLK_ESCAPE){ /* Start */
-					pad[SCE_CTRL_START]=0;
-				}
-			}
-		}
-	#elif PLATFORM==PLAT_3DS
-		hidScanInput();
-		wasJustPad = hidKeysDown();
-		pad = hidKeysHeld();
-	#endif
-}
-
-void EndFrameStuff(){
-	#if PLATFORM == PLAT_VITA
-		previousTouchData=currentTouch;
-	#elif PLATFORM == PLAT_WINDOWS
-		memcpy(lastPad,pad,19);
-	#endif
-	FpsCapWait();
 }
 
 // Resets an animation
@@ -672,7 +528,7 @@ void DrawUnusedAreaRect(){
 	DrawRectangle(SCREENWIDTH-drawXOffset,0,drawXOffset,SCREENHEIGHT,unusedAreaColor);
 }
 
-char checkCollision(int x, int y){
+char CheckCollision(int x, int y){
 	if (x<0 || y<0 || y>=tileOtherData.height || x>=tileOtherData.width){
 		return 1;
 	}
@@ -709,6 +565,7 @@ void DrawMapThings(){
 	DrawUnusedAreaRect();
 }
 
+// This is the same as ShowMessage, but all the text is shown instantly and no map or objects are drawn
 void BasicMessage(char* _tempMsg){
 	ControlsReset();
 	// The string needs to be copied. We're going to modify it, at we can't if we just type the string into the function and let the compiler do everything else
@@ -821,218 +678,6 @@ void BasicMessage(char* _tempMsg){
 	ControlsEnd();
 }
 
-char TestNewMessage(char* message, char isQuestion, CrossTexture* portrait, double portScale){
-	EndFrameStuff();
-	if (portScale==0 && portrait!=NULL){
-		portScale = floor((double)DEFAULTPORTRAITSIZE/GetTextureWidth(portrait));
-	}
-
-	// We count frames, and show a new letter every certian amount of frames.
-	char frames=0;
-	// Letter we're currently displaying.
-	short currentLetter=0;
-
-	CrossTexture* yesButtonTexture=(CrossTexture*)1;
-	CrossTexture* noButtonTexture=(CrossTexture*)1;
-
-	char quitTextbox=0;
-
-	signed char currentSelected=defaultSelected;
-
-	// 68/(8*2)
-	unsigned char linesPerScreen = LINESPERSCREEN;/*floor((SCREENHEIGHT-TEXTBOXY)/(8*TEXTBOXFONTSIZE));*/
-
-	// Letter scale is 2.5. 8*2.5=20.
-	unsigned char maxLetters=floor(SCREENWIDTH/(8*TEXTBOXFONTSIZE));
-
-	short newlineSpaces[50];
-	char totalNewLines=0;
-
-	//vita2d_wait_rendering_done();
-
-	int i=0;
-	int j=0;
-	char questionScale=1;
-	if (isQuestion==1){
-		FixPath("Stuff/Yes.png",tempPathFixBuffer,TYPE_EMBEDDED);
-		yesButtonTexture=LoadPNG(tempPathFixBuffer);
-		FixPath("Stuff/No.png",tempPathFixBuffer,TYPE_EMBEDDED);
-		noButtonTexture=LoadPNG(tempPathFixBuffer);
-		
-
-		if (SCREENWIDTH/GetTextureWidth(yesButtonTexture)>=8){
-			questionScale=2;
-		}else{
-			questionScale=1;
-		}
-	}
-
-	
-	//I guess this adds the newline segments?
-	for (j = 1; j <= floor(strlen(message)/maxLetters)+1; j++){
-		if (j==1){
-			i=j*maxLetters-1;
-		}else{
-			i=newlineSpaces[j-2]+maxLetters;
-		}
-		if (i>strlen(message)){
-			break;
-		}
-		while (1){
-			if (message[i]==32){ // Checks if it's a space
-				// Add the +1 so that the space is left at the end of the previous line.
-				newlineSpaces[j-1]=i+1;
-				totalNewLines++;
-				break;
-			}else{
-				i=i-1;
-			}
-		}
-	}
-	newlineSpaces[(int)totalNewLines]=strlen(message);
-
-	char sectionOfCurrentMessage=linesPerScreen-1;
-	if (totalNewLines<linesPerScreen-1){
-		sectionOfCurrentMessage=totalNewLines;
-	}
-	short characterOffset=0;
-	char startSectionOfNewLine=0;
-
-	// In this variable, we store the character that was replaced with 0.
-	// It should only be 0-255, but it's a signed short so it can start at -1
-	signed short _tempCharStorage=-1;
-
-	// This stores the entire length of the message before we change it for display
-	int totalMessageLength = strlen(message);
-
-	unsigned char nextNewLineSpace=startSectionOfNewLine;
-
-	while (!quitTextbox){
-		StartFrameStuff();
-			
-		if (WasJustPressed(aButton)){
-			if (currentLetter==newlineSpaces[(int)sectionOfCurrentMessage]){
-				// ADVANCE TO NEXT MESSAGE
-				if (sectionOfCurrentMessage!=totalNewLines){
-					startSectionOfNewLine+=linesPerScreen;
-					characterOffset=newlineSpaces[(int)sectionOfCurrentMessage];
-					currentLetter=newlineSpaces[(int)sectionOfCurrentMessage]+1;
-					if (sectionOfCurrentMessage+linesPerScreen<=totalNewLines){
-						sectionOfCurrentMessage+=linesPerScreen;
-					}else{
-						sectionOfCurrentMessage=totalNewLines;
-					}
-					frames=0;
-					nextNewLineSpace=startSectionOfNewLine;
-				}else{
-					quitTextbox=1;
-					// Set isQuestion to 0 so one last render is done, but without the yes and no buttons.
-					isQuestion=0;
-				}
-			}else{
-				currentLetter=newlineSpaces[(int)sectionOfCurrentMessage];
-			}
-		}
-
-		if (isQuestion==1){
-			if (WasJustPressed(SCE_CTRL_DOWN)){
-				currentSelected++;
-				if (currentSelected>1){
-					currentSelected=0;
-				}
-			}else if (WasJustPressed(SCE_CTRL_UP)){
-				currentSelected--;
-				if (currentSelected<0){
-					currentSelected=1;
-				}
-			}	
-		}
-		// Advance currentLetter every certian number of frames.
-		if (frames==textboxNewCharSpeed && currentLetter!=newlineSpaces[(int)sectionOfCurrentMessage]){
-			printf("advance\n");
-			if (currentLetter<totalMessageLength){
-
-				if (currentLetter == newlineSpaces[nextNewLineSpace]){
-					nextNewLineSpace++;
-					message[currentLetter]='\0';
-					_tempCharStorage=-1;
-				}else{
-					printf("ok!\n");
-					frames=0;
-					currentLetter++;
-					if (_tempCharStorage!=-1){
-						message[currentLetter-1]=_tempCharStorage;
-					}
-					_tempCharStorage = message[currentLetter];
-					message[currentLetter]='\0';
-				}
-				printf("%s\n",message);
-			}
-		}
-
-		StartDrawing();
-
-		DrawMapThings();
-		// Draw da white rectangle
-		DrawRectangle(0,TEXTBOXY,SCREENWIDTH,SCREENHEIGHT-TEXTBOXY,255,255,255,255);
-
-		// Draw message
-		short i;
-		// Position in newlineSpaces that we last used the newline thing.
-		
-
-		//for (i = characterOffset; i < currentLetter; i++){
-			//if (i==newlineSpaces[nextNewLineSpace]){
-			//	currentXPos=0;
-			//	currentYPos++;
-			//	nextNewLineSpace++;
-			//}else{
-			//	currentXPos++;
-			//}
-			//if (IsThisTilde(message,i)){
-			//	DrawTildeLetterUnscaled(message[i+1],currentXPos*(TEXTBOXFONTSIZE*8)+5,TEXTBOXY+currentYPos*(TEXTBOXFONTSIZE*8)+currentYPos*5+5,TEXTBOXFONTSIZE);
-			//	i++;
-			//	continue;
-			//}
-			//// currentXPos*20 has a +5 for offset so not at screen edge.
-			//DrawLetterUnscaled(message[i],currentXPos*(TEXTBOXFONTSIZE*8)+5,TEXTBOXY+currentYPos*(TEXTBOXFONTSIZE*8)+currentYPos*5+5,TEXTBOXFONTSIZE);
-			//DrawText(int x, int y, const char* text, float size)
-			int k=0;
-			printf("current secction of message :%d\n", sectionOfCurrentMessage);
-			for (k=LINESPERSCREEN;k>0;k--){
-				DrawText(5,TEXTBOXY+TextHeight(fontSize)*k,&(message[newlineSpaces[sectionOfCurrentMessage-k]]),fontSize);
-			}
-		//}
-
-		// Draw questions
-		if (isQuestion==1){
-			DrawTextureScale(yesButtonTexture,SCREENWIDTH-GetTextureWidth(yesButtonTexture)*questionScale,TEXTBOXY-GetTextureHeight(yesButtonTexture)*questionScale-GetTextureHeight(yesButtonTexture)*questionScale,questionScale,questionScale);
-			DrawTextureScale(noButtonTexture,SCREENWIDTH-GetTextureWidth(noButtonTexture)*questionScale,TEXTBOXY-GetTextureHeight(noButtonTexture)*questionScale,questionScale,questionScale);
-			DrawAnimationAsISay(&selectorAnimation,SCREENWIDTH-GetTextureWidth(yesButtonTexture)*questionScale-questionScale*22-5,TEXTBOXY-(currentSelected)*(GetTextureHeight(yesButtonTexture)*questionScale)-((GetTextureHeight(yesButtonTexture)*questionScale)/2),1);
-		}
-		
-		if (portrait!=NULL){
-			DrawTextureScale(portrait,0,TEXTBOXY-GetTextureHeight(portrait)*portScale,portScale,portScale);
-		}
-
-		EndDrawing();
-
-
-		frames++;
-		EndFrameStuff();
-	}
-
-	if (isQuestion==1){
-		PlzNoCrashOnDispose();
-		FreeTexture(yesButtonTexture);
-		FreeTexture(noButtonTexture);
-	}
-
-	///////
-	
-	return currentSelected;
-}
-
 char StrLenTildes(char* passedString){
 	int i=0;
 	int length=0;
@@ -1046,6 +691,177 @@ char StrLenTildes(char* passedString){
 
 char ShowMessage(char* message, char isQuestion){
 	return ShowMessageWithPortrait(message,isQuestion,NULL,0);
+}
+
+char ShowMessageWithPortrait(char* _tempMsg, char isQuestion, CrossTexture* portrait, double portScale){
+	ControlsReset();
+
+	CrossTexture* yesButtonTexture=(CrossTexture*)1;
+	CrossTexture* noButtonTexture=(CrossTexture*)1;
+	char questionScale=1;
+	// The string needs to be copied. We're going to modify it, at we can't if we just type the string into the function and let the compiler do everything else
+	char message[strlen(_tempMsg)+1];
+	strcpy(message,_tempMsg);
+	signed char currentSelected=defaultSelected;
+	int textboxLinesPerScreens = (SCREENHEIGHT-TEXTBOXY)/TextHeight(fontSize);
+	short newLineLocations[50];
+	int totalMessageLength = strlen(message);
+	int i, j;
+	
+	if (isQuestion==1){
+		yesButtonTexture=LoadEmbeddedPNG("Stuff/Yes.png");
+		noButtonTexture=LoadEmbeddedPNG("Stuff/No.png");
+		
+		if (SCREENWIDTH/GetTextureWidth(yesButtonTexture)>=8){
+			questionScale=2;
+		}else{
+			questionScale=1;
+		}
+	}
+	if (portScale==0 && portrait!=NULL){
+		portScale = floor((double)DEFAULTPORTRAITSIZE/GetTextureWidth(portrait));
+	}
+
+	// This will loop through the entire message, looking for where I need to add new lines. When it finds a spot that
+	// needs a new line, that spot in the message will become 0. So, when looking for the place to 
+	int lastNewlinePosition=0;
+	for (i = 0; i < totalMessageLength; i++){
+		if (message[i]==32){ // Only check when we meet a space. 32 is a space in ASCII
+			message[i]='\0';
+			//printf("Space found at %d\n",i);
+			//printf("%s\n",&message[lastNewlinePosition+1]);
+			//printf("%d\n",TextWidth(fontSize,&(message[lastNewlinePosition+1])));
+			if (TextWidth(fontSize,&(message[lastNewlinePosition+1]))>SCREENWIDTH-20){
+				char _didWork=0;
+				for (j=i-1;j>lastNewlinePosition+1;j--){
+					//printf("J:%d\n",j);
+					if (message[j]==32){
+						message[j]='\0';
+						_didWork=1;
+						message[i]=32;
+						lastNewlinePosition=j;
+						break;
+					}
+				}
+				if (_didWork==0){
+					message[i]='\0';
+					lastNewlinePosition=i+1;
+				}
+			}else{
+				message[i]=32;
+			}
+		}
+	}
+
+	// This spot in the message will be the one that's 0 char. The player won't be able to see this character.
+	int currentLetter=0;
+	int currentLine=0;
+	signed int nextCharStorage=-1;
+	char currentlyVisibleLines=1;
+	char frames=0;
+	// This variable is the location of the start of the first VISIBLE line
+	// This will change if the text box has multiple screens because the text is too long
+	int offsetStrlen=0;
+	//  textboxNewCharSpeed
+	
+	nextCharStorage = message[0];
+	message[0]='\0';
+
+	while (1){
+		FpsCapStart();
+		ControlsStart();
+		if (WasJustPressed(SCE_CTRL_CROSS)){
+			if (currentlyVisibleLines<=textboxLinesPerScreens && currentLetter<totalMessageLength){
+				while (currentlyVisibleLines<=textboxLinesPerScreens && currentLetter!=totalMessageLength){
+					// Copied code from the normal if frames==textboxNewCharSpeed block
+					if (nextCharStorage==0){
+						currentlyVisibleLines++;
+					}
+					message[currentLetter]=nextCharStorage;
+					currentLetter++;
+					if (currentLetter!=totalMessageLength){
+						nextCharStorage = message[currentLetter];
+						message[currentLetter]='\0';
+					}else{
+						nextCharStorage=0;
+					}
+				}
+			}else{
+				if (currentLetter==totalMessageLength){
+					break;
+				}else{
+					offsetStrlen=currentLetter;
+					//currentLetter=0;
+					//nextCharStorage=-1;
+					currentlyVisibleLines=1;
+					frames=0;
+				}
+			}
+		}
+		if (isQuestion==1){
+			if (WasJustPressed(SCE_CTRL_DOWN)){
+				currentSelected++;
+				if (currentSelected>1){
+					currentSelected=0;
+				}
+			}else if (WasJustPressed(SCE_CTRL_UP)){
+				if (currentSelected==0){
+					currentSelected=1;
+				}else{
+					currentSelected--;
+				}
+			}
+		}
+		ControlsEnd();
+		
+		// No Logic
+		if (frames==textboxNewCharSpeed){
+			if (currentLetter!=totalMessageLength && currentlyVisibleLines<=textboxLinesPerScreens){
+				frames=0;
+				if (nextCharStorage==0){
+					currentlyVisibleLines++;
+				}
+				message[currentLetter]=nextCharStorage;
+				currentLetter++;
+				if (currentLetter!=totalMessageLength){
+					nextCharStorage = message[currentLetter];
+					message[currentLetter]='\0';
+				}else{
+					nextCharStorage=0;
+				}
+			}
+		}
+
+		StartDrawing();
+		
+		DrawMapThings();
+		DrawRectangle(0,TEXTBOXY,SCREENWIDTH,SCREENHEIGHT-TEXTBOXY,255,255,255,255);
+
+		// We need this variable so we know the offset in the message for the text that is for the next line
+		int _lastStrlen=0;
+		for (i=0;i<currentlyVisibleLines;i++){
+			DrawText(5,TEXTBOXY+TextHeight(fontSize)*i,&message[_lastStrlen+offsetStrlen],fontSize);
+			// This offset will have the first letter for the next line
+			_lastStrlen = strlen(&message[_lastStrlen+offsetStrlen])+1+_lastStrlen;
+		}
+
+		// Draw questions
+		if (isQuestion==1){
+			DrawTextureScale(yesButtonTexture,SCREENWIDTH-GetTextureWidth(yesButtonTexture)*questionScale,TEXTBOXY-GetTextureHeight(yesButtonTexture)*questionScale-GetTextureHeight(yesButtonTexture)*questionScale,questionScale,questionScale);
+			DrawTextureScale(noButtonTexture,SCREENWIDTH-GetTextureWidth(noButtonTexture)*questionScale,TEXTBOXY-GetTextureHeight(noButtonTexture)*questionScale,questionScale,questionScale);
+			DrawAnimationAsISay(&selectorAnimation,SCREENWIDTH-GetTextureWidth(yesButtonTexture)*questionScale-questionScale*22-5,TEXTBOXY-(currentSelected)*(GetTextureHeight(yesButtonTexture)*questionScale)-((GetTextureHeight(yesButtonTexture)*questionScale)/2),questionScale);
+		}
+		
+		if (portrait!=NULL){
+			DrawTextureScale(portrait,0,TEXTBOXY-GetTextureHeight(portrait)*portScale,portScale,portScale);
+		}
+
+		EndDrawing();
+		FpsCapWait();
+		frames++;
+	}
+	ControlsEnd();
+	return currentSelected;
 }
 
 void LoadMap(char* path){
@@ -1109,8 +925,6 @@ void LoadMap(char* path){
 }
 
 void UnloadMap(){
-	// ... what do I need to do here?
-	PlzNoCrashOnDispose();
 	lua_getglobal(L,"MapDispose");
 	lua_call (L,0,0);
 	SetGoodArray(&(tileOtherData),1,1,1);
@@ -1120,7 +934,6 @@ void UnloadMap(){
 	}
 
 	//// Free enemy animation
-	PlzNoCrashOnDispose();
 	for (i=0;i<10;i++){
 		if (possibleEnemies[i].maxHp!=-1){
 			possibleEnemies[i].maxHp=-1;
@@ -1421,20 +1234,6 @@ void AutodetectNumberOfFrames(animation* passedAnimation){
 	passedAnimation->numberOfFrames = (GetTextureWidth(passedAnimation->texture)/passedAnimation->width);
 }
 
-char DidJustTouch(){
-	#if PLATFORM == PLAT_VITA
-	if (currentTouch.reportNum>0 && previousTouchData.reportNum==0){
-		return 1;
-	}else{
-		return 0;
-	}
-	#elif PLATFORM == PLAT_WINDOWS
-		printf("DidJustTOuch not yet for Windows.");
-	#elif PLATFORM == PLAT_3DS
-		return 0;
-	#endif
-}
-
 void AddSpellToStats(stats* passedMember, int passedSpellId){
 	int i=0;
 	for (i=0;i<10;i++){
@@ -1566,7 +1365,6 @@ void Save(){
 	ShowMessage("Saved.",0);
 }
 
-
 void Load(){
 	int i=0;
 	int j=0;
@@ -1696,7 +1494,6 @@ void Load(){
 === ｎathan
 ========================================================
 */
-
 
 void StatusLoop(){
 	signed char selectedMember=0;
@@ -2029,28 +1826,28 @@ void Overworld(){
 				}
 			}
 			if (IsDown(SCE_CTRL_UP)){
-				if (checkCollision(playerObject->x/32,playerObject->y/32-1)!=1){
+				if (CheckCollision(playerObject->x/32,playerObject->y/32-1)!=1){
 					isWalking=1;
 					playerObject->theAnimation.numberOfFrames=3;
 					playerObject->y=playerObject->y-4;
 				}
 				playerObject->theAnimation.texture=playerUp;
 			}else if (IsDown(SCE_CTRL_DOWN)){
-				if (checkCollision(playerObject->x/32,playerObject->y/32+1)!=1){
+				if (CheckCollision(playerObject->x/32,playerObject->y/32+1)!=1){
 					isWalking=2;
 					playerObject->theAnimation.numberOfFrames=3;
 					playerObject->y=playerObject->y+4;
 				}
 				playerObject->theAnimation.texture=playerDown;
 			}else if (IsDown(SCE_CTRL_LEFT)){
-				if (checkCollision(playerObject->x/32-1,playerObject->y/32)!=1){
+				if (CheckCollision(playerObject->x/32-1,playerObject->y/32)!=1){
 					isWalking=3;
 					playerObject->theAnimation.numberOfFrames=3;
 					playerObject->x=playerObject->x-4;
 				}
 				playerObject->theAnimation.texture=playerLeft;
 			}else if (IsDown(SCE_CTRL_RIGHT)){
-				if (checkCollision(playerObject->x/32+1,playerObject->y/32)!=1){
+				if (CheckCollision(playerObject->x/32+1,playerObject->y/32)!=1){
 					isWalking=4;
 					playerObject->theAnimation.numberOfFrames=3;
 					playerObject->x=playerObject->x+4;
@@ -2114,19 +1911,15 @@ void Overworld(){
 		}
 	}
 
-	if (WasJustPressed(SCE_CTRL_START)){// TODO - PLAY SOUND
+	if (WasJustPressed(SCE_CTRL_START)){
 		place=1;
 	}
 
 	UpdateCameraValues(playerObject);
 
-
 	// Drawing
 	StartDrawing();
-
 	DrawMapThings();
-	//DrawText(60,60,"Hello world",2);
-
 	EndDrawing();
 	EndFrameStuff();
 }
@@ -2219,16 +2012,11 @@ char BattleLop(char canRun){
 	CrossTexture* itemButton=NULL;
 	CrossTexture* winTexture=NULL;
 
-	FixPath("Stuff/AttackIcon.png",tempPathFixBuffer,TYPE_EMBEDDED);
-	attackButton = LoadPNG(tempPathFixBuffer);
-	FixPath("Stuff/MagicIcon.png",tempPathFixBuffer,TYPE_EMBEDDED);
-	magicButton = LoadPNG(tempPathFixBuffer);
-	FixPath("Stuff/RunIcon.png",tempPathFixBuffer,TYPE_EMBEDDED);
-	runButton = LoadPNG(tempPathFixBuffer);
-	FixPath("Stuff/ItemIcon.png",tempPathFixBuffer,TYPE_EMBEDDED);
-	itemButton = LoadPNG(tempPathFixBuffer);
-	FixPath("Stuff/Battle/Win.png",tempPathFixBuffer,TYPE_EMBEDDED);
-	winTexture = LoadPNG(tempPathFixBuffer);
+	attackButton = LoadEmbeddedPNG("Stuff/AttackIcon.png");
+	magicButton = LoadEmbeddedPNG("Stuff/MagicIcon.png");
+	runButton = LoadEmbeddedPNG("Stuff/RunIcon.png");
+	itemButton = LoadEmbeddedPNG("Stuff/ItemIcon.png");
+	winTexture = LoadEmbeddedPNG("Stuff/Battle/Win.png");
 
 	spell* selectedSpell=&(GetSpellList(0)->theSpell);
 
@@ -2731,11 +2519,6 @@ char BattleLop(char canRun){
 				battleStatus=0;
 			}
 		}
-
-		#if NOSLEEP==1
-			sceKernelPowerTick(0);
-		#endif
-
 		StartDrawing();
 		DrawMap();
 		DrawUnusedAreaRect();
@@ -2905,7 +2688,7 @@ char BattleLop(char canRun){
 
 		EndFrameStuff();
 	}
-	PlzNoCrashOnDispose();
+	
 	FreeTexture(attackButton);
 	FreeTexture(magicButton);
 	FreeTexture(itemButton);
@@ -2946,8 +2729,7 @@ char BattleLop(char canRun){
 }
 
 void TitleLoop(){
-	FixPath("Stuff/title.png",tempPathFixBuffer,TYPE_EMBEDDED);
-	CrossTexture* titleImage = LoadPNG(tempPathFixBuffer);
+	CrossTexture* titleImage = LoadEmbeddedPNG("Stuff/Title.png");
 	
 	while (place!=2){
 		StartFrameStuff();
@@ -2976,7 +2758,8 @@ void TitleLoop(){
 				party[0].fighterStats.level=100;
 			}
 
-			LoadMap(STARTINGMAP);
+			FixPath(STARTINGMAP,tempPathFixBuffer,TYPE_EMBEDDED);
+			LoadMap(tempPathFixBuffer);
 			place=0;	
 
 			ClearBottomScreen();
@@ -3001,9 +2784,9 @@ void TitleLoop(){
 
 		#if PLATFORM != PLAT_3DS
 			if (aButton==SCE_CTRL_CROSS){
-				DrawText(51+8,443+15,"Select Button: X",3.5);
+				DrawText(51+8,SCREENHEIGHT-currentTextHeight,"Select Button: X",3.5);
 			}else{
-				DrawText(51+8,443+15,"Select Button: O",3.5);
+				DrawText(51+8,SCREENHEIGHT-currentTextHeight,"Select Button: O",3.5);
 			}
 		#elif PLATFORM == PLAT_3DS
 			EndDrawing();
@@ -3019,7 +2802,6 @@ void TitleLoop(){
 		
 		EndFrameStuff();
 	}
-	PlzNoCrashOnDispose();
 	FreeTexture(titleImage);
 }
 
@@ -3040,183 +2822,6 @@ void TitleLoop(){
 ///////////////////////////////////////
 */
 
-char ShowMessageWithPortrait(char* _tempMsg, char isQuestion, CrossTexture* portrait, double portScale){
-	ControlsReset();
-
-	CrossTexture* yesButtonTexture=(CrossTexture*)1;
-	CrossTexture* noButtonTexture=(CrossTexture*)1;
-	char questionScale=1;
-	// The string needs to be copied. We're going to modify it, at we can't if we just type the string into the function and let the compiler do everything else
-	char message[strlen(_tempMsg)+1];
-	strcpy(message,_tempMsg);
-	signed char currentSelected=defaultSelected;
-	int textboxLinesPerScreens = (SCREENHEIGHT-TEXTBOXY)/TextHeight(fontSize);
-	short newLineLocations[50];
-	int totalMessageLength = strlen(message);
-	int i, j;
-	
-	if (isQuestion==1){
-		FixPath("Stuff/Yes.png",tempPathFixBuffer,TYPE_EMBEDDED);
-		yesButtonTexture=LoadPNG(tempPathFixBuffer);
-		FixPath("Stuff/No.png",tempPathFixBuffer,TYPE_EMBEDDED);
-		noButtonTexture=LoadPNG(tempPathFixBuffer);
-		
-		if (SCREENWIDTH/GetTextureWidth(yesButtonTexture)>=8){
-			questionScale=2;
-		}else{
-			questionScale=1;
-		}
-	}
-	if (portScale==0 && portrait!=NULL){
-		portScale = floor((double)DEFAULTPORTRAITSIZE/GetTextureWidth(portrait));
-	}
-
-	// This will loop through the entire message, looking for where I need to add new lines. When it finds a spot that
-	// needs a new line, that spot in the message will become 0. So, when looking for the place to 
-	int lastNewlinePosition=0;
-	for (i = 0; i < totalMessageLength; i++){
-		if (message[i]==32){ // Only check when we meet a space. 32 is a space in ASCII
-			message[i]='\0';
-			//printf("Space found at %d\n",i);
-			//printf("%s\n",&message[lastNewlinePosition+1]);
-			//printf("%d\n",TextWidth(fontSize,&(message[lastNewlinePosition+1])));
-			if (TextWidth(fontSize,&(message[lastNewlinePosition+1]))>SCREENWIDTH-20){
-				char _didWork=0;
-				for (j=i-1;j>lastNewlinePosition+1;j--){
-					//printf("J:%d\n",j);
-					if (message[j]==32){
-						message[j]='\0';
-						_didWork=1;
-						message[i]=32;
-						lastNewlinePosition=j;
-						break;
-					}
-				}
-				if (_didWork==0){
-					message[i]='\0';
-					lastNewlinePosition=i+1;
-				}
-			}else{
-				message[i]=32;
-			}
-		}
-	}
-	printf("WIll try drawing....\n");
-
-	// This spot in the message will be the one that's 0 char. The player won't be able to see this character.
-	int currentLetter=0;
-	int currentLine=0;
-	signed int nextCharStorage=-1;
-	char currentlyVisibleLines=1;
-	char frames=0;
-	// This variable is the location of the start of the first VISIBLE line
-	// This will change if the text box has multiple screens because the text is too long
-	int offsetStrlen=0;
-	//  textboxNewCharSpeed
-	
-	nextCharStorage = message[0];
-	message[0]='\0';
-
-	while (1){
-		FpsCapStart();
-		ControlsStart();
-		if (WasJustPressed(SCE_CTRL_CROSS)){
-			if (currentlyVisibleLines<=textboxLinesPerScreens && currentLetter<totalMessageLength){
-				while (currentlyVisibleLines<=textboxLinesPerScreens && currentLetter!=totalMessageLength){
-					// Copied code from the normal if frames==textboxNewCharSpeed block
-					if (nextCharStorage==0){
-						currentlyVisibleLines++;
-					}
-					message[currentLetter]=nextCharStorage;
-					currentLetter++;
-					if (currentLetter!=totalMessageLength){
-						nextCharStorage = message[currentLetter];
-						message[currentLetter]='\0';
-					}else{
-						nextCharStorage=0;
-					}
-				}
-			}else{
-				if (currentLetter==totalMessageLength){
-					break;
-				}else{
-					offsetStrlen=currentLetter;
-					//currentLetter=0;
-					//nextCharStorage=-1;
-					currentlyVisibleLines=1;
-					frames=0;
-				}
-			}
-		}
-		if (isQuestion==1){
-			if (WasJustPressed(SCE_CTRL_DOWN)){
-				currentSelected++;
-				if (currentSelected>1){
-					currentSelected=0;
-				}
-			}else if (WasJustPressed(SCE_CTRL_UP)){
-				if (currentSelected==0){
-					currentSelected=1;
-				}else{
-					currentSelected--;
-				}
-			}
-		}
-		ControlsEnd();
-		
-		// No Logic
-		if (frames==textboxNewCharSpeed){
-			if (currentLetter!=totalMessageLength && currentlyVisibleLines<=textboxLinesPerScreens){
-				frames=0;
-				if (nextCharStorage==0){
-					currentlyVisibleLines++;
-				}
-				message[currentLetter]=nextCharStorage;
-				currentLetter++;
-				if (currentLetter!=totalMessageLength){
-					nextCharStorage = message[currentLetter];
-					message[currentLetter]='\0';
-				}else{
-					nextCharStorage=0;
-				}
-			}
-		}
-
-		StartDrawing();
-		
-		
-
-		DrawMapThings();
-		DrawRectangle(0,TEXTBOXY,SCREENWIDTH,SCREENHEIGHT-TEXTBOXY,255,255,255,255);
-
-		// We need this variable so we know the offset in the message for the text that is for the next line
-		int _lastStrlen=0;
-		for (i=0;i<currentlyVisibleLines;i++){
-			DrawText(5,TEXTBOXY+TextHeight(fontSize)*i,&message[_lastStrlen+offsetStrlen],fontSize);
-			// This offset will have the first letter for the next line
-			_lastStrlen = strlen(&message[_lastStrlen+offsetStrlen])+1+_lastStrlen;
-		}
-
-		// Draw questions
-		if (isQuestion==1){
-			DrawTextureScale(yesButtonTexture,SCREENWIDTH-GetTextureWidth(yesButtonTexture)*questionScale,TEXTBOXY-GetTextureHeight(yesButtonTexture)*questionScale-GetTextureHeight(yesButtonTexture)*questionScale,questionScale,questionScale);
-			DrawTextureScale(noButtonTexture,SCREENWIDTH-GetTextureWidth(noButtonTexture)*questionScale,TEXTBOXY-GetTextureHeight(noButtonTexture)*questionScale,questionScale,questionScale);
-			DrawAnimationAsISay(&selectorAnimation,SCREENWIDTH-GetTextureWidth(yesButtonTexture)*questionScale-questionScale*22-5,TEXTBOXY-(currentSelected)*(GetTextureHeight(yesButtonTexture)*questionScale)-((GetTextureHeight(yesButtonTexture)*questionScale)/2),questionScale);
-		}
-		
-		if (portrait!=NULL){
-			DrawTextureScale(portrait,0,TEXTBOXY-GetTextureHeight(portrait)*portScale,portScale,portScale);
-		}
-
-		EndDrawing();
-		FpsCapWait();
-		frames++;
-	}
-	printf("Done with textbox.\n");
-	ControlsEnd();
-	return currentSelected;
-}
-
 void Init(){
 	// Good stuff
 	spellLinkedListStart=calloc(1,sizeof(spellLinkedList));
@@ -3225,8 +2830,8 @@ void Init(){
 		// Init vita2d and set its clear color.
 		vita2d_init();
 		vita2d_set_clear_color(RGBA8(212, 208, 200, 0xFF));
-		// We love default fonts.
-		//defaultPgf = vita2d_load_default_pgf();
+		// 0 this out so we start the game without having pushed any buttons
+		memset(&pad, 0, sizeof(pad));
 	#elif PLATFORM == PLAT_WINDOWS
 		SDL_Init(SDL_INIT_VIDEO);
 		mainWindow = SDL_CreateWindow( "HappyWindo", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, SCREENWIDTH, SCREENHEIGHT, SDL_WINDOW_SHOWN );
@@ -3244,6 +2849,7 @@ void Init(){
 		// Check if this fails?
 		IMG_Init( IMG_INIT_PNG );
 
+		// We need to set this because SDL_FontCache will change it if we don't.
 		SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "0");
 	#elif PLATFORM == PLAT_3DS
 		sf2d_init();
@@ -3251,11 +2857,6 @@ void Init(){
 	#endif
 
 	LoadFont();
-
-	#if PLATFORM == PLAT_VITA
-		// ... I guess I have to do this? I'm... most probrablly not basing this off the sample.
-		memset(&pad, 0, sizeof(pad));
-	#endif
 
 	InitGoodArray(&tileOtherData);
 	int i=0;
@@ -3274,7 +2875,6 @@ void Init(){
 	lua_pushnumber(L,PLATFORM);
 	lua_setglobal(L,"Platform");
 
-
 	// Set all enemy pointers to null
 	for (i=0;i<4;i++){
 		enemies[i].hp=-1;
@@ -3286,16 +2886,11 @@ void Init(){
 		possibleEnemies[i].maxHp=-1;
 	}
 
-	FixPath("Stuff/PlayerDown.png",tempPathFixBuffer,TYPE_EMBEDDED);
-	playerDown=LoadPNG(tempPathFixBuffer);
-	FixPath("Stuff/PlayerUp.png",tempPathFixBuffer,TYPE_EMBEDDED);
-	playerUp=LoadPNG(tempPathFixBuffer);
-	FixPath("Stuff/PlayerLeft.png",tempPathFixBuffer,TYPE_EMBEDDED);
-	playerLeft=LoadPNG(tempPathFixBuffer);
-	FixPath("Stuff/PlayerRight.png",tempPathFixBuffer,TYPE_EMBEDDED);
-	playerRight=LoadPNG(tempPathFixBuffer);
-	FixPath("Stuff/Selector.png",tempPathFixBuffer,TYPE_EMBEDDED);
-	selectorAnimation.texture=LoadPNG(tempPathFixBuffer);
+	playerDown=LoadEmbeddedPNG("Stuff/PlayerDown.png");
+	playerUp=LoadEmbeddedPNG("Stuff/PlayerUp.png");
+	playerLeft=LoadEmbeddedPNG("Stuff/PlayerLeft.png");
+	playerRight=LoadEmbeddedPNG("Stuff/PlayerRight.png");
+	selectorAnimation.texture=LoadEmbeddedPNG("Stuff/Selector.png");
 
 	selectorAnimation.numberOfFrames=8;
 	selectorAnimation.width=22;
@@ -3331,23 +2926,11 @@ void Init(){
 	dummyMember.hp=01;
 	dummyMember.mp=01;
 
-	#if PLATFORM == PLAT_VITA
-		// Get touch
-		sceTouchPeek(SCE_TOUCH_PORT_FRONT, &currentTouch, 1);
-	
-		// Magic line to fix touch. It's really magic, I promise.
-		sceTouchSetSamplingState(SCE_TOUCH_PORT_FRONT, 1);
-	#endif
-
 	place=5;
 
 	#if SHOWSPLASH==1
 		#if PLATFORM == PLAT_VITA
-			#if PLATFORM == PLAT_VITA
-				CrossTexture* happy = LoadPNG("app0:OtherStuff/Splash.png");
-			#elif PLATFORM == PLAT_WINDOWS
-				CrossTexture* happy = LoadPNG("./OtherStuff/Splash.png");
-			#endif
+			CrossTexture* happy = LoadEmbeddedPNG("OtherStuff/Splash.png");
 
 			StartDrawing();
 			DrawTexture(happy,0,0);
@@ -3358,12 +2941,7 @@ void Init(){
 			if (!(IsDown(SCE_CTRL_LTRIGGER))){
 				Wait(700);
 			}
-		#endif
-	#endif
-
-	PlzNoCrashOnDispose();
-	#if SHOWSPLASH==1
-		#if PLATFORM == PLAT_VITA
+			
 			FreeTexture(happy);
 		#endif
 	#endif

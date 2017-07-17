@@ -4,7 +4,6 @@
 	unsigned char isSkipping=0;
 	signed char InputValidity = 1;
 
-
 	int screenHeight = 544;
 	int screenWidth = 960;
 
@@ -61,6 +60,10 @@
 			SCE_CTRL_VOLDOWN     = 18	//!< Volume down button.
 			//int SCE_TOUCH = 19;
 		};
+	#endif
+	#if PLATFORM == PLAT_3DS
+		u32 pad;
+		u32 wasJustPad;
 	#endif
 
 	// Subplatform Stuff
@@ -142,23 +145,7 @@
 		}
 	#endif
 
-	void LoadFont(){
-		#if TEXTRENDERER == TEXT_DEBUG
-			FixPath("Stuff/Font.png",tempPathFixBuffer,TYPE_EMBEDDED);
-			fontImage=LoadPNG(tempPathFixBuffer);
-		#elif TEXTRENDERER == TEXT_FONTCACHE
-			FC_FreeFont(fontImage);
-			fontImage = NULL;
-			fontImage = FC_CreateFont();
-			FixPath("Stuff/LiberationSans-Regular.ttf",tempPathFixBuffer,TYPE_EMBEDDED);
-			FC_LoadFont(fontImage, mainWindowRenderer, tempPathFixBuffer, fontSize, FC_MakeColor(0,0,0,255), TTF_STYLE_NORMAL);
-		#elif TEXTRENDERER == TEXT_VITA2D
-			FixPath("Stuff/LiberationSans-Regular.ttf",tempPathFixBuffer,TYPE_EMBEDDED);
-			fontImage=LoadPNG(tempPathFixBuffer);
-		#endif
-	}
-
-	void StartDrawingA(){
+	void StartDrawing(){
 		#if RENDERER == REND_VITA2D
 			vita2d_start_drawing();
 			vita2d_clear_screen();
@@ -169,7 +156,7 @@
 		#endif
 	}
 	
-	void EndDrawingA(){
+	void EndDrawing(){
 
 		#if PLATFORM == PLAT_WINDOWS
 			//DrawTouchControlsHelp();

@@ -32,8 +32,6 @@ function AddPartyMember2()
 	mattslot=nil;
 end
 
-print("platform is " .. Platform);
-
 -- Called when game starts
 --[[
  0 - Used big water bottle (0 or 1)

@@ -196,7 +196,7 @@
 	void FreeTexture(CrossTexture* passedTexture){
 		#if RENDERER == REND_VITA2D
 			vita2d_wait_rendering_done();
-			//sceDisplayWaitVblankStart();
+			sceDisplayWaitVblankStart();
 			vita2d_free_texture(passedTexture);
 			passedTexture=NULL;
 		#elif RENDERER == REND_SDL
