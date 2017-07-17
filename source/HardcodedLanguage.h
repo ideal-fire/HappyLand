@@ -40,44 +40,39 @@ void SetupHardcodedLanguage(){
 		N_HP = "Health";
 		N_MP = "MP";
 		N_LV = "Level";
-
 		N_SAVE = "Save";
 		N_LOAD = "Load";
 	}
 	if (LANGUAGE==LANG_SPANISH){
 		// NEed acsent on a;
 		// (The Magic List);
-		N_MAGICLIST = "La Lista M'agico";
+		N_MAGICLIST = "La Lista Mágico";
 		// Need acsent on mas;
 		// You need more MP;
-		N_NEEDMOREMP = "Necesitas m'as MP.";
+		N_NEEDMOREMP = "Necesitas más MP.";
 		// Need acsent on tu;
 		// You died.;
-		N_DEADMESSAGE = "T'u moriste.";
+		N_DEADMESSAGE = "Tú moriste.";
 		// The Happy Menu;
-		N_HAPPYMENU = "El Men'u Feliz";
+		N_HAPPYMENU = "El Menú Feliz";
 		// Next 3 from Google Translate. Probrablly all right.;
 		N_RESUME = "Continuar";
 		N_QUIT = "Dejar";
 		N_OPTIONS = "Opciones";
-		
 		// You won;
-		N_WIN = "T'u Ganaste";
-		
+		N_WIN = "Tú Ganaste";
 		N_ATK = "Ataque";
 		N_DEF = "Defensa";
-		N_MATK = "Ataque M'agico";
-		N_MDEF = "Defensa M'agico";
+		N_MATK = "Ataque Mágico";
+		N_MDEF = "Defensa Mágico";
 		N_SPEED = "Velocidad";
 		N_HP = "HP";
 		N_MP = "MP";
 		// I don't know how to say 'leveled up';
 		// I'll just settle for the next best thing;
 		// is more strong!;
-		N_LEVELEDUP = "es m'as fuerte!";
-		
+		N_LEVELEDUP = "es más fuerte!";
 		N_LV = "LV";
-
 		N_SAVE = "Guardar";
 		N_LOAD = "Cargar";
 	}

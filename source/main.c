@@ -8,29 +8,62 @@ O---O---O--OOOOO-O----OOOOO-O---O---
 // Only turned off when I'm working on my game. Needs to be set to 1 before release
 #define SHOWSPLASH 1
 
+#define LUAREGISTER(x,y) lua_pushcfunction(L,x);\
+	lua_setglobal(L,y);
+
 //#define LANGUAGE LANG_SPANISH
 #define LANG_ENGLISH 1
 #define LANG_SPANISH 2
 int LANGUAGE=LANG_ENGLISH;
 
-
 #define PLAT_VITA 1
 #define PLAT_WINDOWS 2
 #define PLAT_3DS 3
 
-#define PLATFORM PLAT_3DS
+#define PLATFORM PLAT_WINDOWS
+
+#define SUB_ANDROID 1
+#define SUBPLATFORM SUB_NONE
+
+#define SND_SDL 1
+#define SOUNDPLAYER SND_SDL
+
+#define REND_UNDEFINED 0
+#define REND_SDL 1
+#define REND_VITA2D 2
+#define REND_SF2D 3
+
+#define RENDERER REND_SDL
+
+#define TEXT_UNDEFINED 0
+#define TEXT_DEBUG 1
+#define TEXT_VITA2D 2
+#define TEXT_FONTCACHE 3
+
+#define TEXTRENDERER TEXT_FONTCACHE
+
+#define TYPE_UNDEFINED 0
+#define TYPE_DATA 1
+#define TYPE_EMBEDDED 2
+
+// Change the place variable to one of these
+#define PLACE_OVERWORLD 0
+#define PLACE_MENU 1
+#define PLACE_QUIT 2
+#define PLACE_BATTLE 3
+#define PLACE_STATUS 4
+#define PLACE_TITLE 5
 
 #if PLATFORM == PLAT_VITA
 	#define STARTINGMAP "app0:Stuff/Maps/NathansHouse"
 #elif PLATFORM == PLAT_WINDOWS
-	#define STARTINGMAP "./Stuff/Maps/NathansHouse"
+	#define STARTINGMAP "./Stuff/Maps/TestLand"
 #elif PLATFORM == PLAT_3DS
 	#define STARTINGMAP "/3ds/data/HappyLand/Stuff/Maps/NathansHouse"
 #endif
 
 // Translatos for hardcoded strings
 #include "HardcodedLanguage.h"
-
 
 #define MAXOBJECTS 15
 #if PLATFORM==PLAT_VITA
@@ -161,7 +194,7 @@ int drawYOffset=0;
 	#include <SDL2/SDL.h>
 	#include <SDL2/SDL_image.h>
 
-	#define u64 unsigned long
+	#include <dirent.h>
 #elif PLATFORM == PLAT_3DS
 	#include <3ds.h>
 	#include <stdio.h>
@@ -172,7 +205,41 @@ int drawYOffset=0;
 
 // Include stuff I made.
 #include "GoodArray.h"
-//#include "main.h" TODO - Make this
+
+
+//vita2d_pgf* defaultPgf;
+
+#if PLATFORM == PLAT_VITA
+	// Controls at start of frame.
+	SceCtrlData pad;
+	// Controls from start of last frame.
+	SceCtrlData lastPad;
+
+	SceTouchData currentTouch;
+	SceTouchData previousTouchData;
+#elif PLATFORM == PLAT_WINDOWS
+	//The window we'll be rendering to
+	SDL_Window* mainWindow;
+	
+	//The window renderer
+	SDL_Renderer* mainWindowRenderer;
+
+#elif PLATFORM==PLAT_3DS
+	u32 pad;
+	u32 wasJustPad;
+#endif
+
+#define unusedAreaColor 0,0,0,255
+//unsigned int unusedAreaColor = RGBA8(0,0,0,255);
+
+char tempPathFixBuffer[256];
+
+void FixPath(char* filename,unsigned char _buffer[], char type);
+char ShowMessageWithPortrait(char* _tempMsg, char isQuestion, CrossTexture* portrait, double portScale);
+
+#include "GeneralGoodExtended.h"
+#include "FpsCapper.h"
+//TODO - Make this
 // main.h
 	// Make stuff fresh
 	//typedef int8_t		s8;
@@ -183,9 +250,7 @@ int drawYOffset=0;
 	//typedef uint16_t 	u16;
 	//typedef uint32_t	u32;
 	//typedef uint64_t	u64;
-
-	void Wait(int miliseconds);
-	u64 GetTicks();
+	void BasicMessage(char* message);
 
 	typedef struct Q_tileImageData{
 		char tile;
@@ -247,57 +312,6 @@ int drawYOffset=0;
 		struct Q_spellLinkedList* nextEntry;
 		spell theSpell;
 	}spellLinkedList;
-// 
-#include "FpsCapper.h"
-
-//vita2d_pgf* defaultPgf;
-
-#if PLATFORM == PLAT_VITA
-	// Controls at start of frame.
-	SceCtrlData pad;
-	// Controls from start of last frame.
-	SceCtrlData lastPad;
-
-	SceTouchData currentTouch;
-	SceTouchData previousTouchData;
-#elif PLATFORM == PLAT_WINDOWS
-	//The window we'll be rendering to
-	SDL_Window* mainWindow;
-	
-	//The window renderer
-	SDL_Renderer* mainWindowRenderer;
-
-	enum SceCtrlPadButtons {
-		SCE_CTRL_SELECT      = 0,	//!< Select button.
-		SCE_CTRL_L3          = 1,	//!< L3 button.
-		SCE_CTRL_R3          = 2,	//!< R3 button.
-		SCE_CTRL_START       = 3,	//!< Start button.
-		SCE_CTRL_UP          = 4,	//!< Up D-Pad button.
-		SCE_CTRL_RIGHT       = 5,	//!< Right D-Pad button.
-		SCE_CTRL_DOWN        = 6,	//!< Down D-Pad button.
-		SCE_CTRL_LEFT        = 7,	//!< Left D-Pad button.
-		SCE_CTRL_LTRIGGER    = 8,	//!< Left trigger.
-		SCE_CTRL_RTRIGGER    = 9,	//!< Right trigger.
-		SCE_CTRL_L1          = 10,	//!< L1 button.
-		SCE_CTRL_R1          = 11,	//!< R1 button.
-		SCE_CTRL_TRIANGLE    = 12,	//!< Triangle button.
-		SCE_CTRL_CIRCLE      = 13,	//!< Circle button.
-		SCE_CTRL_CROSS       = 14,	//!< Cross button.
-		SCE_CTRL_SQUARE      = 15,	//!< Square button.
-		SCE_CTRL_INTERCEPTED = 16,  //!< Input not available because intercepted by another application
-		SCE_CTRL_VOLUP       = 17,	//!< Volume up button.
-		SCE_CTRL_VOLDOWN     = 18	//!< Volume down button.
-	};
-
-	char pad[19]={0};
-	char lastPad[19]={0};
-#elif PLATFORM==PLAT_3DS
-	u32 pad;
-	u32 wasJustPad;
-#endif
-
-#define unusedAreaColor 0,0,0,255
-//unsigned int unusedAreaColor = RGBA8(0,0,0,255);
 
 /*
 =================================================
@@ -305,7 +319,7 @@ int drawYOffset=0;
 =================================================
 */
 lua_State* L;
-CrossTexture* fontImage;
+//CrossTexture* fontImage;
 animation selectorAnimation;
 // Where you are. Like Overworld, Menu, Battle, etc.
 // Values in main function
@@ -315,21 +329,6 @@ spellLinkedList* spellLinkedListStart={0};
 unsigned short spellLinkedListSize=1;
 
 char* currentMapFilepath;
-
-
-/*
-==================
-== TILDE
-==================
-*/
-CrossTexture* tilde_a;
-CrossTexture* tilde_e;
-CrossTexture* tilde_i;
-CrossTexture* tilde_o;
-CrossTexture* tilde_u;
-CrossTexture* tilde_n;
-CrossTexture* tilde_questionMark;
-CrossTexture* tilde_esclimationPoint;
 
 /*
 ====================================================
@@ -395,214 +394,45 @@ animation possibleEnemiesAttackAnimation[10];
 ///////////////////////////////////////
 */
 
-void DrawRectangle(int x, int y, int w, int h, int r, int g, int b, int a){
-	#if PLATFORM == PLAT_VITA
-		vita2d_draw_rectangle(x,y,w,h,RGBA8(r,g,b,a));
-	#elif PLATFORM == PLAT_WINDOWS
-		SDL_SetRenderDrawColor(mainWindowRenderer,r,g,b,a);
-		SDL_Rect tempRect;
-		tempRect.x=x;
-		tempRect.y=y;
-		tempRect.w=w;
-		tempRect.h=h;
-		SDL_RenderFillRect(mainWindowRenderer,&tempRect);
-	#elif PLATFORM == PLAT_3DS
-		sf2d_draw_rectangle(x,y,w,h,RGBA8(r,g,b,a));
-	#endif
-}
-
-void DrawTexture(CrossTexture* passedTexture, int _destX, int _destY){
-	#if PLATFORM == PLAT_VITA
-		vita2d_draw_texture(passedTexture,_destX,_destY);
-	#elif PLATFORM == PLAT_WINDOWS
-		SDL_Rect _srcRect;
-		SDL_Rect _destRect;
-		//if (_srcWidth==-1){
-			SDL_QueryTexture(passedTexture, NULL, NULL, &(_srcRect.w), &(_srcRect.h));
-		//}else{
-		//	_srcRect.w=_srcWidth;
-		//	_srcRect.h=_srcHeight;
-		//}
-		//if (_destWidth==-1){
-			_destRect.w=_srcRect.w;
-			_destRect.h=_srcRect.h;
-		//}else{
-		//	_destRect.w=_destWidth;
-		//	_destRect.h=_destHeight;
-		//}
-	
-		_destRect.x=_destX;
-		_destRect.y=_destY;
-		
-		_srcRect.x=0;
-		_srcRect.y=0;
-	
-		SDL_RenderCopy(mainWindowRenderer, passedTexture, &_srcRect, &_destRect );
-	#elif PLATFORM == PLAT_3DS
-		sf2d_draw_texture(passedTexture,_destX,_destY);
-	#endif
-}
-
-void DrawTexturePartScale(CrossTexture* passedTexture, int destX, int destY, int texX, int texY, int texW, int texH, float texXScale, float texYScale){
-	#if PLATFORM == PLAT_VITA
-		vita2d_draw_texture_part_scale(passedTexture,destX,destY,texX,texY,texW, texH, texXScale, texYScale);
-	#elif PLATFORM == PLAT_WINDOWS
-		SDL_Rect _srcRect;
-		SDL_Rect _destRect;
-		_srcRect.w=texW;
-		_srcRect.h=texH;
-		
-		_srcRect.x=texX;
-		_srcRect.y=texY;
-	
-		_destRect.w=_srcRect.w*texXScale;
-		_destRect.h=_srcRect.h*texYScale;
-
-		_destRect.x=destX;
-		_destRect.y=destY;
-
-		SDL_RenderCopy(mainWindowRenderer, passedTexture, &_srcRect, &_destRect );
-	#elif PLATFORM==PLAT_3DS
-		sf2d_draw_texture_part_scale(passedTexture,destX,destY,texX,texY,texW, texH, texXScale, texYScale);
-	#endif
-}
-
-void DrawTextureScale(CrossTexture* passedTexture, int destX, int destY, float texXScale, float texYScale){
-	#if PLATFORM == PLAT_VITA
-		vita2d_draw_texture_scale(passedTexture,destX,destY,texXScale,texYScale);
-	#elif PLATFORM == PLAT_WINDOWS
-		SDL_Rect _srcRect;
-		SDL_Rect _destRect;
-		SDL_QueryTexture(passedTexture, NULL, NULL, &(_srcRect.w), &(_srcRect.h));
-		
-		_srcRect.x=0;
-		_srcRect.y=0;
-	
-		_destRect.w=(_srcRect.w*texXScale);
-		_destRect.h=(_srcRect.h*texYScale);
-
-		_destRect.x=destX;
-		_destRect.y=destY;
-
-		SDL_RenderCopy(mainWindowRenderer, passedTexture, &_srcRect, &_destRect );
-	#elif PLATFORM == PLAT_3DS
-		sf2d_draw_texture_scale(passedTexture,destX,destY,texXScale,texYScale);
-	#endif
-}
-
-// TODO MAKE ROTATE ON WINDOWS
-void DrawTexturePartScaleRotate(CrossTexture* texture, float x, float y, float tex_x, float tex_y, float tex_w, float tex_h, float x_scale, float y_scale, float rad){
-	#if PLATFORM == PLAT_VITA
-		vita2d_draw_texture_part_scale_rotate(texture,x,y,tex_x,tex_y,tex_w,tex_h,x_scale,y_scale,rad);
-	#elif PLATFORM == PLAT_WINDOWS
-		DrawTexturePartScale(texture,x,y,tex_x,tex_y,tex_w,tex_h,x_scale,y_scale);
-	#elif PLATFORM == PLAT_3DS
-		sf2d_draw_texture_part_rotate_scale(texture,x,y,rad,tex_x,tex_y,tex_w,tex_h,x_scale,y_scale);
-	#endif
-}
-
-int GetTextureWidth(CrossTexture* passedTexture){
-	#if PLATFORM == PLAT_VITA
-		return vita2d_texture_get_width(passedTexture);
-	#elif PLATFORM == PLAT_WINDOWS
-		int w, h;
-		SDL_QueryTexture(passedTexture, NULL, NULL, &w, &h);
-		return w;
-	#elif PLATFORM == PLAT_3DS
-		return passedTexture->width;
-	#endif
-}
-
-int GetTextureHeight(CrossTexture* passedTexture){
-	#if PLATFORM == PLAT_VITA
-		return vita2d_texture_get_height(passedTexture);
-	#elif PLATFORM == PLAT_WINDOWS
-		int w, h;
-		SDL_QueryTexture(passedTexture, NULL, NULL, &w, &h);
-		return h;
-	#elif PLATFORM == PLAT_3DS
-		return passedTexture->height;
-	#endif
-}
-
-char ShowErrorIfNull(void* _thingie){
-	#if PLATFORM == PLAT_VITA || PLATFORM == PLAT_3DS
-		if (_thingie==NULL){
-			printf("Some wacky thingie is null");
-			return 1;
-		}
-		return 0;
-	#elif PLATFORM == PLAT_WINDOWS
-		if (_thingie==NULL){
-			printf("Error: %s\n",SDL_GetError());
-			return 1;
-		}
-		return 0;
-	#endif
-}
-
 void StartDrawing(){
-	#if PLATFORM == PLAT_VITA
-		vita2d_start_drawing();
-		vita2d_clear_screen();
-	#elif PLATFORM == PLAT_WINDOWS
-		SDL_RenderClear(mainWindowRenderer);
-	#elif PLATFORM == PLAT_3DS
-		sf2d_start_frame(GFX_TOP, GFX_LEFT);
-	#endif
+	StartDrawingA();
 }
 
 void EndDrawing(){
-	#if PLATFORM == PLAT_VITA
-		vita2d_end_drawing();
-		vita2d_swap_buffers();
-		vita2d_wait_rendering_done();
-	#elif PLATFORM == PLAT_WINDOWS
-		SDL_RenderPresent(mainWindowRenderer);
-	#elif PLATFORM == PLAT_3DS
-		sf2d_end_frame();
-		sf2d_swapbuffers();
-	#endif
+	EndDrawingA();
 }
 
-CrossTexture* LoadPNG(char* path){
-	#if PLATFORM == PLAT_VITA
-		return vita2d_load_PNG_file(path);
-	#elif PLATFORM == PLAT_WINDOWS
-		// Real one we'll return
-		SDL_Texture* _returnTexture;
-		// Load temp and sho error
-		SDL_Surface* _tempSurface = IMG_Load(path);
-		ShowErrorIfNull(_tempSurface);
-		// Make good
-		_returnTexture = SDL_CreateTextureFromSurface( mainWindowRenderer, _tempSurface );
-		ShowErrorIfNull(_returnTexture);
-		// Free memori
-		SDL_FreeSurface(_tempSurface);
-		return _returnTexture;
-	#elif PLATFORM == PLAT_3DS
-		return sfil_load_PNG_file(path,SF2D_PLACE_RAM);
-	#endif
-}
-
-void FreeTexture(CrossTexture* passedTexture){
-	#if PLATFORM == PLAT_VITA
-		vita2d_free_texture(passedTexture);
-		passedTexture=NULL;
-	#elif PLATFORM == PLAT_WINDOWS
-		SDL_DestroyTexture(passedTexture);
-		passedTexture=NULL;
-	#elif PLATFORM == PLAT_3DS
-		sf2d_free_texture(passedTexture);
-		passedTexture=NULL;
-	#endif
-}
 
 /*
 ////////////////////////////////////////////////
 // 
 ///////////////////////////////////////////////
 */
+
+void FixPath(char* filename,unsigned char _buffer[], char type){
+	#if SUBPLATFORM == SUB_ANDROID
+		if (type==TYPE_DATA){
+			strcpy((char*)_buffer,"/sdcard/HIGURASHI/");
+		}else if (type==TYPE_EMBEDDED){
+			strcpy((char*)_buffer,"a/");
+		}
+		strcat((char*)_buffer,filename);
+	#elif PLATFORM == PLAT_WINDOWS
+		if (type==TYPE_DATA){
+			strcpy((char*)_buffer,"./");
+		}else if (type==TYPE_EMBEDDED){
+			strcpy((char*)_buffer,"./");
+		}
+		strcat((char*)_buffer,filename);
+	#elif PLATFORM == PLAT_VITA
+		if (type==TYPE_DATA){
+			strcpy((char*)_buffer,"ux0:data/HIGURASHI/");
+		}else if (type==TYPE_EMBEDDED){
+			strcpy((char*)_buffer,"app0:a/");
+		}
+		strcat((char*)_buffer,filename);
+	#endif
+}
 
 void RestorePartyMember(int id){
 	int passedSlot = id;
@@ -662,29 +492,6 @@ void DrawMap(){
 			}
 		}
 	}
-}
-
-// Waits for a number of miliseconds.
-void Wait(int miliseconds){
-	#if PLATFORM == PLAT_VITA
-		sceKernelDelayThread(miliseconds*1000);
-	#elif PLATFORM == PLAT_WINDOWS
-		SDL_Delay(miliseconds);
-	#elif PLATFORM == PLAT_3DS
-		svcSleepThread(miliseconds*1000000);
-	#endif
-}
-
-u64 GetTicks(){
-	#if PLATFORM == PLAT_VITA
-		SceRtcTick temp;
-		sceRtcGetCurrentTick(&temp);
-		return temp.tick;
-	#elif PLATFORM == PLAT_WINDOWS
-		return SDL_GetTicks();
-	#elif PLATFORM == PLAT_3DS
-		return osGetTime();
-	#endif
 }
 
 void SetCameraValues(){
@@ -877,7 +684,14 @@ char ExecuteEvent(object* theThingie,int eventId){
 	sprintf(eventString,"%s%02d","Event",eventId);
 
 	// Adds function to stack
-	lua_getglobal(L,eventString);
+	if (lua_getglobal(L,eventString)==0){
+		printf("Failed to get event with function name %s\n",eventString);
+		char _tempBuf[strlen("Failed to get event with function name ")+8];
+		strcpy(_tempBuf,"Failed to get event with function name ");
+		strcat(_tempBuf,eventString);
+		BasicMessage(_tempBuf);
+		return 0;
+	}
 	// Pass object
 	lua_pushlightuserdata(L,theThingie);
 	// Call funciton. Removes function from stack.
@@ -888,116 +702,6 @@ char ExecuteEvent(object* theThingie,int eventId){
 	return returnedValue;
 }
 
-char IsThisTilde(char* passedString, int passedPosition){
-	if (passedString[passedPosition]==39){
-		if (passedString[passedPosition+1]==97 || passedString[passedPosition+1]==101 || passedString[passedPosition+1]==105 || passedString[passedPosition+1]==111 || passedString[passedPosition+1]==117 || passedString[passedPosition+1]==110 || passedString[passedPosition+1]==63 || passedString[passedPosition+1]==33){
-			return 1;
-		}
-	}
-	return 0;
-}
-
-void DrawLetter(int letterId, int _x, int _y, int size){
-	//DrawTexture(_mainRenderer,fontImage, (letterId-32)*8, 0, 8, 8, _x, _y, 16, 16);
-	DrawTexturePartScale(fontImage,_x,_y,(letterId-32)*(8),0,8,8,MAPXSCALE*size,MAPYSCALE*size);
-}
-
-void DrawLetterUnscaled(int letterId, int _x, int _y, int size){
-	DrawTexturePartScale(fontImage,_x,_y,(letterId-32)*(8),0,8,8,size,size);
-}
-
-void DrawTildeLetterUnscaled(int letterId, int _x, int _y, int size){
-	switch(letterId){
-		case 97:
-			DrawTextureScale(tilde_a,_x,_y,size,size);
-		break;
-		case 101:
-			DrawTextureScale(tilde_e,_x,_y,size,size);
-		break;
-		case 105:
-			DrawTextureScale(tilde_i,_x,_y,size,size);
-		break;
-		case 111:
-			DrawTextureScale(tilde_o,_x,_y,size,size);
-		break;
-		case 117:
-			DrawTextureScale(tilde_u,_x,_y,size,size);
-		break;
-		case 110:
-			DrawTextureScale(tilde_n,_x,_y,size,size);
-		break;
-		case 63:
-			DrawTextureScale(tilde_questionMark,_x,_y,size,size);
-		break;
-		case 33:
-			DrawTextureScale(tilde_esclimationPoint,_x,_y,size,size);
-		break;
-	}
-}
-
-void DrawText(int x, int y, const char* text, int size){
-	int i=0;
-	int notICounter=0;
-	for (i = 0; i < strlen(text); i++){
-		if (5==39){
-			DrawTildeLetterUnscaled(text[i+1],FixX(x+(notICounter*(8*size))+notICounter),FixY(y),size);
-			i++;
-		}else{
-			DrawLetter(text[i],FixX(x+(notICounter*(8*size))+notICounter),FixY(y),size);
-		}
-		notICounter++;
-	}
-}
-
-void DrawTextAsISay(int x, int y, const char* text, int size){
-	int i=0;
-	int notICounter=0;
-	for (i = 0; i < strlen(text); i++){
-		if (IsThisTilde((char*)text,i)){
-			DrawTildeLetterUnscaled(text[i+1],(x+(notICounter*(8*size))+notICounter),(y),size);
-			i++;
-		}else{
-			DrawLetterUnscaled(text[i],(x+(notICounter*(8*size))+notICounter),(y),size);
-		}
-		notICounter++;
-	}
-}
-
-char WasJustPressed(int value){
-	#if PLATFORM == PLAT_VITA
-		if (pad.buttons & value && !(lastPad.buttons & value)){
-			return 1;
-		}
-	#elif PLATFORM == PLAT_WINDOWS
-		if (pad[value]==1 && lastPad[value]==0){
-			return 1;
-		}
-	#elif PLATFORM==PLAT_3DS
-		if (wasJustPad & value){
-			return 1;
-		}
-	#endif
-	return 0;
-}
-
-char IsDown(int value){
-	#if PLATFORM == PLAT_VITA
-		if (pad.buttons & value){
-			return 1;
-		}
-	#elif PLATFORM == PLAT_WINDOWS
-
-		if (pad[value]==1){
-			return 1;
-		}
-	#elif PLATFORM == PLAT_3DS
-		if (pad & value){
-			return 1;
-		}
-	#endif
-	return 0;
-}
-
 // Draws everything we draw on map.
 void DrawMapThings(){
 	DrawMap();
@@ -1005,118 +709,119 @@ void DrawMapThings(){
 	DrawUnusedAreaRect();
 }
 
-void BasicMessage(char* message){
-	// Letter we're currently displaying.
-	short currentLetter=0;
+void BasicMessage(char* _tempMsg){
+	ControlsReset();
+	// The string needs to be copied. We're going to modify it, at we can't if we just type the string into the function and let the compiler do everything else
+	char message[strlen(_tempMsg)+1];
+	strcpy(message,_tempMsg);
+	int textboxLinesPerScreens = (SCREENHEIGHT-TEXTBOXY)/TextHeight(fontSize);
+	short newLineLocations[50];
+	int totalMessageLength = strlen(message);
+	int i, j;
 
-	char quitTextbox=0;
-
-	// Letter scale is 2.5. 8*2.5=20.
-	unsigned char maxLetters=floor(SCREENWIDTH/(8*TEXTBOXFONTSIZE));
-
-	// 68/(8*2)
-	unsigned char linesPerScreen = LINESPERSCREEN;/*floor((SCREENHEIGHT-TEXTBOXY)/(8*TEXTBOXFONTSIZE));*/
-
-	short newlineSpaces[50];
-	char totalNewLines=0;
-
-	int i=0;
-	int j=0;
-
-	//I guess this adds the newline segments?
-	for (j = 1; j <= floor(strlen(message)/maxLetters)+1; j++){
-		if (j==1){
-			i=j*maxLetters-1;
+	// This will loop through the entire message, looking for where I need to add new lines. When it finds a spot that
+	// needs a new line, that spot in the message will become 0. So, when looking for the place to 
+	int lastNewlinePosition=0;
+	for (i = 0; i < totalMessageLength; i++){
+		if (message[i]==32){ // Only check when we meet a space. 32 is a space in ASCII
+			message[i]='\0';
+			//printf("Space found at %d\n",i);
+			//printf("%s\n",&message[lastNewlinePosition+1]);
+			//printf("%d\n",TextWidth(fontSize,&(message[lastNewlinePosition+1])));
+			if (TextWidth(fontSize,&(message[lastNewlinePosition+1]))>SCREENWIDTH-20){
+				char _didWork=0;
+				for (j=i-1;j>lastNewlinePosition+1;j--){
+					//printf("J:%d\n",j);
+					if (message[j]==32){
+						message[j]='\0';
+						_didWork=1;
+						message[i]=32;
+						lastNewlinePosition=j;
+						break;
+					}
+				}
+				if (_didWork==0){
+					message[i]='\0';
+					lastNewlinePosition=i+1;
+				}
+			}else{
+				message[i]=32;
+			}
+		}
+	}
+	// This spot in the message will be the one that's 0 char. The player won't be able to see this character.
+	int currentLetter=0;
+	int currentLine=0;
+	signed int nextCharStorage=-1;
+	char currentlyVisibleLines=1;
+	char frames=0;
+	// This variable is the location of the start of the first VISIBLE line
+	// This will change if the text box has multiple screens because the text is too long
+	int offsetStrlen=0;
+	//  textboxNewCharSpeed
+	
+	nextCharStorage = message[0];
+	message[0]='\0';
+	while (currentlyVisibleLines<=textboxLinesPerScreens && currentLetter!=totalMessageLength){
+		if (nextCharStorage==0){
+			currentlyVisibleLines++;
+		}
+		message[currentLetter]=nextCharStorage;
+		currentLetter++;
+		if (currentLetter!=totalMessageLength){
+			nextCharStorage = message[currentLetter];
+			message[currentLetter]='\0';
 		}else{
-			i=newlineSpaces[j-2]+maxLetters;
+			nextCharStorage=0;
 		}
-		if (i>strlen(message)){
-			break;
-		}
-		while (1){
-			if (message[i]==32){
-				// Add the +1 so that space is left at the end of the previous line.
-				newlineSpaces[j-1]=i+1;
-				totalNewLines++;
+	}
+	while (1){
+		FpsCapStart();
+		ControlsStart();
+		if (WasJustPressed(SCE_CTRL_CROSS)){
+			if (currentLetter==totalMessageLength){
 				break;
 			}else{
-				i=i-1;
+				offsetStrlen=currentLetter;
+				//currentLetter=0;
+				//nextCharStorage=-1;
+				currentlyVisibleLines=1;
+				frames=0;
 			}
-		}
-	}
-	newlineSpaces[(int)totalNewLines]=strlen(message);
-
-	char sectionOfCurrentMessage=linesPerScreen-1;
-	if (totalNewLines<linesPerScreen-1){
-		sectionOfCurrentMessage=totalNewLines;
-	}
-	short characterOffset=0;
-	char startSectionOfNewLine=0;
-
-	currentLetter=newlineSpaces[(int)sectionOfCurrentMessage];
-
-	EndFrameStuff();
-	while (!quitTextbox){
-		StartFrameStuff();
-			
-		if (WasJustPressed(aButton)){
-			
-			// ADVANCE TO NEXT MESSAGE
-			if (sectionOfCurrentMessage!=totalNewLines){
-				startSectionOfNewLine+=linesPerScreen;
-				characterOffset=newlineSpaces[(int)sectionOfCurrentMessage];
-				currentLetter=newlineSpaces[(int)sectionOfCurrentMessage]+1;
-				if (sectionOfCurrentMessage+linesPerScreen<=totalNewLines){
-					sectionOfCurrentMessage+=linesPerScreen;
-				}else{
-					sectionOfCurrentMessage=totalNewLines;
+			while (currentlyVisibleLines<=textboxLinesPerScreens && currentLetter!=totalMessageLength){
+				if (nextCharStorage==0){
+					currentlyVisibleLines++;
 				}
-				currentLetter=newlineSpaces[(int)sectionOfCurrentMessage];
-			}else{
-				quitTextbox=1;
-				
+				message[currentLetter]=nextCharStorage;
+				currentLetter++;
+				if (currentLetter!=totalMessageLength){
+					nextCharStorage = message[currentLetter];
+					message[currentLetter]='\0';
+				}else{
+					nextCharStorage=0;
+				}
 			}
-			
 		}
-
+		ControlsEnd();
+		
 		StartDrawing();
 
-		// Draw da white rectangle
-		DrawRectangle(0,TEXTBOXY,SCREENWIDTH,SCREENHEIGHT-TEXTBOXY,255,255,255,255);
-
-		// Draw message
-		short i;
-		char currentYPos=0;
-		unsigned char currentXPos=-1;
-		// Position in newlineSpaces that we last used the newline thing.
-		unsigned char nextNewLineSpace=startSectionOfNewLine;
-		
-		for (i = characterOffset; i < currentLetter; i++){
-			if (i==newlineSpaces[nextNewLineSpace]){
-				currentXPos=0;
-				currentYPos++;
-				nextNewLineSpace++;
-			}else{
-				currentXPos++;
-			}
-			if (IsThisTilde(message,i)){
-				DrawTildeLetterUnscaled(message[i+1],currentXPos*(TEXTBOXFONTSIZE*8)+5,TEXTBOXY+currentYPos*(TEXTBOXFONTSIZE*8)+currentYPos*5+5,2.5);
-				i++;
-				continue;
-			}
-			// currentXPos*20 has a +5 for offset so not at screen edge.
-			DrawLetterUnscaled(message[i],currentXPos*(TEXTBOXFONTSIZE*8)+5,TEXTBOXY+currentYPos*(TEXTBOXFONTSIZE*8)+currentYPos*5+5,TEXTBOXFONTSIZE);
+		// We need this variable so we know the offset in the message for the text that is for the next line
+		int _lastStrlen=0;
+		for (i=0;i<currentlyVisibleLines;i++){
+			DrawText(5,TEXTBOXY+TextHeight(fontSize)*i,&message[_lastStrlen+offsetStrlen],fontSize);
+			// This offset will have the first letter for the next line
+			_lastStrlen = strlen(&message[_lastStrlen+offsetStrlen])+1+_lastStrlen;
 		}
-		//DrawTextAsISay(0,TEXTBO,"",TEXTBOXFONTSIZE); (TEXTBOXFONTSIZE*8)
-
 
 		EndDrawing();
-
-		EndFrameStuff();
+		FpsCapWait();
+		frames++;
 	}
+	ControlsEnd();
 }
 
-char ShowMessageWithPortrait(char* message, char isQuestion, CrossTexture* portrait, double portScale){
+char TestNewMessage(char* message, char isQuestion, CrossTexture* portrait, double portScale){
 	EndFrameStuff();
 	if (portScale==0 && portrait!=NULL){
 		portScale = floor((double)DEFAULTPORTRAITSIZE/GetTextureWidth(portrait));
@@ -1126,6 +831,9 @@ char ShowMessageWithPortrait(char* message, char isQuestion, CrossTexture* portr
 	char frames=0;
 	// Letter we're currently displaying.
 	short currentLetter=0;
+
+	CrossTexture* yesButtonTexture=(CrossTexture*)1;
+	CrossTexture* noButtonTexture=(CrossTexture*)1;
 
 	char quitTextbox=0;
 
@@ -1140,38 +848,17 @@ char ShowMessageWithPortrait(char* message, char isQuestion, CrossTexture* portr
 	short newlineSpaces[50];
 	char totalNewLines=0;
 
-	// Initialize them so I don't get compiler warnings.
-	CrossTexture* yesButtonTexture=(CrossTexture*)1;
-	CrossTexture* noButtonTexture=(CrossTexture*)1;
 	//vita2d_wait_rendering_done();
 
 	int i=0;
 	int j=0;
 	char questionScale=1;
 	if (isQuestion==1){
-		if (LANGUAGE==LANG_ENGLISH){
-			#if PLATFORM == PLAT_VITA
-				yesButtonTexture=LoadPNG("app0:Stuff/Yes.png");
-				noButtonTexture=LoadPNG("app0:Stuff/No.png");
-			#elif PLATFORM == PLAT_WINDOWS
-				yesButtonTexture=LoadPNG("./Stuff/Yes.png");
-				noButtonTexture=LoadPNG("./Stuff/No.png");
-			#elif PLATFORM == PLAT_3DS
-				yesButtonTexture=LoadPNG("/3ds/data/HappyLand/Stuff/Yes.png");
-				noButtonTexture=LoadPNG("/3ds/data/HappyLand/Stuff/No.png");
-			#endif
-		}else if (LANGUAGE==LANG_SPANISH){
-			#if PLATFORM == PLAT_VITA
-				yesButtonTexture=LoadPNG("app0:SpanishReplace/Yes.png");
-				noButtonTexture=LoadPNG("app0:SpanishReplace/No.png");
-			#elif PLATFORM == PLAT_WINDOWS
-				yesButtonTexture=LoadPNG("./SpanishReplace/Yes.png");
-				noButtonTexture=LoadPNG("./SpanishReplace/No.png");
-			#elif PLATFORM == PLAT_3DS
-				yesButtonTexture=LoadPNG("/3ds/data/HappyLand/SpanishReplace/Yes.png");
-				noButtonTexture=LoadPNG("/3ds/data/HappyLand/SpanishReplace/No.png");
-			#endif
-		}
+		FixPath("Stuff/Yes.png",tempPathFixBuffer,TYPE_EMBEDDED);
+		yesButtonTexture=LoadPNG(tempPathFixBuffer);
+		FixPath("Stuff/No.png",tempPathFixBuffer,TYPE_EMBEDDED);
+		noButtonTexture=LoadPNG(tempPathFixBuffer);
+		
 
 		if (SCREENWIDTH/GetTextureWidth(yesButtonTexture)>=8){
 			questionScale=2;
@@ -1192,8 +879,8 @@ char ShowMessageWithPortrait(char* message, char isQuestion, CrossTexture* portr
 			break;
 		}
 		while (1){
-			if (message[i]==32){
-				// Add the +1 so that space is left at the end of the previous line.
+			if (message[i]==32){ // Checks if it's a space
+				// Add the +1 so that the space is left at the end of the previous line.
 				newlineSpaces[j-1]=i+1;
 				totalNewLines++;
 				break;
@@ -1210,6 +897,16 @@ char ShowMessageWithPortrait(char* message, char isQuestion, CrossTexture* portr
 	}
 	short characterOffset=0;
 	char startSectionOfNewLine=0;
+
+	// In this variable, we store the character that was replaced with 0.
+	// It should only be 0-255, but it's a signed short so it can start at -1
+	signed short _tempCharStorage=-1;
+
+	// This stores the entire length of the message before we change it for display
+	int totalMessageLength = strlen(message);
+
+	unsigned char nextNewLineSpace=startSectionOfNewLine;
+
 	while (!quitTextbox){
 		StartFrameStuff();
 			
@@ -1226,6 +923,7 @@ char ShowMessageWithPortrait(char* message, char isQuestion, CrossTexture* portr
 						sectionOfCurrentMessage=totalNewLines;
 					}
 					frames=0;
+					nextNewLineSpace=startSectionOfNewLine;
 				}else{
 					quitTextbox=1;
 					// Set isQuestion to 0 so one last render is done, but without the yes and no buttons.
@@ -1249,15 +947,27 @@ char ShowMessageWithPortrait(char* message, char isQuestion, CrossTexture* portr
 				}
 			}	
 		}
-		
-
 		// Advance currentLetter every certian number of frames.
 		if (frames==textboxNewCharSpeed && currentLetter!=newlineSpaces[(int)sectionOfCurrentMessage]){
-			if (currentLetter<strlen(message)){
-				frames=0;
-				currentLetter++;
+			printf("advance\n");
+			if (currentLetter<totalMessageLength){
+
+				if (currentLetter == newlineSpaces[nextNewLineSpace]){
+					nextNewLineSpace++;
+					message[currentLetter]='\0';
+					_tempCharStorage=-1;
+				}else{
+					printf("ok!\n");
+					frames=0;
+					currentLetter++;
+					if (_tempCharStorage!=-1){
+						message[currentLetter-1]=_tempCharStorage;
+					}
+					_tempCharStorage = message[currentLetter];
+					message[currentLetter]='\0';
+				}
+				printf("%s\n",message);
 			}
-			//Mix_PlayChannel(0,textboxBlip,0);
 		}
 
 		StartDrawing();
@@ -1268,27 +978,31 @@ char ShowMessageWithPortrait(char* message, char isQuestion, CrossTexture* portr
 
 		// Draw message
 		short i;
-		char currentYPos=0;
-		unsigned char currentXPos=-1;
 		// Position in newlineSpaces that we last used the newline thing.
-		unsigned char nextNewLineSpace=startSectionOfNewLine;
 		
-		for (i = characterOffset; i < currentLetter; i++){
-			if (i==newlineSpaces[nextNewLineSpace]){
-				currentXPos=0;
-				currentYPos++;
-				nextNewLineSpace++;
-			}else{
-				currentXPos++;
+
+		//for (i = characterOffset; i < currentLetter; i++){
+			//if (i==newlineSpaces[nextNewLineSpace]){
+			//	currentXPos=0;
+			//	currentYPos++;
+			//	nextNewLineSpace++;
+			//}else{
+			//	currentXPos++;
+			//}
+			//if (IsThisTilde(message,i)){
+			//	DrawTildeLetterUnscaled(message[i+1],currentXPos*(TEXTBOXFONTSIZE*8)+5,TEXTBOXY+currentYPos*(TEXTBOXFONTSIZE*8)+currentYPos*5+5,TEXTBOXFONTSIZE);
+			//	i++;
+			//	continue;
+			//}
+			//// currentXPos*20 has a +5 for offset so not at screen edge.
+			//DrawLetterUnscaled(message[i],currentXPos*(TEXTBOXFONTSIZE*8)+5,TEXTBOXY+currentYPos*(TEXTBOXFONTSIZE*8)+currentYPos*5+5,TEXTBOXFONTSIZE);
+			//DrawText(int x, int y, const char* text, float size)
+			int k=0;
+			printf("current secction of message :%d\n", sectionOfCurrentMessage);
+			for (k=LINESPERSCREEN;k>0;k--){
+				DrawText(5,TEXTBOXY+TextHeight(fontSize)*k,&(message[newlineSpaces[sectionOfCurrentMessage-k]]),fontSize);
 			}
-			if (IsThisTilde(message,i)){
-				DrawTildeLetterUnscaled(message[i+1],currentXPos*(TEXTBOXFONTSIZE*8)+5,TEXTBOXY+currentYPos*(TEXTBOXFONTSIZE*8)+currentYPos*5+5,TEXTBOXFONTSIZE);
-				i++;
-				continue;
-			}
-			// currentXPos*20 has a +5 for offset so not at screen edge.
-			DrawLetterUnscaled(message[i],currentXPos*(TEXTBOXFONTSIZE*8)+5,TEXTBOXY+currentYPos*(TEXTBOXFONTSIZE*8)+currentYPos*5+5,TEXTBOXFONTSIZE);
-		}
+		//}
 
 		// Draw questions
 		if (isQuestion==1){
@@ -1392,7 +1106,6 @@ void LoadMap(char* path){
 	//
 }
 
-// TODO - reset and dispose and stuff enemies
 void UnloadMap(){
 	// ... what do I need to do here?
 	PlzNoCrashOnDispose();
@@ -1437,7 +1150,6 @@ void ChangeMap(char* newMap){
 	UnloadMap();
 	LoadMap(newMap);
 }
-
 
 void BattleAttackTemplate(animation* animationToModify, char* filePath, char width, int speed){
 	animationToModify->speed=speed;
@@ -1652,28 +1364,28 @@ signed char SelectSpell(partyMember member){
 		StartDrawing();
 		#if PLATFORM != PLAT_3DS
 
-			DrawTextAsISay( CenterText(N_MAGICLIST,6),2,N_MAGICLIST,6);
+			DrawText( CenterText(N_MAGICLIST,6),2,N_MAGICLIST,6);
 	
 			for (i=0;i<numberOfSkillsSelect;i++){
 				if (member.fighterStats.spells[i]!=0){
 					//ShowMessage("a",0);
 					spellLinkedList* tempList = GetSpellList(member.fighterStats.spells[i]-1);
 					sprintf((char*)tempMessage,"%s:%d",tempList->theSpell.name,tempList->theSpell.mpCost);
-					DrawTextAsISay(88,i*48+i*2+64,tempMessage,6);
+					DrawText(88,i*48+i*2+64,tempMessage,6);
 				}else{
 					break;
 				}
 			}
 			DrawAnimationAsISay(&selectorAnimation,0,selected*48+selected*2+64-10,4);
 		#else
-			DrawTextAsISay( CenterText(N_MAGICLIST,2),2,N_MAGICLIST,2);
+			DrawText( CenterText(N_MAGICLIST,2),2,N_MAGICLIST,2);
 	
 			for (i=0;i<numberOfSkillsSelect;i++){
 				if (member.fighterStats.spells[i]!=0){
 					//ShowMessage("a",0);
 					spellLinkedList* tempList = GetSpellList(member.fighterStats.spells[i]-1);
 					sprintf((char*)tempMessage,"%s:%d",tempList->theSpell.name,tempList->theSpell.mpCost);
-					DrawTextAsISay(88,i*16+i*2+20,tempMessage,2);
+					DrawText(88,i*16+i*2+20,tempMessage,2);
 				}else{
 					break;
 				}
@@ -1754,7 +1466,6 @@ void ClearBottomScreen(){
 		EndDrawing();
 	#endif
 }
-
 
 void LevelUp(partyMember* passedMember, int removexp){
 	if (removexp==1){
@@ -1974,8 +1685,6 @@ void Load(){
 	ChangeMap(currentMapFilepath);
 }
 
-
-
 /*
 ========================================================
 ===
@@ -2007,33 +1716,33 @@ void StatusLoop(){
 		StartDrawing();
 
 		#if PLATFORM != PLAT_3DS
-			DrawTextAsISay(SCREENWIDTH/2-strlen(party[selectedMember].fighterStats.name)*64/2,3,party[selectedMember].fighterStats.name,8);
-			DrawTextAsISay(3,69,N_ATK,4);
+			DrawText(SCREENWIDTH/2-strlen(party[selectedMember].fighterStats.name)*64/2,3,party[selectedMember].fighterStats.name,8);
+			DrawText(3,69,N_ATK,4);
 			sprintf((char*)&statNumberString,"%d",party[selectedMember].fighterStats.attack);
-			DrawTextAsISay(strlen(N_ATK)*32+32,69,statNumberString,4);
-			DrawTextAsISay(3,106,N_MATK,4);
+			DrawText(strlen(N_ATK)*32+32,69,statNumberString,4);
+			DrawText(3,106,N_MATK,4);
 			sprintf((char*)&statNumberString,"%d",party[selectedMember].fighterStats.magicAttack);
-			DrawTextAsISay(strlen(N_MATK)*32+32,106,statNumberString,4);
-			DrawTextAsISay(3,143,N_DEF,4);
+			DrawText(strlen(N_MATK)*32+32,106,statNumberString,4);
+			DrawText(3,143,N_DEF,4);
 			sprintf((char*)&statNumberString,"%d",party[selectedMember].fighterStats.defence);
-			DrawTextAsISay(strlen(N_DEF)*32+32,143,statNumberString,4);
-			DrawTextAsISay(3,180,N_MDEF,4);
+			DrawText(strlen(N_DEF)*32+32,143,statNumberString,4);
+			DrawText(3,180,N_MDEF,4);
 			sprintf((char*)&statNumberString,"%d",party[selectedMember].fighterStats.magicDefence);
-			DrawTextAsISay(strlen(N_MDEF)*32+32,180,statNumberString,4);
-			DrawTextAsISay(3,217,N_SPEED,4);
+			DrawText(strlen(N_MDEF)*32+32,180,statNumberString,4);
+			DrawText(3,217,N_SPEED,4);
 			sprintf((char*)&statNumberString,"%d",party[selectedMember].fighterStats.speed);
-			DrawTextAsISay(strlen(N_SPEED)*32+32,217,statNumberString,4);
+			DrawText(strlen(N_SPEED)*32+32,217,statNumberString,4);
 	
 			sprintf((char*)&statNumberString,"%d/%d",party[selectedMember].hp,party[selectedMember].fighterStats.maxHp);
-			DrawTextAsISay(strlen(N_HP)*32+32,254,statNumberString,4);
-			DrawTextAsISay(3,254,N_HP,4);
+			DrawText(strlen(N_HP)*32+32,254,statNumberString,4);
+			DrawText(3,254,N_HP,4);
 			sprintf((char*)&statNumberString,"%d/%d",party[selectedMember].mp,party[selectedMember].fighterStats.maxMp);
-			DrawTextAsISay(strlen(N_MP)*32+32,291,statNumberString,4);
-			DrawTextAsISay(3,291,N_MP,4);
+			DrawText(strlen(N_MP)*32+32,291,statNumberString,4);
+			DrawText(3,291,N_MP,4);
 			
 			sprintf((char*)&statNumberString,"%d",party[selectedMember].fighterStats.level);
-			DrawTextAsISay(strlen(N_LV)*32+32,328,statNumberString,4);
-			DrawTextAsISay(3,328,N_LV,4);
+			DrawText(strlen(N_LV)*32+32,328,statNumberString,4);
+			DrawText(3,328,N_LV,4);
 			
 			double animationScale=(SCREENHEIGHT-180)/ partyIdleAnimation[selectedMember].height;
 			DrawAnimationAsISay(&partyIdleAnimation[selectedMember],SCREENWIDTH-partyIdleAnimation[selectedMember].width*animationScale-100,180,animationScale);
@@ -2043,49 +1752,49 @@ void StatusLoop(){
 			sf2d_start_frame(GFX_BOTTOM, GFX_LEFT);
 			
 			// Draw name
-			DrawTextAsISay(CenterTextCustomWidth(party[selectedMember].fighterStats.name,3,BOTTOMSCREENWIDTH),3,party[selectedMember].fighterStats.name,3);
+			DrawText(CenterTextCustomWidth(party[selectedMember].fighterStats.name,3,BOTTOMSCREENWIDTH),3,party[selectedMember].fighterStats.name,3);
 			
 			int i=0;
 			// Draw attack
 			i++;
-			DrawTextAsISay(3,20*i+2*i+10,N_ATK,2);
+			DrawText(3,20*i+2*i+10,N_ATK,2);
 			sprintf((char*)&statNumberString,"%d",party[selectedMember].fighterStats.attack);
-			DrawTextAsISay(strlen(N_ATK)*16+16,20*i+2*i+10,statNumberString,2);
+			DrawText(strlen(N_ATK)*16+16,20*i+2*i+10,statNumberString,2);
 
 			i++;
-			DrawTextAsISay(3,20*i+2*i+10,N_MATK,2);
+			DrawText(3,20*i+2*i+10,N_MATK,2);
 			sprintf((char*)&statNumberString,"%d",party[selectedMember].fighterStats.magicAttack);
-			DrawTextAsISay(strlen(N_MATK)*16+16,20*i+2*i+10,statNumberString,2);
+			DrawText(strlen(N_MATK)*16+16,20*i+2*i+10,statNumberString,2);
 
 			i++;
-			DrawTextAsISay(3,20*i+2*i+10,N_DEF,2);
+			DrawText(3,20*i+2*i+10,N_DEF,2);
 			sprintf((char*)&statNumberString,"%d",party[selectedMember].fighterStats.defence);
-			DrawTextAsISay(strlen(N_DEF)*16+16,20*i+2*i+10,statNumberString,2);
+			DrawText(strlen(N_DEF)*16+16,20*i+2*i+10,statNumberString,2);
 
 			i++;
-			DrawTextAsISay(3,20*i+2*i+10,N_MDEF,2);
+			DrawText(3,20*i+2*i+10,N_MDEF,2);
 			sprintf((char*)&statNumberString,"%d",party[selectedMember].fighterStats.magicDefence);
-			DrawTextAsISay(strlen(N_MDEF)*16+16,20*i+2*i+10,statNumberString,2);
+			DrawText(strlen(N_MDEF)*16+16,20*i+2*i+10,statNumberString,2);
 
 			i++;
-			DrawTextAsISay(3,20*i+2*i+10,N_SPEED,2);
+			DrawText(3,20*i+2*i+10,N_SPEED,2);
 			sprintf((char*)&statNumberString,"%d",party[selectedMember].fighterStats.speed);
-			DrawTextAsISay(strlen(N_SPEED)*16+16,20*i+2*i+10,statNumberString,2);
+			DrawText(strlen(N_SPEED)*16+16,20*i+2*i+10,statNumberString,2);
 			
 			i++;
 			sprintf((char*)&statNumberString,"%d/%d",party[selectedMember].hp,party[selectedMember].fighterStats.maxHp);
-			DrawTextAsISay(strlen(N_HP)*16+16,20*i+2*i+10,statNumberString,2);
-			DrawTextAsISay(3,20*i+2*i+10,N_HP,2);
+			DrawText(strlen(N_HP)*16+16,20*i+2*i+10,statNumberString,2);
+			DrawText(3,20*i+2*i+10,N_HP,2);
 
 			i++;
 			sprintf((char*)&statNumberString,"%d/%d",party[selectedMember].mp,party[selectedMember].fighterStats.maxMp);
-			DrawTextAsISay(strlen(N_MP)*16+16,20*i+2*i+10,statNumberString,2);
-			DrawTextAsISay(3,20*i+2*i+10,N_MP,2);
+			DrawText(strlen(N_MP)*16+16,20*i+2*i+10,statNumberString,2);
+			DrawText(3,20*i+2*i+10,N_MP,2);
 			
 			i++;
 			sprintf((char*)&statNumberString,"%d",party[selectedMember].fighterStats.level);
-			DrawTextAsISay(strlen(N_LV)*16+32,20*i+2*i+10,statNumberString,2);
-			DrawTextAsISay(3,20*i+2*i+10,N_LV,2);			
+			DrawText(strlen(N_LV)*16+32,20*i+2*i+10,statNumberString,2);
+			DrawText(3,20*i+2*i+10,N_LV,2);			
 			
 			double animationScale=(BOTTOMSCREENHEIGHT-120)/ (double)partyIdleAnimation[selectedMember].height;
 			DrawAnimationAsISay(&partyIdleAnimation[selectedMember],BOTTOMSCREENWIDTH-partyIdleAnimation[selectedMember].width*animationScale-32,120,animationScale);
@@ -2199,26 +1908,26 @@ void MenuLop(){
 			DrawRectangle(245,141,470,262,252,255,255,255);
 	
 			if (subspot==0){
-				DrawTextAsISay(CenterText(N_HAPPYMENU,4),146,N_HAPPYMENU,4);
+				DrawText(CenterText(N_HAPPYMENU,4),146,N_HAPPYMENU,4);
 				// 0
-				DrawTextAsISay(287,183,N_RESUME,4);
+				DrawText(287,183,N_RESUME,4);
 				// 1
-				DrawTextAsISay(287,183+32+5,playerName,4);
+				DrawText(287,183+32+5,playerName,4);
 				// 2
-				DrawTextAsISay(287,183+32+32+5+5,N_SAVE,4);
+				DrawText(287,183+32+32+5+5,N_SAVE,4);
 				// 3
-				DrawTextAsISay(287,183+32+32+32+5+5+5,N_LOAD,4);
+				DrawText(287,183+32+32+32+5+5+5,N_LOAD,4);
 				// 4
-				DrawTextAsISay(287,183+32+32+32+32+5+5+5+5,N_QUIT,4);
+				DrawText(287,183+32+32+32+32+5+5+5+5,N_QUIT,4);
 			}else if (subspot==1){
 				if (LANGUAGE==LANG_SPANISH){
-					DrawTextAsISay(CenterText("?Quieres cargar?",4),146,"'?Quieres cargar?",4);
-					DrawTextAsISay(287,183,"S'i.",4);
-					DrawTextAsISay(287,183+32+5,"No.",4);
+					DrawText(CenterText("?Quieres cargar?",4),146,"'?Quieres cargar?",4);
+					DrawText(287,183,"S'i.",4);
+					DrawText(287,183+32+5,"No.",4);
 				}else if (LANGUAGE==LANG_ENGLISH){
-					DrawTextAsISay(CenterText("Really load?",4),146,"Really load?",4);
-					DrawTextAsISay(287,183,"Yes.",4);
-					DrawTextAsISay(287,183+32+5,"No.",4);
+					DrawText(CenterText("Really load?",4),146,"Really load?",4);
+					DrawText(287,183,"Yes.",4);
+					DrawText(287,183+32+5,"No.",4);
 				}
 			}
 			DrawAnimationAsISay(&selectorAnimation,245,selected*32+183+selected*5,2);
@@ -2229,26 +1938,26 @@ void MenuLop(){
 			DrawRectangle(0,0,320,240,252,255,255,255);
 	
 			if (subspot==0){
-				DrawTextAsISay(5,0,N_HAPPYMENU,3.5);
+				DrawText(5,0,N_HAPPYMENU,3.5);
 				// 0
-				DrawTextAsISay(30,32+24+5,N_RESUME,3);
+				DrawText(30,32+24+5,N_RESUME,3);
 				// 1
-				DrawTextAsISay(30,32+24+24+5+5,playerName,3);
+				DrawText(30,32+24+24+5+5,playerName,3);
 				// 2
-				DrawTextAsISay(30,32+24+24+24+5+5+5,N_SAVE,3);
+				DrawText(30,32+24+24+24+5+5+5,N_SAVE,3);
 				// 3
-				DrawTextAsISay(30,32+24+24+24+24+5+5+5+5,N_LOAD,3);
+				DrawText(30,32+24+24+24+24+5+5+5+5,N_LOAD,3);
 				// 4
-				DrawTextAsISay(30,32+24+24+24+24+24+5+5+5+5+5,N_QUIT,3);
+				DrawText(30,32+24+24+24+24+24+5+5+5+5+5,N_QUIT,3);
 			}else if (subspot==1){
 				if (LANGUAGE==LANG_SPANISH){
-					DrawTextAsISay(5,0,"'?Quieres cargar?",3.5);
-					DrawTextAsISay(30,32+24+5,"S'i.",3);
-					DrawTextAsISay(30,32+24+25+5+5,"No.",3);
+					DrawText(5,0,"'?Quieres cargar?",3.5);
+					DrawText(30,32+24+5,"S'i.",3);
+					DrawText(30,32+24+25+5+5,"No.",3);
 				}else if (LANGUAGE==LANG_ENGLISH){
-					DrawTextAsISay(5,0,"Really load?",3.5);
-					DrawTextAsISay(30,32+24+5,"Yes.",3);
-					DrawTextAsISay(30,32+24+25+5+5,"No.",3);
+					DrawText(5,0,"Really load?",3.5);
+					DrawText(30,32+24+5,"Yes.",3);
+					DrawText(30,32+24+25+5+5,"No.",3);
 				}
 			}
 			DrawAnimationAsISay(&selectorAnimation,0,selected*24+32+24+selected*5+5,1);
@@ -2478,49 +2187,17 @@ char BattleLop(char canRun){
 	CrossTexture* runButton=NULL;
 	CrossTexture* itemButton=NULL;
 	CrossTexture* winTexture=NULL;
-	#if PLATFORM == PLAT_VITA
-		if (LANGUAGE==LANG_ENGLISH){
-			attackButton = LoadPNG("app0:Stuff/AttackIcon.png");
-			magicButton = LoadPNG("app0:Stuff/MagicIcon.png");
-			runButton= LoadPNG("app0:Stuff/RunIcon.png");
-			itemButton = LoadPNG("app0:Stuff/ItemIcon.png");
-			winTexture = LoadPNG("app0:Stuff/Battle/Win.png");
-		}else if (LANGUAGE==LANG_SPANISH){
-			attackButton = LoadPNG("app0:SpanishReplace/AttackIcon.png");
-			magicButton = LoadPNG("app0:SpanishReplace/MagicIcon.png");
-			runButton= LoadPNG("app0:SpanishReplace/RunIcon.png");
-			itemButton = LoadPNG("app0:Stuff/ItemIcon.png");
-			winTexture = LoadPNG("app0:SpanishReplace/Battle/Win.png");
-		}
-	#elif PLATFORM == PLAT_WINDOWS
-		if (LANGUAGE==LANG_ENGLISH){
-			attackButton = LoadPNG("./Stuff/AttackIcon.png");
-			magicButton = LoadPNG("./Stuff/MagicIcon.png");
-			runButton= LoadPNG("./Stuff/RunIcon.png");
-			itemButton = LoadPNG("./Stuff/ItemIcon.png");
-			winTexture = LoadPNG("./Stuff/Battle/Win.png");
-		}else if (LANGUAGE==LANG_SPANISH){
-			attackButton = LoadPNG("./SpanishReplace/AttackIcon.png");
-			magicButton = LoadPNG("./SpanishReplace/MagicIcon.png");
-			runButton= LoadPNG("./SpanishReplace/RunIcon.png");
-			itemButton = LoadPNG("./Stuff/ItemIcon.png");
-			winTexture = LoadPNG("./SpanishReplace/Battle/Win.png");
-		}
-	#elif PLATFORM == PLAT_3DS
-		if (LANGUAGE==LANG_ENGLISH){
-			attackButton = LoadPNG("/3ds/data/HappyLand/Stuff/AttackIcon.png");
-			magicButton = LoadPNG("/3ds/data/HappyLand/Stuff/MagicIcon.png");
-			runButton= LoadPNG("/3ds/data/HappyLand/Stuff/RunIcon.png");
-			itemButton = LoadPNG("/3ds/data/HappyLand/Stuff/ItemIcon.png");
-			winTexture = LoadPNG("/3ds/data/HappyLand/Stuff/Battle/Win.png");
-		}else if (LANGUAGE==LANG_SPANISH){
-			attackButton = LoadPNG("/3ds/data/HappyLand/SpanishReplace/AttackIcon.png");
-			magicButton = LoadPNG("/3ds/data/HappyLand/SpanishReplace/MagicIcon.png");
-			runButton= LoadPNG("/3ds/data/HappyLand/SpanishReplace/RunIcon.png");
-			itemButton = LoadPNG("/3ds/data/HappyLand/Stuff/ItemIcon.png");
-			winTexture = LoadPNG("/3ds/data/HappyLand/SpanishReplace/Battle/Win.png");
-		}
-	#endif
+
+	FixPath("Stuff/AttackIcon.png",tempPathFixBuffer,TYPE_EMBEDDED);
+	attackButton = LoadPNG(tempPathFixBuffer);
+	FixPath("Stuff/MagicIcon.png",tempPathFixBuffer,TYPE_EMBEDDED);
+	magicButton = LoadPNG(tempPathFixBuffer);
+	FixPath("Stuff/RunIcon.png",tempPathFixBuffer,TYPE_EMBEDDED);
+	runButton = LoadPNG(tempPathFixBuffer);
+	FixPath("Stuff/ItemIcon.png",tempPathFixBuffer,TYPE_EMBEDDED);
+	itemButton = LoadPNG(tempPathFixBuffer);
+	FixPath("Stuff/Battle/Win.png",tempPathFixBuffer,TYPE_EMBEDDED);
+	winTexture = LoadPNG(tempPathFixBuffer);
 
 	spell* selectedSpell=&(GetSpellList(0)->theSpell);
 
@@ -2683,13 +2360,13 @@ char BattleLop(char canRun){
 							StartDrawing();
 							DrawTextureScale(winTexture,CenterSomething(GetTextureWidth(winTexture)*2),3,2,2);
 
-							DrawTextAsISay(0,206+64,"EXP:",8);
-							DrawTextAsISay(256,206+64,temp2,8);
+							DrawText(0,206+64,"EXP:",8);
+							DrawText(256,206+64,temp2,8);
 					
 							for (i=0;i<partySize;i++){
 								if (didLevelUp[i]==1){
-									DrawTextAsISay(0,300+i*32+i*5+64,party[i].fighterStats.name,4);
-									DrawTextAsISay(strlen(party[i].fighterStats.name)*32+32,300+i*32+i*5+64,N_LEVELEDUP,4);
+									DrawText(0,300+i*32+i*5+64,party[i].fighterStats.name,4);
+									DrawText(strlen(party[i].fighterStats.name)*32+32,300+i*32+i*5+64,N_LEVELEDUP,4);
 								}
 							}
 						#else
@@ -2698,13 +2375,13 @@ char BattleLop(char canRun){
 							EndDrawing();
 							sf2d_start_frame(GFX_BOTTOM, GFX_LEFT);
 
-							DrawTextAsISay(5,5,"EXP:",4);
-							DrawTextAsISay(8*4*5+5,5,temp2,4);
+							DrawText(5,5,"EXP:",4);
+							DrawText(8*4*5+5,5,temp2,4);
 					
 							for (i=0;i<partySize;i++){
 								if (didLevelUp[i]==1){
-									DrawTextAsISay(5,40+i*24+i*5,party[i].fighterStats.name,2);
-									DrawTextAsISay(5+strlen(party[i].fighterStats.name)*16+16,40+i*24+i*5,N_LEVELEDUP,2);
+									DrawText(5,40+i*24+i*5,party[i].fighterStats.name,2);
+									DrawText(5+strlen(party[i].fighterStats.name)*16+16,40+i*24+i*5,N_LEVELEDUP,2);
 								}
 							}
 						#endif
@@ -2929,7 +2606,7 @@ char BattleLop(char canRun){
 						
 					originalY=GetBattlerById(orderOfAction[currentOrder])->y;
 					originalX=GetBattlerById(orderOfAction[currentOrder])->x;
-	
+						
 					moveXPerFrame=3;
 					moveXPerFrame=floor((GetBattlerById(target)->x - GetBattlerById(orderOfAction[currentOrder])->x - GetBattlerAnimationById(orderOfAction[currentOrder],2)->width*BATTLEENTITYSCALE+32 )/30);
 					moveYPerFrame=floor((GetBattlerById(target)->y - GetBattlerById(orderOfAction[currentOrder])->y + GetBattlerAnimationById(target,1)->height/4)/30);
@@ -3069,7 +2746,7 @@ char BattleLop(char canRun){
 				DrawRectangle(32+i*128+i*16,48,128,32,0,0,0,255);
 				DrawRectangle(32+i*128+i*16,48,floor(128*(((double)party[i].mp)/party[i].fighterStats.maxMp)),32,0,0,190,255);
 				// name
-				DrawTextAsISay(32+i*128+i*16,90,party[i].fighterStats.name,2);
+				DrawText(32+i*128+i*16,90,party[i].fighterStats.name,2);
 			#endif
 			// Draws attack animation for person moving to attack
 			if (battleStatus==3){
@@ -3119,15 +2796,15 @@ char BattleLop(char canRun){
 			temp=selectedSpell->theAnimation.currentFrame;
 			DrawAnimationAsISay(&(selectedSpell->theAnimation),GetBattlerById(target)->x,GetBattlerById(target)->y,SPELLSCALE);
 			if (GetBattlerById(target)->y-(8*DAMAGETEXTSIZE)-drawYOffset>=0){
-				DrawTextAsISay(GetBattlerById(target)->x-floor(strlen(temp2)/2)*(8*DAMAGETEXTSIZE),GetBattlerById(target)->y-(8*DAMAGETEXTSIZE),temp2,DAMAGETEXTSIZE);
+				DrawText(GetBattlerById(target)->x-floor(strlen(temp2)/2)*(8*DAMAGETEXTSIZE),GetBattlerById(target)->y-(8*DAMAGETEXTSIZE),temp2,DAMAGETEXTSIZE);
 			}else{
-				DrawTextAsISay(GetBattlerById(target)->x-floor(strlen(temp2)/2)*(8*DAMAGETEXTSIZE),GetBattlerById(target)->y+ GetBattlerAnimationById(target,1)->height+70,temp2,DAMAGETEXTSIZE);
+				DrawText(GetBattlerById(target)->x-floor(strlen(temp2)/2)*(8*DAMAGETEXTSIZE),GetBattlerById(target)->y+ GetBattlerAnimationById(target,1)->height+70,temp2,DAMAGETEXTSIZE);
 			}
 		}else if (battleStatus==4){ // BACK FROM ATTACK
 			if (GetBattlerById(target)->y-(8*DAMAGETEXTSIZE)-drawYOffset>=0){
-				DrawTextAsISay(GetBattlerById(target)->x-floor(strlen(temp2)/2)*(8*DAMAGETEXTSIZE),GetBattlerById(target)->y-(8*DAMAGETEXTSIZE),temp2,DAMAGETEXTSIZE);
+				DrawText(GetBattlerById(target)->x-floor(strlen(temp2)/2)*(8*DAMAGETEXTSIZE),GetBattlerById(target)->y-(8*DAMAGETEXTSIZE),temp2,DAMAGETEXTSIZE);
 			}else{
-				DrawTextAsISay(GetBattlerById(target)->x-floor(strlen(temp2)/2)*(8*DAMAGETEXTSIZE),GetBattlerById(target)->y+ GetBattlerAnimationById(target,1)->height+(8*DAMAGETEXTSIZE),temp2,DAMAGETEXTSIZE);
+				DrawText(GetBattlerById(target)->x-floor(strlen(temp2)/2)*(8*DAMAGETEXTSIZE),GetBattlerById(target)->y+ GetBattlerAnimationById(target,1)->height+(8*DAMAGETEXTSIZE),temp2,DAMAGETEXTSIZE);
 			}
 		}else if (battleStatus==2){
 			// Fix cursor if selecting dead person.
@@ -3187,7 +2864,7 @@ char BattleLop(char canRun){
 					DrawRectangle((i+1)*10+i*70,17,70,15,0,0,0,255);
 					DrawRectangle((i+1)*10+i*70,17,floor(70*(((double)party[i].mp)/party[i].fighterStats.maxMp)),15,0,0,190,255);
 					// name
-					DrawTextAsISay((i+1)*10+i*70,34,party[i].fighterStats.name,1);
+					DrawText((i+1)*10+i*70,34,party[i].fighterStats.name,1);
 				}
 
 			}
@@ -3219,13 +2896,9 @@ char BattleLop(char canRun){
 			RestorePartyMember(2);
 			RestorePartyMember(3);
 
-			#if PLATFORM == PLAT_VITA
-				ChangeMap("app0:Stuff/Maps/NathansHouse");
-			#elif PLATFORM == PLAT_WINDOWS
-				ChangeMap("./Stuff/Maps/NathansHouse");
-			#elif PLATFORM == PLAT_3DS
-				ChangeMap("/3ds/data/HappyLand/Stuff/Maps/NathansHouse");
-			#endif
+			FixPath("Stuff/Maps/NathansHouse",tempPathFixBuffer,TYPE_EMBEDDED);
+			ChangeMap(tempPathFixBuffer);
+			
 		}else{
 			place=0;
 		}
@@ -3242,13 +2915,8 @@ char BattleLop(char canRun){
 }
 
 void TitleLoop(){
-	#if PLATFORM == PLAT_VITA
-		CrossTexture* titleImage = LoadPNG("app0:Stuff/title.png");
-	#elif PLATFORM == PLAT_WINDOWS
-		CrossTexture* titleImage = LoadPNG("./Stuff/title.png");
-	#elif PLATFORM == PLAT_3DS
-		CrossTexture* titleImage = LoadPNG("/3ds/data/HappyLand/Stuff/title.png");
-	#endif
+	FixPath("Stuff/title.png",tempPathFixBuffer,TYPE_EMBEDDED);
+	CrossTexture* titleImage = LoadPNG(tempPathFixBuffer);
 	
 	while (place!=2){
 		StartFrameStuff();
@@ -3264,14 +2932,8 @@ void TitleLoop(){
 			SetupHardcodedLanguage();
 
 			// Need to load here as Lang variable has been set.
-			#if PLATFORM == PLAT_VITA
-				luaL_dofile(L,"app0:Stuff/Happy.lua");
-			#elif PLATFORM == PLAT_WINDOWS
-				luaL_dofile(L,"./Stuff/Happy.lua");
-			#elif PLATFORM==PLAT_3DS
-				luaL_dofile(L,"/3ds/data/HappyLand/Stuff/Happy.lua");
-			#endif
-
+			FixPath("Stuff/Happy.lua",tempPathFixBuffer,TYPE_EMBEDDED);
+			luaL_dofile(L,tempPathFixBuffer);
 
 			if (IsDown(SCE_CTRL_UP)==1 && IsDown(SCE_CTRL_CROSS)==1 && IsDown(SCE_CTRL_CIRCLE)==1){
 				BasicMessage("You activated the top secret key combo. You will get a high level. Restart the game to play normally");
@@ -3288,34 +2950,6 @@ void TitleLoop(){
 
 			ClearBottomScreen();
 			break;
-		}
-		if (WasJustPressed(SCE_CTRL_TRIANGLE)){
-			if (LANGUAGE==LANG_ENGLISH){
-				LANGUAGE=LANG_SPANISH;
-			}else if (LANGUAGE==LANG_SPANISH){
-				LANGUAGE=LANG_ENGLISH;
-			}
-			PlzNoCrashOnDispose();
-			FreeTexture(titleImage);
-			#if PLATFORM == PLAT_VITA
-				if (LANGUAGE==LANG_ENGLISH){
-					titleImage = LoadPNG("app0:Stuff/title.png");
-				}else if (LANGUAGE==LANG_SPANISH){
-					titleImage = LoadPNG("app0:SpanishReplace/title.png");
-				}
-			#elif PLATFORM == PLAT_WINDOWS
-				if (LANGUAGE==LANG_ENGLISH){
-					titleImage = LoadPNG("./Stuff/title.png");
-				}else if (LANGUAGE==LANG_SPANISH){
-					titleImage = LoadPNG("./SpanishReplace/title.png");
-				}
-			#elif PLATFORM == PLAT_3DS
-				if (LANGUAGE==LANG_ENGLISH){
-					titleImage = LoadPNG("/3ds/data/HappyLand/Stuff/title.png");
-				}else if (LANGUAGE==LANG_SPANISH){
-					titleImage = LoadPNG("/3ds/data/HappyLand/SpanishReplace/title.png");
-				}
-			#endif
 		}
 		if (WasJustPressed(SCE_CTRL_SQUARE)){
 			#if PLATFORM != PLAT_VITA
@@ -3335,33 +2969,26 @@ void TitleLoop(){
 		DrawTextureScale(titleImage,0,0,(float)SCREENWIDTH/GetTextureWidth(titleImage),(float)SCREENHEIGHT/GetTextureHeight(titleImage));
 
 		#if PLATFORM != PLAT_3DS
-			if (LANGUAGE==LANG_ENGLISH){
-				//DrawTextAsISay(int x, int y, const char* text, int size
-				DrawTextAsISay(49+8,495,"Espa'nol",5.875);
-			}else if (LANGUAGE==LANG_SPANISH){
-				DrawTextAsISay(49+8,495,"English",5.875);
-			}
-	
 			if (aButton==SCE_CTRL_CROSS){
 				if (LANGUAGE==LANG_ENGLISH){
-					DrawTextAsISay(51+8,443+15,"X and O: Not Japan",3.5);
+					DrawText(51+8,443+15,"X and O: Not Japan",3.5);
 				}else if (LANGUAGE==LANG_SPANISH){
-					DrawTextAsISay(51+8,443+15,"X y O: NO Jap'on",3.5);
+					DrawText(51+8,443+15,"X y O: NO Jap'on",3.5);
 				}
 			}else{
 				if (LANGUAGE==LANG_ENGLISH){
-					DrawTextAsISay(51+8,443+15,"X and O: Japan",3.5);
+					DrawText(51+8,443+15,"X and O: Japan",3.5);
 				}else if (LANGUAGE==LANG_SPANISH){
-					DrawTextAsISay(51+8,443+15,"X y O: Jap'on",3.5);
+					DrawText(51+8,443+15,"X y O: Jap'on",3.5);
 				}
 			}
 		#elif PLATFORM == PLAT_3DS
 			EndDrawing();
 			sf2d_start_frame(GFX_BOTTOM, GFX_LEFT);
 			if (LANGUAGE==LANG_ENGLISH){
-				DrawTextAsISay(0,0,"X: Espa'nol",2);
+				DrawText(0,0,"X: Espa'nol",2);
 			}else if (LANGUAGE==LANG_SPANISH){
-				DrawTextAsISay(0,0,"X: English",2);
+				DrawText(0,0,"X: English",2);
 			}
 		#endif
 
@@ -3390,6 +3017,183 @@ void TitleLoop(){
 ///////////////////////////////////////
 */
 
+char ShowMessageWithPortrait(char* _tempMsg, char isQuestion, CrossTexture* portrait, double portScale){
+	ControlsReset();
+
+	CrossTexture* yesButtonTexture=(CrossTexture*)1;
+	CrossTexture* noButtonTexture=(CrossTexture*)1;
+	char questionScale=1;
+	// The string needs to be copied. We're going to modify it, at we can't if we just type the string into the function and let the compiler do everything else
+	char message[strlen(_tempMsg)+1];
+	strcpy(message,_tempMsg);
+	signed char currentSelected=defaultSelected;
+	int textboxLinesPerScreens = (SCREENHEIGHT-TEXTBOXY)/TextHeight(fontSize);
+	short newLineLocations[50];
+	int totalMessageLength = strlen(message);
+	int i, j;
+	
+	if (isQuestion==1){
+		FixPath("Stuff/Yes.png",tempPathFixBuffer,TYPE_EMBEDDED);
+		yesButtonTexture=LoadPNG(tempPathFixBuffer);
+		FixPath("Stuff/No.png",tempPathFixBuffer,TYPE_EMBEDDED);
+		noButtonTexture=LoadPNG(tempPathFixBuffer);
+		
+		if (SCREENWIDTH/GetTextureWidth(yesButtonTexture)>=8){
+			questionScale=2;
+		}else{
+			questionScale=1;
+		}
+	}
+	if (portScale==0 && portrait!=NULL){
+		portScale = floor((double)DEFAULTPORTRAITSIZE/GetTextureWidth(portrait));
+	}
+
+	// This will loop through the entire message, looking for where I need to add new lines. When it finds a spot that
+	// needs a new line, that spot in the message will become 0. So, when looking for the place to 
+	int lastNewlinePosition=0;
+	for (i = 0; i < totalMessageLength; i++){
+		if (message[i]==32){ // Only check when we meet a space. 32 is a space in ASCII
+			message[i]='\0';
+			//printf("Space found at %d\n",i);
+			//printf("%s\n",&message[lastNewlinePosition+1]);
+			//printf("%d\n",TextWidth(fontSize,&(message[lastNewlinePosition+1])));
+			if (TextWidth(fontSize,&(message[lastNewlinePosition+1]))>SCREENWIDTH-20){
+				char _didWork=0;
+				for (j=i-1;j>lastNewlinePosition+1;j--){
+					//printf("J:%d\n",j);
+					if (message[j]==32){
+						message[j]='\0';
+						_didWork=1;
+						message[i]=32;
+						lastNewlinePosition=j;
+						break;
+					}
+				}
+				if (_didWork==0){
+					message[i]='\0';
+					lastNewlinePosition=i+1;
+				}
+			}else{
+				message[i]=32;
+			}
+		}
+	}
+	printf("WIll try drawing....\n");
+
+	// This spot in the message will be the one that's 0 char. The player won't be able to see this character.
+	int currentLetter=0;
+	int currentLine=0;
+	signed int nextCharStorage=-1;
+	char currentlyVisibleLines=1;
+	char frames=0;
+	// This variable is the location of the start of the first VISIBLE line
+	// This will change if the text box has multiple screens because the text is too long
+	int offsetStrlen=0;
+	//  textboxNewCharSpeed
+	
+	nextCharStorage = message[0];
+	message[0]='\0';
+
+	while (1){
+		FpsCapStart();
+		ControlsStart();
+		if (WasJustPressed(SCE_CTRL_CROSS)){
+			if (currentlyVisibleLines<=textboxLinesPerScreens && currentLetter<totalMessageLength){
+				while (currentlyVisibleLines<=textboxLinesPerScreens && currentLetter!=totalMessageLength){
+					// Copied code from the normal if frames==textboxNewCharSpeed block
+					if (nextCharStorage==0){
+						currentlyVisibleLines++;
+					}
+					message[currentLetter]=nextCharStorage;
+					currentLetter++;
+					if (currentLetter!=totalMessageLength){
+						nextCharStorage = message[currentLetter];
+						message[currentLetter]='\0';
+					}else{
+						nextCharStorage=0;
+					}
+				}
+			}else{
+				if (currentLetter==totalMessageLength){
+					break;
+				}else{
+					offsetStrlen=currentLetter;
+					//currentLetter=0;
+					//nextCharStorage=-1;
+					currentlyVisibleLines=1;
+					frames=0;
+				}
+			}
+		}
+		if (isQuestion==1){
+			if (WasJustPressed(SCE_CTRL_DOWN)){
+				currentSelected++;
+				if (currentSelected>1){
+					currentSelected=0;
+				}
+			}else if (WasJustPressed(SCE_CTRL_UP)){
+				if (currentSelected==0){
+					currentSelected=1;
+				}else{
+					currentSelected--;
+				}
+			}
+		}
+		ControlsEnd();
+		
+		// No Logic
+		if (frames==textboxNewCharSpeed){
+			if (currentLetter!=totalMessageLength && currentlyVisibleLines<=textboxLinesPerScreens){
+				frames=0;
+				if (nextCharStorage==0){
+					currentlyVisibleLines++;
+				}
+				message[currentLetter]=nextCharStorage;
+				currentLetter++;
+				if (currentLetter!=totalMessageLength){
+					nextCharStorage = message[currentLetter];
+					message[currentLetter]='\0';
+				}else{
+					nextCharStorage=0;
+				}
+			}
+		}
+
+		StartDrawing();
+		
+		
+
+		DrawMapThings();
+		DrawRectangle(0,TEXTBOXY,SCREENWIDTH,SCREENHEIGHT-TEXTBOXY,255,255,255,255);
+
+		// We need this variable so we know the offset in the message for the text that is for the next line
+		int _lastStrlen=0;
+		for (i=0;i<currentlyVisibleLines;i++){
+			DrawText(5,TEXTBOXY+TextHeight(fontSize)*i,&message[_lastStrlen+offsetStrlen],fontSize);
+			// This offset will have the first letter for the next line
+			_lastStrlen = strlen(&message[_lastStrlen+offsetStrlen])+1+_lastStrlen;
+		}
+
+		// Draw questions
+		if (isQuestion==1){
+			DrawTextureScale(yesButtonTexture,SCREENWIDTH-GetTextureWidth(yesButtonTexture)*questionScale,TEXTBOXY-GetTextureHeight(yesButtonTexture)*questionScale-GetTextureHeight(yesButtonTexture)*questionScale,questionScale,questionScale);
+			DrawTextureScale(noButtonTexture,SCREENWIDTH-GetTextureWidth(noButtonTexture)*questionScale,TEXTBOXY-GetTextureHeight(noButtonTexture)*questionScale,questionScale,questionScale);
+			DrawAnimationAsISay(&selectorAnimation,SCREENWIDTH-GetTextureWidth(yesButtonTexture)*questionScale-questionScale*22-5,TEXTBOXY-(currentSelected)*(GetTextureHeight(yesButtonTexture)*questionScale)-((GetTextureHeight(yesButtonTexture)*questionScale)/2),questionScale);
+		}
+		
+		if (portrait!=NULL){
+			DrawTextureScale(portrait,0,TEXTBOXY-GetTextureHeight(portrait)*portScale,portScale,portScale);
+		}
+
+		EndDrawing();
+		FpsCapWait();
+		frames++;
+	}
+	printf("Done with textbox.\n");
+	ControlsEnd();
+	return currentSelected;
+}
+
 void Init(){
 	// Good stuff
 	spellLinkedListStart=calloc(1,sizeof(spellLinkedList));
@@ -3401,7 +3205,7 @@ void Init(){
 		// We love default fonts.
 		//defaultPgf = vita2d_load_default_pgf();
 	#elif PLATFORM == PLAT_WINDOWS
-
+		SDL_Init(SDL_INIT_VIDEO);
 		mainWindow = SDL_CreateWindow( "HappyWindo", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, SCREENWIDTH, SCREENHEIGHT, SDL_WINDOW_SHOWN );
 		ShowErrorIfNull(mainWindow);
 
@@ -3416,10 +3220,14 @@ void Init(){
 		SDL_SetRenderDrawColor( mainWindowRenderer, 212, 208, 200, 255 );
 		// Check if this fails?
 		IMG_Init( IMG_INIT_PNG );
+
+		SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "0");
 	#elif PLATFORM == PLAT_3DS
 		sf2d_init();
 		sf2d_set_clear_color(RGBA8(212, 208, 200, 0xFF));
 	#endif
+
+	LoadFont();
 
 	#if PLATFORM == PLAT_VITA
 		// ... I guess I have to do this? I'm... most probrablly not basing this off the sample.
@@ -3433,28 +3241,6 @@ void Init(){
 	}
 
 	currentMapFilepath = malloc(1);
-
-	
-
-	#if SHOWSPLASH==1
-		#if PLATFORM == PLAT_VITA
-			#if PLATFORM == PLAT_VITA
-				CrossTexture* happy = LoadPNG("app0:OtherStuff/Splash.png");
-			#elif PLATFORM == PLAT_WINDOWS
-				CrossTexture* happy = LoadPNG("./OtherStuff/Splash.png");
-			#endif
-
-			StartDrawing();
-			DrawTexture(happy,0,0);
-			EndDrawing();
-			
-			StartFrameStuff();
-			//sceCtrlPeekBufferPositive(0, &pad, 1);
-			if (!(IsDown(SCE_CTRL_LTRIGGER))){
-				Wait(700);
-			}
-		#endif
-	#endif
 
 	// Init Lua
 	L = luaL_newstate();
@@ -3477,73 +3263,17 @@ void Init(){
 		possibleEnemies[i].maxHp=-1;
 	}
 
-	#if PLATFORM == PLAT_VITA
-		// Load player frames
-		playerDown=LoadPNG("app0:Stuff/PlayerDown.png");
-		playerUp=LoadPNG("app0:Stuff/PlayerUp.png");
-		playerLeft=LoadPNG("app0:Stuff/PlayerLeft.png");
-		playerRight=LoadPNG("app0:Stuff/PlayerRight.png");
-		
-		// Load tilde
-		tilde_a = LoadPNG("app0:Stuff/Tilde/a.png");
-		tilde_e = LoadPNG("app0:Stuff/Tilde/e.png");
-		tilde_i = LoadPNG("app0:Stuff/Tilde/i.png");
-		tilde_o = LoadPNG("app0:Stuff/Tilde/o.png");
-		tilde_u = LoadPNG("app0:Stuff/Tilde/u.png");
-		tilde_n = LoadPNG("app0:Stuff/Tilde/n.png");
-		tilde_esclimationPoint = LoadPNG("app0:Stuff/Tilde/EsclimationPoint.png");
-		tilde_questionMark = LoadPNG("app0:Stuff/Tilde/QuestionMark.png");
-		
-		// Load what, I guess, could be called a font. It's just an image.
-		fontImage=LoadPNG("app0:Stuff/Font.png");
+	FixPath("Stuff/PlayerDown.png",tempPathFixBuffer,TYPE_EMBEDDED);
+	playerDown=LoadPNG(tempPathFixBuffer);
+	FixPath("Stuff/PlayerUp.png",tempPathFixBuffer,TYPE_EMBEDDED);
+	playerUp=LoadPNG(tempPathFixBuffer);
+	FixPath("Stuff/PlayerLeft.png",tempPathFixBuffer,TYPE_EMBEDDED);
+	playerLeft=LoadPNG(tempPathFixBuffer);
+	FixPath("Stuff/PlayerRight.png",tempPathFixBuffer,TYPE_EMBEDDED);
+	playerRight=LoadPNG(tempPathFixBuffer);
+	FixPath("Stuff/Selector.png",tempPathFixBuffer,TYPE_EMBEDDED);
+	selectorAnimation.texture=LoadPNG(tempPathFixBuffer);
 
-		// Selector animation for good looking menus
-		selectorAnimation.texture=LoadPNG("app0:Stuff/Selector.png");
-	#elif PLATFORM == PLAT_WINDOWS
-		// Load player frames
-		playerDown=LoadPNG("./Stuff/PlayerDown.png");
-		playerUp=LoadPNG("./Stuff/PlayerUp.png");
-		playerLeft=LoadPNG("./Stuff/PlayerLeft.png");
-		playerRight=LoadPNG("./Stuff/PlayerRight.png");
-		
-		// Load tilde
-		tilde_a = LoadPNG("./Stuff/Tilde/a.png");
-		tilde_e = LoadPNG("./Stuff/Tilde/e.png");
-		tilde_i = LoadPNG("./Stuff/Tilde/i.png");
-		tilde_o = LoadPNG("./Stuff/Tilde/o.png");
-		tilde_u = LoadPNG("./Stuff/Tilde/u.png");
-		tilde_n = LoadPNG("./Stuff/Tilde/n.png");
-		tilde_esclimationPoint = LoadPNG("./Stuff/Tilde/EsclimationPoint.png");
-		tilde_questionMark = LoadPNG("./Stuff/Tilde/QuestionMark.png");
-	
-		// Load what, I guess, could be called a font. It's just an image.
-		fontImage=LoadPNG("./Stuff/Font.png");
-
-		// Selector animation for good looking menus
-		selectorAnimation.texture=LoadPNG("./Stuff/Selector.png");
-	#elif PLATFORM == PLAT_3DS
-		// Load player frames
-		playerDown=LoadPNG("/3ds/data/HappyLand/Stuff/PlayerDown.png");
-		playerUp=LoadPNG("/3ds/data/HappyLand/Stuff/PlayerUp.png");
-		playerLeft=LoadPNG("/3ds/data/HappyLand/Stuff/PlayerLeft.png");
-		playerRight=LoadPNG("/3ds/data/HappyLand/Stuff/PlayerRight.png");
-		
-		// Load tilde
-		tilde_a = LoadPNG("/3ds/data/HappyLand/Stuff/Tilde/a.png");
-		tilde_e = LoadPNG("/3ds/data/HappyLand/Stuff/Tilde/e.png");
-		tilde_i = LoadPNG("/3ds/data/HappyLand/Stuff/Tilde/i.png");
-		tilde_o = LoadPNG("/3ds/data/HappyLand/Stuff/Tilde/o.png");
-		tilde_u = LoadPNG("/3ds/data/HappyLand/Stuff/Tilde/u.png");
-		tilde_n = LoadPNG("/3ds/data/HappyLand/Stuff/Tilde/n.png");
-		tilde_esclimationPoint = LoadPNG("/3ds/data/HappyLand/Stuff/Tilde/EsclimationPoint.png");
-		tilde_questionMark = LoadPNG("/3ds/data/HappyLand/Stuff/Tilde/QuestionMark.png");
-	
-		// Load what, I guess, could be called a font. It's just an image.
-		fontImage=LoadPNG("/3ds/data/HappyLand/Stuff/Font.png");
-
-		// Selector animation for good looking menus
-		selectorAnimation.texture=LoadPNG("/3ds/data/HappyLand/Stuff/Selector.png");
-	#endif
 	selectorAnimation.numberOfFrames=8;
 	selectorAnimation.width=22;
 	selectorAnimation.height=17;
@@ -3588,6 +3318,26 @@ void Init(){
 
 	place=5;
 
+	#if SHOWSPLASH==1
+		#if PLATFORM == PLAT_VITA
+			#if PLATFORM == PLAT_VITA
+				CrossTexture* happy = LoadPNG("app0:OtherStuff/Splash.png");
+			#elif PLATFORM == PLAT_WINDOWS
+				CrossTexture* happy = LoadPNG("./OtherStuff/Splash.png");
+			#endif
+
+			StartDrawing();
+			DrawTexture(happy,0,0);
+			EndDrawing();
+			
+			StartFrameStuff();
+			//sceCtrlPeekBufferPositive(0, &pad, 1);
+			if (!(IsDown(SCE_CTRL_LTRIGGER))){
+				Wait(700);
+			}
+		#endif
+	#endif
+
 	PlzNoCrashOnDispose();
 	#if SHOWSPLASH==1
 		#if PLATFORM == PLAT_VITA
@@ -3609,20 +3359,25 @@ int main(int argc, char *argv[]){
 	
 	//BattleInit();
 
+	//TestNewMessage("The FitnessGram Pacer Test is a multistage aerobic capacity test that progressively gets more difficult as it continues. The 20 meter pacer test will begin in 30 seconds. Line up at the start. The running speed starts slowly, but gets faster each minute after you hear this signal. [beep] A single lap should be completed each time you hear this sound. [ding] Remember to run in a straight line, and run as long as possible. The second time you fail to complete a lap before the sound, your test is over. The test will begin on the word start. On your mark, get ready, start.");
+	////TestNewMessage("This is a really long sentence that is also a run-on sentence that is going to go on, and on, and on because I need it to reach the END!!");
+	//TestNewMessage("");
+	//return;
+
 	while (1){
-		if (place==0){
+		if (place==PLACE_OVERWORLD){
 			Overworld();
-		}else if (place==1){
+		}else if (place==PLACE_MENU){
 			MenuLop();
 			ClearBottomScreen();
-		}else if (place==2){
+		}else if (place==PLACE_QUIT){
 			break;
-		}else if (place==3){
+		}else if (place==PLACE_BATTLE){
 			BattleLop(1);
 			EndFrameStuff();
-		}else if (place==4){
+		}else if (place==PLACE_STATUS){
 			StatusLoop();
-		}else if (place==5){
+		}else if (place==PLACE_TITLE){
 			TitleLoop();
 		}
 	}
