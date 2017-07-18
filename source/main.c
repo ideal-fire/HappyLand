@@ -5,6 +5,8 @@
 O---O---O--OOOOO-O----OOOOO-O---O---
 */
 
+// TODO - Remove party members when loading game
+
 #include "Config.h"
 
 // Only turned off when I'm working on my game. Needs to be set to 1 before release
@@ -34,6 +36,8 @@ int LANGUAGE=LANG_ENGLISH;
 #define PLACE_TITLE 5
 
 #define STARTINGMAP "Stuff/Maps/NathansHouse"
+
+#define USEVSYNC 0
 
 // Translatos for hardcoded strings
 #include "HardcodedLanguage.h"
@@ -171,6 +175,7 @@ char tempPathFixBuffer[256];
 
 #include "GeneralGoodExtended.h"
 #include "FpsCapper.h"
+#include "pathfinding.h"
 //TODO - Make this
 // main.h
 	// Make stuff fresh
@@ -240,9 +245,9 @@ char tempPathFixBuffer[256];
 	}spellLinkedList;
 
 /*
-=================================================
+/////////////////////////////////////////////////
 == STUFF
-=================================================
+/////////////////////////////////////////////////
 */
 lua_State* L;
 //CrossTexture* fontImage;
@@ -259,9 +264,9 @@ char* currentMapFilepath;
 int currentTextHeight=0;
 
 /*
-====================================================
+////////////////////////////////////////////////////
 == OPTIONS
-===================================================
+///////////////////////////////////////////////////
 */
 // Max I think I'll make 8 chars.
 char* playerName="Nathan";
@@ -271,9 +276,9 @@ char textboxNewCharSpeed=1;
 char defaultSelected=1;
 
 /*
-==================================================
+//////////////////////////////////////////////////
 == WORLD MAP
-==================================================
+//////////////////////////////////////////////////
 */
 CrossTexture* tilesets[5];
 object mapObjects[MAXOBJECTS];
@@ -297,10 +302,14 @@ short cameraWidth;
 short cameraHeight;
 short encounterRate=0;
 short nextEncounter=0;
+// This is an array of coordinates for pathfinding
+coordinates* pathfindingPath;
+short foundPathLength=-1;
+short walkingPathProgress=0;
 /*
-=================================================
+/////////////////////////////////////////////////
 == BATTLE
-=================================================
+/////////////////////////////////////////////////
 */
 partyMember party[4];
 animation partyAttackAnimation[4];
@@ -533,6 +542,13 @@ char CheckCollision(int x, int y){
 		return 1;
 	}
 	return GetMapSpotData(x,y)->isSolid;
+}
+
+char IsFree(short _x, short _y){
+	if (CheckCollision(_x,_y)==0){
+		return 1;
+	}
+	return 0;
 }
 
 char ExecuteEvent(object* theThingie,int eventId){
@@ -922,6 +938,9 @@ void LoadMap(char* path){
 
 	//((tileImageData*)GetGoodArray(&layers[0],1,1))->tile=1;
 	//
+	legfinderMapWidth = tileOtherData.width;
+	legfinderMapHeight = tileOtherData.height;
+	LegfinderFixList();
 }
 
 void UnloadMap(){
@@ -1488,11 +1507,11 @@ void Load(){
 }
 
 /*
-========================================================
-===
-===      PLACES
-=== ｎathan
-========================================================
+////////////////////////////////////////////////////////
+///
+///      PLACES
+/// ｎathan
+////////////////////////////////////////////////////////
 */
 
 void StatusLoop(){
@@ -1798,71 +1817,127 @@ void MenuLop(){
 }
 
 void Overworld(){
-	StartFrameStuff();
+	FpsCapStart();
+	ControlsStart();
 	// Main logic
 
 	// Controls only if not walking
 	if (isWalking==0){
-		if (1){
-			if (WasJustPressed(aButton)){
-				short eventUseX;
-				short eventUseY;
+		// This are relative to the player. Moving up would have the y be -1 and x be 0
+		signed char _moveXQueue=127;
+		signed char _moveYQueue=127;
+		// 1 if they press aButton
+		signed char _actionQueue=127;
 
-				eventUseX=playerObject->x/32;
-				eventUseY=playerObject->y/32;
-
-				if (playerObject->theAnimation.texture==playerRight){
-					eventUseX++;
-				}else if (playerObject->theAnimation.texture==playerLeft){
-					eventUseX--;
-				}else if (playerObject->theAnimation.texture==playerDown){
-					eventUseY++;
-				}else if (playerObject->theAnimation.texture==playerUp){
-					eventUseY--;
-				}
-				tileSpotData* eventTempSpotData = GetMapSpotData(eventUseX,eventUseY);
-				if (eventTempSpotData->event!=0){
-					ExecuteEvent(playerObject,eventTempSpotData->event);
-				}
+		if (IsDown(SCE_TOUCH)){
+			int _touchedTileX = floor( ((touchX-drawXOffset)/MAPXSCALE)/32)+cameraWholeOffsetX;
+			int _touchedTileY = floor( ((touchY-drawYOffset)/MAPYSCALE)/32)+cameraWholeOffsetY;
+			LegfinderFixList();
+			currentListValue=1;
+			free(pathfindingPath);
+			pathfindingPath = FindPath(&foundPathLength,playerObject->x/32,playerObject->y/32,_touchedTileX,_touchedTileY);
+			if (foundPathLength!=-1){ // -1 or 0
+				walkingPathProgress=0;
 			}
-			if (IsDown(SCE_CTRL_UP)){
-				if (CheckCollision(playerObject->x/32,playerObject->y/32-1)!=1){
+		}//walkingPathProgress
+
+		if (foundPathLength!=-1){
+			// foundPathLength is 1 more than the actual length. This checks if the path was already completed.
+			if (walkingPathProgress==foundPathLength-1){
+				foundPathLength=-1;
+				walkingPathProgress=0;
+			}else{
+				walkingPathProgress++;
+				_moveXQueue =  pathfindingPath[walkingPathProgress].x-playerObject->x/32;
+				_moveYQueue =  pathfindingPath[walkingPathProgress].y-playerObject->y/32;
+			}
+		}
+
+		if (IsDown(SCE_CTRL_UP)){
+			_moveXQueue = 0;
+			_moveYQueue = -1;
+		}else if (IsDown(SCE_CTRL_DOWN)){
+			_moveXQueue = 0;
+			_moveYQueue = 1;
+		}else if (IsDown(SCE_CTRL_LEFT)){
+			_moveXQueue = -1;
+			_moveYQueue = 0;
+		}else if (IsDown(SCE_CTRL_RIGHT)){
+			_moveXQueue = 1;
+			_moveYQueue = 0;
+		}
+
+		// Only do the tests if they are not the default values
+		if (_moveXQueue!=127 && _moveYQueue!=127){
+			if (_moveYQueue<0){
+				if (CheckCollision(playerObject->x/32,playerObject->y/32+_moveYQueue)!=1){
 					isWalking=1;
 					playerObject->theAnimation.numberOfFrames=3;
 					playerObject->y=playerObject->y-4;
 				}
 				playerObject->theAnimation.texture=playerUp;
-			}else if (IsDown(SCE_CTRL_DOWN)){
-				if (CheckCollision(playerObject->x/32,playerObject->y/32+1)!=1){
+			}else if (_moveYQueue>0){
+				if (CheckCollision(playerObject->x/32,playerObject->y/32+_moveYQueue)!=1){
 					isWalking=2;
 					playerObject->theAnimation.numberOfFrames=3;
 					playerObject->y=playerObject->y+4;
 				}
 				playerObject->theAnimation.texture=playerDown;
-			}else if (IsDown(SCE_CTRL_LEFT)){
-				if (CheckCollision(playerObject->x/32-1,playerObject->y/32)!=1){
+			}else if (_moveXQueue<0){
+				if (CheckCollision(playerObject->x/32+_moveXQueue,playerObject->y/32)!=1){
 					isWalking=3;
 					playerObject->theAnimation.numberOfFrames=3;
 					playerObject->x=playerObject->x-4;
 				}
 				playerObject->theAnimation.texture=playerLeft;
-			}else if (IsDown(SCE_CTRL_RIGHT)){
-				if (CheckCollision(playerObject->x/32+1,playerObject->y/32)!=1){
+			}else if (_moveXQueue>0){
+				if (CheckCollision(playerObject->x/32+_moveXQueue,playerObject->y/32)!=1){
 					isWalking=4;
 					playerObject->theAnimation.numberOfFrames=3;
 					playerObject->x=playerObject->x+4;
 				}
 				playerObject->theAnimation.texture=playerRight;
 			}
-		
+
+			// The player tried to move, but didn't because it was solid.
 			if (playerObject->x%32==0 && playerObject->y%32==0){
 				// Player didn't move.
 				playerObject->theAnimation.addOnChange=1;
 				playerObject->theAnimation.numberOfFrames=1;
 				playerObject->theAnimation.currentFrame=0;
+				// This checks if the player is on a path. If they are, and didn't move, that means that their destination is a wall and they should try to interact with it.
+				if (foundPathLength!=-1){
+					_actionQueue=1;
+				}
 			}
-
 		}
+
+		if (WasJustPressed(aButton)){
+			_actionQueue=1;
+		}
+
+		if (_actionQueue==1){
+			short eventUseX;
+			short eventUseY;
+
+			eventUseX=playerObject->x/32;
+			eventUseY=playerObject->y/32;
+
+			if (playerObject->theAnimation.texture==playerRight){
+				eventUseX++;
+			}else if (playerObject->theAnimation.texture==playerLeft){
+				eventUseX--;
+			}else if (playerObject->theAnimation.texture==playerDown){
+				eventUseY++;
+			}else if (playerObject->theAnimation.texture==playerUp){
+				eventUseY--;
+			}
+			tileSpotData* eventTempSpotData = GetMapSpotData(eventUseX,eventUseY);
+			if (eventTempSpotData->event!=0){
+				ExecuteEvent(playerObject,eventTempSpotData->event);
+			}
+		}
+		
 	}else{
 		if (playerObject->x%32==0 && playerObject->y%32==0){
 			nextEncounter--;
@@ -1921,7 +1996,8 @@ void Overworld(){
 	StartDrawing();
 	DrawMapThings();
 	EndDrawing();
-	EndFrameStuff();
+	ControlsEnd();
+	FpsCapWait();
 }
 
 char BattleLop(char canRun){
@@ -2837,10 +2913,10 @@ void Init(){
 		mainWindow = SDL_CreateWindow( "HappyWindo", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, SCREENWIDTH, SCREENHEIGHT, SDL_WINDOW_SHOWN );
 		ShowErrorIfNull(mainWindow);
 
-		if (0==1){
-			mainWindowRenderer = SDL_CreateRenderer( mainWindow, -1, SDL_RENDERER_ACCELERATED);
-		}else{
+		if (USEVSYNC){
 			mainWindowRenderer = SDL_CreateRenderer( mainWindow, -1, SDL_RENDERER_PRESENTVSYNC);
+		}else{
+			mainWindowRenderer = SDL_CreateRenderer( mainWindow, -1, SDL_RENDERER_ACCELERATED);
 		}
 		ShowErrorIfNull(mainWindowRenderer);
 
@@ -2945,25 +3021,17 @@ void Init(){
 			FreeTexture(happy);
 		#endif
 	#endif
+
+	pathfindingPath = malloc(1);
+	foundPathLength=-1;
+
+	// Init pathfinding list.
+	LegfinderInit();
 }
 
 int main(int argc, char *argv[]){
 	srand(time(NULL));
 	Init();	
-
-	/*
-		0 - Overworld
-		1 - Pause in Overworld
-		2 - Quit (breaks)
-		3 - Battle
-	*/
-	
-	//BattleInit();
-
-	//TestNewMessage("The FitnessGram Pacer Test is a multistage aerobic capacity test that progressively gets more difficult as it continues. The 20 meter pacer test will begin in 30 seconds. Line up at the start. The running speed starts slowly, but gets faster each minute after you hear this signal. [beep] A single lap should be completed each time you hear this sound. [ding] Remember to run in a straight line, and run as long as possible. The second time you fail to complete a lap before the sound, your test is over. The test will begin on the word start. On your mark, get ready, start.");
-	////TestNewMessage("This is a really long sentence that is also a run-on sentence that is going to go on, and on, and on because I need it to reach the END!!");
-	//TestNewMessage("");
-	//return;
 
 	while (1){
 		if (place==PLACE_OVERWORLD){
@@ -2982,12 +3050,10 @@ int main(int argc, char *argv[]){
 			TitleLoop();
 		}
 	}
-	
 
 	// End this stuff
 	#if PLATFORM == PLAT_VITA
 		vita2d_fini();
-		//vita2d_free_pgf(defaultPgf);
 		// I really don't get why I need this when the user can just use the PS button.
 		sceKernelExitProcess(0);
 	#elif PLATFORM == PLAT_WINDOWS

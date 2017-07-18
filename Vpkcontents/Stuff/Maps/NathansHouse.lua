@@ -82,7 +82,7 @@ function Event06()
 	tempPort=nil;
 end
 function Event07()
-	if (flags[2]==0) then
+	if (flags[2]==0 and flags[5]==0) then
 		signport = LoadPNG(FixString("Stuff/Portraits/Matt.png"));
 		nathanport = LoadPNG(FixString("Stuff/Portraits/Player.png"));
 		if (Lang==1) then
@@ -116,6 +116,8 @@ function Event07()
 			elseif (Lang==2) then
 				questionanswer = ShowMessageWithPortrait("'!NOo0oo0oOo!", false, signport, 0);
 			end
+			-- Matt has been denied. He won't ask again.
+			flags[5]=1;
 		end
 
 		UnloadTexture(signport);
@@ -150,19 +152,7 @@ function Event08()
 			end
 
 			-- Party slots are 0 based, party size isn't.
-			mattslot = GetPartySize();
-			tempidle = GetPartyMemberAnimation(mattslot,1)
-			tempatk = GetPartyMemberAnimation(mattslot,2)
-
-			SetAnimation(tempidle,30,29,68,-1,false,0,0,LoadPNG(FixString("Stuff/Battle/MattIdle.png")));
-			SetAnimation(tempatk,10,56,68,-1,true,0,0,LoadPNG(FixString("Stuff/Battle/MattAttack.png")));
-			SetStats(GetPartyMemberStats(mattslot),1,35,30,8,8,15,15,7,0,MallocString("Matt"));
-			SetPartySize(mattslot+1);
-			RestorePartyMember(mattslot);
-
-			tempidle=nil;
-			tempatk=nil;
-			mattslot=nil;
+			AddPartyMember2();
 
 			flags[2]=1;
 			-- Hide Matt
@@ -185,9 +175,7 @@ end
 function Event09()
 	tempPort = LoadPNG(FixString("Stuff/Portraits/SmileyFace.png"));
 
-	for i=0,GetPartySize()-1 do
-		RestorePartyMember(i);
-	end
+	RestoreEntireParty();
 
 	if (Lang==1) then
 		ShowMessageWithPortrait("HP and MP restored.",false,tempPort,0);

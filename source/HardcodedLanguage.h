@@ -44,10 +44,8 @@ void SetupHardcodedLanguage(){
 		N_LOAD = "Load";
 	}
 	if (LANGUAGE==LANG_SPANISH){
-		// NEed acsent on a;
 		// (The Magic List);
 		N_MAGICLIST = "La Lista Mágico";
-		// Need acsent on mas;
 		// You need more MP;
 		N_NEEDMOREMP = "Necesitas más MP.";
 		// Need acsent on tu;

@@ -7,6 +7,8 @@ function MapDispose()
 	Event02=nil;
 	Event03=nil;
 	Event04=nil;
+	EasyHideBigfoot=nil;
+	EasyShowBigfoot=nil;
 end
 
 function Event01()
@@ -17,9 +19,7 @@ end
 function Event02()
 	tempPort = LoadPNG(FixString("Stuff/Portraits/SmileyFace.png"));
 
-	for i=0,GetPartySize()-1 do
-		RestorePartyMember(i);
-	end
+	RestoreEntireParty();
 
 	if (Lang==1) then
 		ShowMessageWithPortrait("HP and MP restored.",false,tempPort,0);
@@ -33,6 +33,21 @@ end
 function Event03()
 	ShowMessage("...",false);
 end
+
+function EasyHideBigfoot(topleftx, toplefty)
+	SetMapImageData(topleftx,toplefty,1,0,0);
+	SetMapImageData(topleftx+1,toplefty,1,0,0);
+	SetMapImageData(topleftx,toplefty+1,1,0,0);
+	SetMapImageData(topleftx+1,toplefty+1,1,0,0);
+	--x,y,layer,tileset,tile
+end
+function EasyShowBigfoot(topleftx, toplefty)
+	SetMapImageData(topleftx,toplefty,1,0,10);
+	SetMapImageData(topleftx+1,toplefty,1,0,11);
+	SetMapImageData(topleftx,toplefty+1,1,0,12);
+	SetMapImageData(topleftx+1,toplefty+1,1,0,13);
+end
+
 function Event04()
 	-- POTATOZZZZZZZZ
 
@@ -75,7 +90,17 @@ function Event04()
 			ShowMessageWithPortrait("Yo soy Pie Grande Azul, yo voy a te mato con mi fuerza azula.",false,BlueBigFootPortrait,0);
 			ShowMessageWithPortrait("'!Vamos, Pies Grandes!",false,BigFootPackPortrait,0);
 		end
-		
+		-- Don't confuse the player
+		EasyHideBigfoot(3,3);
+		EasyHideBigfoot(2,6);
+		EasyHideBigfoot(4,9);
+		EasyHideBigfoot(6,5);
+		EasyHideBigfoot(9,3);
+		EasyHideBigfoot(11,5);
+		EasyHideBigfoot(9,7);
+		EasyHideBigfoot(8,10);
+		EasyHideBigfoot(11,11);
+
 		-- Battle
 			InlineEnemy0Member = Malloc(true,2);
 			InlineEnemy0Stats = GetPartyMemberStats(InlineEnemy0Member);
@@ -139,6 +164,15 @@ function Event04()
 				ThanksForPlaying();
 			end
 		else
+			EasyShowBigfoot(3,3);
+			EasyShowBigfoot(2,6);
+			EasyShowBigfoot(4,9);
+			EasyShowBigfoot(6,5);
+			EasyShowBigfoot(9,3);
+			EasyShowBigfoot(11,5);
+			EasyShowBigfoot(9,7);
+			EasyShowBigfoot(8,10);
+			EasyShowBigfoot(11,11);
 			if (Lang==1) then
 					ShowMessageWithPortrait("Hahahaha! I'm more blue than you!",false,BlueBigFootPortrait,0);
 			elseif (Lang==2) then
@@ -205,6 +239,9 @@ function Event04()
 				ShowMessage("Fin. [Fin F'acil]",false);
 			end
 		end
+
+		-- Do this so the player doesn't insta-die if they retry
+		RestoreEntireParty();
 
 	end
 

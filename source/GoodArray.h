@@ -17,16 +17,10 @@ void SetGoodArray(Good2dArray* _array, short _width, short _height, short _typeS
 	(*_array).width=_width;
 	(*_array).height=_height;
 	(*_array).array = realloc((_array)->array, _width*_height*_typeSize);
-	//(*_array).array = malloc(_width*_height*sizeof(char));
 	(*_array).singleElementSize=_typeSize;
 }
 char* GetGoodArray(Good2dArray* _array, short _x, short _y){
-	//printf("%d\n",(*_array).width);
-	//return &((*_array).array[0]);
-	//return &((*_array).array[0])
-	//return &((*_array).array[_x+(_y*(*_array).width)]);
 	return (((char*)((*_array).array))+(*_array).singleElementSize*(_x+(_y*(*_array).width)));
-	//return 
 }
 
 #endif

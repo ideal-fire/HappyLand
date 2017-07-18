@@ -177,7 +177,7 @@ function Event07()
 			enemyidle0 = nil;
 			enemyatk0 = nil;
 
-			RestorePartyMember(0);
+			RestoreEntireParty();
 		
 	else
 		if (Lang==1) then

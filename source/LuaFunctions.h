@@ -390,7 +390,7 @@
 	
 	// Set map stuff
 	// ARGS
-	// isSolid, blockEvent
+	// x, y, isSolid, blockEvent
 	int L_SetMapOtherData(lua_State* passedState){
 		int x = lua_tonumber(passedState,1);
 		int y = lua_tonumber(passedState,2);
@@ -501,7 +501,6 @@
 		for (i=0;i<numLevels;i++){
 			
 			party[passedMemberId].fighterStats.level++;
-			
 			party[passedMemberId].fighterStats.attack+=3;
 			party[passedMemberId].fighterStats.magicAttack+=3;
 			party[passedMemberId].fighterStats.defence+=3;
@@ -511,8 +510,7 @@
 			party[passedMemberId].fighterStats.maxMp+=3;
 			party[passedMemberId].hp=party[passedMemberId].fighterStats.maxHp;
 			party[passedMemberId].mp=party[passedMemberId].fighterStats.maxMp;
-			
-		
+					
 		}
 		return 0;
 	}
@@ -576,12 +574,12 @@
 		}else if (LANGUAGE==LANG_SPANISH){
 			ShowMessage("Gracias por jugar.",0);
 		}
-	/*
+		/*
 		FILE * fp;
 		// I don't know. You unlock the ability to save your language when you win??
-	   fp = fopen ("savedata0:didWin.nathan", "w+");
-	   fprintf(fp, "%d", LANGUAGE);
-	   fclose(fp);
+		fp = fopen ("savedata0:didWin.nathan", "w+");
+		fprintf(fp, "%d", LANGUAGE);
+		fclose(fp);
 	   */
 	   return 0;
 	}

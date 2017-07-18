@@ -108,7 +108,16 @@ function Event04()
 			didWin = StartSpecificBattle(1,WierdSlimeHybridMember,enemyidle0,enemyatk0);
 			if (didWin==true) then
 				flags[4]=1;
+				HideTile(7,3,1);
+				HideTile(8,3,1);
+				HideTile(7,4,1);
+				HideTile(8,4,1);
 			else
+				-- Only restore Big Foot if you don't kill him
+				SetMapImageData(7,3,1,0,2);
+				SetMapImageData(8,3,1,0,3);
+				SetMapImageData(7,4,1,0,4);
+				SetMapImageData(8,4,1,0,5);
 				if (Lang==1) then
 					ShowMessageWithPortrait("Hahahaha! I'm more big than you!",false,bigfootport,0);
 				elseif (Lang==2) then
@@ -131,12 +140,6 @@ function Event04()
 
 			RestorePartyMember(0);
 			RestorePartyMember(1);
-
-
-		SetMapImageData(7,3,1,0,2);
-		SetMapImageData(8,3,1,0,3);
-		SetMapImageData(7,4,1,0,4);
-		SetMapImageData(8,4,1,0,5);
 		-- After you've killed bigfoot
 		if (flags[4]==1) then
 	
@@ -214,6 +217,7 @@ tileset0=nil;
 if (flags[4]==1) then
 	tempx=0;
 	tempy=5;
+	-- Set torches
 	while (true) do
 		SetMapImageData(tempx,tempy,1,0,6);
 		SetMapImageData(14-tempx,tempy,1,0,6);
@@ -229,20 +233,23 @@ if (flags[4]==1) then
 	-- Add portal
 	SetMapImageData(7,0,1,0,7);
 	SetMapOtherData(7,0,false,5);
+
+	-- Remove Big Foot
+	HideTile(7,3,1);
+	HideTile(8,3,1);
+	HideTile(7,4,1);
+	HideTile(8,4,1);
 else
 	-- Remove portal
 	SetMapImageData(7,0,1,0,0);
 	SetMapOtherData(7,0,false,0);
 end
 
-
-
-
 RedrawMap();
 if (GetLevel(0)<6) then
 	if (Lang==1) then
-		DebugMsg("You feel you should fight more noob enemies.",false);
+		ShowMessage("You feel you should fight more noob enemies.",false);
 	elseif (Lang==2) then
-		DebugMsg("T'u piensas que debes matar m'as enemigos f'aciles.",false)
+		ShowMessage("T'u piensas que debes matar m'as enemigos f'aciles.",false)
 	end
 end

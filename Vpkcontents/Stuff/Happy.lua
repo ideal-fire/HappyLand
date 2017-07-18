@@ -16,6 +16,34 @@ function FixString(passedString)
 	end
 end
 
+-- Removes the image at this spot and makes it not solid and removes its block event
+function HideTile(x, y, layer)
+	SetMapImageData(x,y,layer,0,0);
+	SetMapOtherData(x,y,false,0);
+end
+
+-- Restores the HP and MP of everybody in the party. This is often used after boss fights that the player has lost so the battle won't instantly end if the player retries without healing
+function RestoreEntireParty()
+	for i=0,GetPartySize()-1 do
+		RestorePartyMember(i);
+	end
+end
+
+-- Nathan
+function AddPartyMember1()
+	tempidle = GetPartyMemberAnimation(0,1)
+	tempatk = GetPartyMemberAnimation(0,2)
+	SetAnimation(tempidle,35,16,32,-1,true,0,0,LoadPNG(FixString("Stuff/Battle/PlayerIdle.png")));
+	SetAnimation(tempatk,3,44,39,-1,true,0,0,LoadPNG(FixString("Stuff/Battle/PlayerAttack.png")));
+	SetStats(GetPartyMemberStats(0),1,35,10,10,10,10,10,5,0,MallocString("Nathan"));
+	SetPartySize(1);
+	RestorePartyMember(0);
+	tempidle=nil;
+	tempatk=nil;
+	SetStatsSpells(GetPartyMemberStats(0),3);
+end
+
+-- Matt
 function AddPartyMember2()
 	mattslot = GetPartySize();
 	tempidle = GetPartyMemberAnimation(mattslot,1)
@@ -45,20 +73,13 @@ flags[2]=0;
 flags[3]=0;
 -- noob bigfoot beat
 flags[4]=0;
+-- Denied Matt's join request
+flags[5]=0;
 
 numberOfFlags=#flags+1;
 
 -- MAKE NATHAN
-tempidle = GetPartyMemberAnimation(0,1)
-tempatk = GetPartyMemberAnimation(0,2)
-SetAnimation(tempidle,35,16,32,-1,true,0,0,LoadPNG(FixString("Stuff/Battle/PlayerIdle.png")));
-SetAnimation(tempatk,3,44,39,-1,true,0,0,LoadPNG(FixString("Stuff/Battle/PlayerAttack.png")));
-SetStats(GetPartyMemberStats(0),1,35,10,10,10,10,10,5,0,MallocString("Nathan"));
-SetPartySize(1);
-RestorePartyMember(0);
-tempidle=nil;
-tempatk=nil;
-SetStatsSpells(GetPartyMemberStats(0),3);
+AddPartyMember1();
 
 --[[
 
