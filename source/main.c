@@ -5,7 +5,13 @@
 O---O---O--OOOOO-O----OOOOO-O---O---
 */
 
-// TODO - Remove party members when loading game
+/*
+TODO - Remove party members when loading game
+TODO - Make characters run off screen
+TODO - Mobile battle controls
+TODO - Mobile text box controls
+TODO - Move yes and no buttons in text box to suit mobile
+*/
 
 #include "Config.h"
 
@@ -34,6 +40,19 @@ int LANGUAGE=LANG_ENGLISH;
 #define PLACE_BATTLE 3
 #define PLACE_STATUS 4
 #define PLACE_TITLE 5
+
+#define SPELLSPECIAL_NONE 0
+#define SPELLSPECIAL_NODEFENCE 1
+
+#define ANIMATION_IDLE 1
+#define ANIMATION_ATTACK 2
+
+#define BATTLESTATUS_NEXTTURN 0
+#define BATTLESTATUS_CHOOSINGMOVE 1
+#define BATTLESTATUS_CHOOSINGTARGET 2
+#define BATTLESTATUS_MOVETOTARGET 3
+#define BATTLESTATUS_MOVEBACKFROMTARGET 4
+#define BATTLESTATUS_SPELLANIMATION 5
 
 #define STARTINGMAP "Stuff/Maps/NathansHouse"
 
@@ -237,7 +256,7 @@ char tempPathFixBuffer[256];
 		char* spellPath;
 		animation theAnimation;
 		char mpCost;
-		unsigned char lastMinuteFix;
+		unsigned char spellSpecialProperty;
 	}spell;
 	typedef struct Q_spellLinkedList{
 		struct Q_spellLinkedList* nextEntry;
@@ -254,7 +273,7 @@ lua_State* L;
 animation selectorAnimation;
 // Where you are. Like Overworld, Menu, Battle, etc.
 // Values in main function
-unsigned char place=0;
+unsigned char place=PLACE_OVERWORLD;
 
 spellLinkedList* spellLinkedListStart={0};
 unsigned short spellLinkedListSize=1;
@@ -1003,19 +1022,22 @@ partyMember* GetBattlerById(char id){
 		return &dummyMember;
 	}
 }
+
 // Id - the id
-// animationType - 1 for idle animation, 2 for attack animation
+// animationType - 
+// ANIMATION_IDLE
+// ANIMATION_ATTACK
 animation* GetBattlerAnimationById(char id, char animationType){
 	if (id<=4 && id>=1){
-		if (animationType==2){
+		if (animationType==ANIMATION_ATTACK){
 			return &(partyAttackAnimation[(int)(id-1)]);
-		}else{
+		}else if (animationType==ANIMATION_IDLE){
 			return &(partyIdleAnimation[(int)(id-1)]);
 		}
 	}else if (id>=5 && id<=8){
-		if (animationType==2){
+		if (animationType==ANIMATION_ATTACK){
 			return (enemyAttackAnimation[(int)(id-5)]);
-		}else{
+		}else if (animationType==ANIMATION_IDLE || animationType == 0){
 			return (enemyIdleAnimation[(int)(id-5)]);
 		}
 	}else{
@@ -1027,9 +1049,9 @@ int CalculateDamage(int moveAttack, int moveMagicAttack, int fighterAttack, int 
 	return floor(((double)fighterAttack/victimDefence)*moveAttack+((double)fighterMagicAttack/victimMagicDefence)*moveMagicAttack);
 }
 
-int Damage(partyMember* attacker, partyMember* victim, int moveAttack, int moveMagicAttack, int lastMinuteFix){
+int Damage(partyMember* attacker, partyMember* victim, int moveAttack, int moveMagicAttack, int spellSpecialProperty){
 	int doneDamage;
-	if (lastMinuteFix==1){
+	if (spellSpecialProperty==SPELLSPECIAL_NODEFENCE){
 		doneDamage=moveAttack+moveMagicAttack;
 	}else{
 		doneDamage = CalculateDamage(moveAttack,moveMagicAttack,attacker->fighterStats.attack,attacker->fighterStats.magicAttack,victim->fighterStats.defence,victim->fighterStats.magicDefence);
@@ -1038,6 +1060,7 @@ int Damage(partyMember* attacker, partyMember* victim, int moveAttack, int moveM
 	if (victim->hp<0){
 		victim->hp=0;
 	}
+	// Limit overhealing
 	if (victim->hp>victim->fighterStats.maxHp+15){
 		victim->hp=victim->fighterStats.maxHp+15;
 	}
@@ -2000,6 +2023,25 @@ void Overworld(){
 	FpsCapWait();
 }
 
+// Draws the damage text.
+// arguments are self explanitory
+void DrawDamageText(int battlerId, int damage, char _passedString[]){
+	if (GetBattlerById(battlerId)->y-currentTextHeight-drawYOffset>=0){
+		if (damage<0){
+			DrawTextColored(GetBattlerById(battlerId)->x-TextWidth(fontSize,_passedString)/2,GetBattlerById(battlerId)->y-currentTextHeight,_passedString,DAMAGETEXTSIZE,0,255,0);
+		}else{
+			DrawTextColored(GetBattlerById(battlerId)->x-TextWidth(fontSize,_passedString)/2,GetBattlerById(battlerId)->y-currentTextHeight,_passedString,DAMAGETEXTSIZE,255,0,0);
+		}
+	}else{
+		if (damage<0){
+			DrawTextColored(GetBattlerById(battlerId)->x-TextWidth(fontSize,_passedString)/2,GetBattlerById(battlerId)->y+GetBattlerAnimationById(battlerId,ANIMATION_IDLE)->height+currentTextHeight,_passedString,DAMAGETEXTSIZE,0,255,0);
+		}else{
+			DrawTextColored(GetBattlerById(battlerId)->x-TextWidth(fontSize,_passedString)/2,GetBattlerById(battlerId)->y+GetBattlerAnimationById(battlerId,ANIMATION_IDLE)->height+currentTextHeight,_passedString,DAMAGETEXTSIZE,255,0,0);
+		}
+	}
+}
+
+// Returns 1 if the player won, 0 otherwise
 char BattleLop(char canRun){
 	// 0 - Ready for next person in line
 	// 1 - Choosing attack
@@ -2007,7 +2049,7 @@ char BattleLop(char canRun){
 	// 3 - Fighter moving to target
 	// 4 - Fighter moving back from target
 	// 5 - Showing spell animation
-	char battleStatus=0;
+	char battleStatus=BATTLESTATUS_NEXTTURN;
 	// Array that holds turn order.
 	// To say that somebody moves on a certian turn, use their value.
 	// 1-4 is party members
@@ -2031,18 +2073,19 @@ char BattleLop(char canRun){
 	short originalX=0;
 	short originalY=0;
 
-	// In battleStatus 4, used to hold damage delt.
-	// In battleStatus 5, used for animation stuff
+	// In battleStatus BATTLESTATUS_MOVEBACKFROMTARGET, used to hold damage delt.
+	// In battleStatus BATTLESTATUS_SPELLANIMATION, used for animation stuff
 	// Between 
 	int temp=0;
-	// In battleStatus 4 and 5, used as string to display damage delt
+	// In battleStatus BATTLESTATUS_MOVEBACKFROMTARGET and BATTLESTATUS_SPELLANIMATION, used as string to display damage delt
 	// At the end of the battle, used to display earned EXP.
 	char temp2[10];
-	// X speed for magic moving
+	// X speed for magic moving in BATTLESTATUS_CHOOSINGMOVE and BATTLESTATUS_CHOOSINGTARGET
+	// Damage delt in BATTLESTATUS_MOVEBACKFROMTARGET and BATTLESTATUS_SPELLANIMATION
 	// Also temp while var in start
-	signed char temp3=0;
-	// Y speed for magic moving
-	signed char temp4=1;
+	int temp3=0;
+	// Y speed for magic moving in BATTLESTATUS_CHOOSINGMOVE and BATTLESTATUS_CHOOSINGTARGET
+	int temp4=1;
 
 	// FOr checking if somebody is alive.
 	// if 0 after battle end, player lost
@@ -2099,11 +2142,12 @@ char BattleLop(char canRun){
 	// Battle moving in intro
 	temp3=1;
 	while (temp3==1){
-		// Entrence positions
+		// Entrence positions ONLY. The position that the partyMember struct holds is their end position, this is their current position in the battle intro
 		int xPositions[8]={0};
 		int yPositions[8]={0};
 		signed char addPerFrame[8]={0,0,0,0,0,0,0,0};
 
+		// This prepares variables that are used when the enemies are going in from off screen
 		for (i=1;i<9;i++){
 			if (j<5){
 				if (i>partySize){
@@ -2118,10 +2162,11 @@ char BattleLop(char canRun){
 				continue;
 			}
 			yPositions[i-1]=GetBattlerById(i)->y;
+			// Start the battle intro positions off screen
 			if (GetBattlerById(i)->x<SCREENWIDTH/2){
-				xPositions[i-1]=GetBattlerAnimationById(i,0)->width*-1;
+				xPositions[i-1]=GetBattlerAnimationById(i,ANIMATION_IDLE)->width*-1;
 			}else{
-				xPositions[i-1]=GetBattlerAnimationById(i,0)->width+SCREENWIDTH;
+				xPositions[i-1]=GetBattlerAnimationById(i,ANIMATION_IDLE)->width+SCREENWIDTH;
 			}
 
 			if (xPositions[i-1]>SCREENWIDTH/2){
@@ -2155,12 +2200,12 @@ char BattleLop(char canRun){
 					continue;
 				}
 				if (GetBattlerById(i)->x==xPositions[i-1]  || (addPerFrame[i-1]<0 && xPositions[i-1]<=GetBattlerById(i)->x)  || (addPerFrame[i-1]>0 && xPositions[i-1]>=GetBattlerById(i)->x)   ){
-					DrawAnimationAsISay((GetBattlerAnimationById(i,0)),xPositions[i-1],yPositions[i-1],BATTLEENTITYSCALE);
+					DrawAnimationAsISay((GetBattlerAnimationById(i,ANIMATION_IDLE)),xPositions[i-1],yPositions[i-1],BATTLEENTITYSCALE);
 					continue;
 				}
 				xPositions[i-1]+=addPerFrame[i-1];
 
-				DrawAnimationAsISay((GetBattlerAnimationById(i,0)),xPositions[i-1],yPositions[i-1],BATTLEENTITYSCALE);
+				DrawAnimationAsISay((GetBattlerAnimationById(i,ANIMATION_IDLE)),xPositions[i-1],yPositions[i-1],BATTLEENTITYSCALE);
 			}
 			EndDrawing();
 
@@ -2191,11 +2236,13 @@ char BattleLop(char canRun){
 		}
 	}
 
+	// This is the main battle loop
 	while (1){
-		StartFrameStuff();
+		FpsCapStart();
+		ControlsStart();
 
 		// Alright, time to go to next turn
-		if (battleStatus==0)/*My body is ready for next turn*/{
+		if (battleStatus==BATTLESTATUS_NEXTTURN)/*My body is ready for next turn*/{
 
 			// Check if alive
 				isOneAlive=0;
@@ -2266,7 +2313,7 @@ char BattleLop(char canRun){
 							}
 						#else
 							StartDrawing();
-								DrawTextureScale(winTexture,CenterSomething(GetTextureWidth(winTexture)*1.8),3,1.8,1.8);
+							DrawTextureScale(winTexture,CenterSomething(GetTextureWidth(winTexture)*1.8),3,1.8,1.8);
 							EndDrawing();
 							sf2d_start_frame(GFX_BOTTOM, GFX_LEFT);
 
@@ -2296,10 +2343,12 @@ char BattleLop(char canRun){
 				if (orderOfAction[(int)currentOrder]<=4){
 					originalX = GetBattlerById(orderOfAction[currentOrder])->x;
 					originalY = GetBattlerById(orderOfAction[currentOrder])->y;
-	
+					// Fix the magic moving
+					temp4=1;
+					temp3=0;
 					battleStatus=1;
 				}else if (orderOfAction[(int)currentOrder]<=8){
-					// generate enmy turn
+					// generate enemy turn
 					char numberOfLivePartyMembers=0;
 					for (i=0;i<partySize;i++){
 						if (party[i].hp>0){
@@ -2327,26 +2376,26 @@ char BattleLop(char canRun){
 						ResetAnimation(&(selectedSpell->theAnimation));
 						LoadSpellImageIfNeeded(enemySpellSelected);
 						
-						int tempDone = Damage(GetBattlerById(orderOfAction[currentOrder]),GetBattlerById(target),selectedSpell->attack,selectedSpell->magicAttack,selectedSpell->lastMinuteFix);
+						int tempDone = Damage(GetBattlerById(orderOfAction[currentOrder]),GetBattlerById(target),selectedSpell->attack,selectedSpell->magicAttack,selectedSpell->spellSpecialProperty);
 						sprintf((char*)&temp2,"%d",tempDone);
 						GetBattlerById(orderOfAction[currentOrder])->mp -= selectedSpell->mpCost;
 						
-						battleStatus=5;
+						battleStatus=BATTLESTATUS_SPELLANIMATION;
 					}else{
 						// Using normal attack
-						battleStatus=3;
+						battleStatus=BATTLESTATUS_MOVETOTARGET;
 						originalY=GetBattlerById(orderOfAction[currentOrder])->y;
 						originalX=GetBattlerById(orderOfAction[currentOrder])->x;
 	
 						moveXPerFrame=3;
-						moveXPerFrame=floor((GetBattlerById(target)->x - GetBattlerById(orderOfAction[currentOrder])->x - GetBattlerAnimationById(orderOfAction[currentOrder],2)->width*BATTLEENTITYSCALE+32 )/30);
-						moveYPerFrame=floor((GetBattlerById(target)->y - GetBattlerById(orderOfAction[currentOrder])->y + GetBattlerAnimationById(target,1)->height/4)/30);
+						moveXPerFrame=floor((GetBattlerById(target)->x - GetBattlerById(orderOfAction[currentOrder])->x - GetBattlerAnimationById(orderOfAction[currentOrder],ANIMATION_ATTACK)->width*BATTLEENTITYSCALE+32 )/30);
+						moveYPerFrame=floor((GetBattlerById(target)->y - GetBattlerById(orderOfAction[currentOrder])->y + GetBattlerAnimationById(target,ANIMATION_IDLE)->height/4)/30);
 		
 						if (moveXPerFrame==0){
-							moveXPerFrame=ceil((GetBattlerById(target)->x - GetBattlerById(orderOfAction[currentOrder])->x - GetBattlerAnimationById(orderOfAction[currentOrder],2)->width*BATTLEENTITYSCALE+32 )/30);
+							moveXPerFrame=ceil((GetBattlerById(target)->x - GetBattlerById(orderOfAction[currentOrder])->x - GetBattlerAnimationById(orderOfAction[currentOrder],ANIMATION_ATTACK)->width*BATTLEENTITYSCALE+32 )/30);
 						}
 						if (moveYPerFrame==0){
-							moveYPerFrame=ceil((GetBattlerById(target)->y - GetBattlerById(orderOfAction[currentOrder])->y + GetBattlerAnimationById(target,1)->height/4)/30);
+							moveYPerFrame=ceil((GetBattlerById(target)->y - GetBattlerById(orderOfAction[currentOrder])->y + GetBattlerAnimationById(target,ANIMATION_IDLE)->height/4)/30);
 						}
 					}
 				}else{
@@ -2355,7 +2404,7 @@ char BattleLop(char canRun){
 					currentOrder=0;
 				}
 			}
-		}else if (battleStatus==1)/*Choosing type of move*/{
+		}else if (battleStatus==BATTLESTATUS_CHOOSINGMOVE)/*Choosing type of move*/{
 			#if PLATFORM != PLAT_3DS
 			if (WasJustPressed(SCE_CTRL_RIGHT))
 			#else
@@ -2406,7 +2455,7 @@ char BattleLop(char canRun){
 				temp=0;
 				if (selected==0){
 					// Attack
-					battleStatus=2;
+					battleStatus=BATTLESTATUS_CHOOSINGTARGET;
 					if (orderOfAction[(int)currentOrder]<=4){
 						target=5;
 					}
@@ -2425,7 +2474,7 @@ char BattleLop(char canRun){
 						// Set temp to 7 to say we're choosing target for spell and not normal attack
 						temp=7;
 
-						battleStatus=2;
+						battleStatus=BATTLESTATUS_CHOOSINGTARGET;
 					}
 				}else if (selected==3){
 					// Item
@@ -2435,7 +2484,7 @@ char BattleLop(char canRun){
 					break;
 				}
 			}
-		}else if (battleStatus==2)/*Choosing target*/{
+		}else if (battleStatus==BATTLESTATUS_CHOOSINGTARGET)/*Choosing target*/{
 			if (WasJustPressed(SCE_CTRL_RIGHT) || WasJustPressed(SCE_CTRL_DOWN)){
 				target=target+1;
 				if (target>partySize && target<5){
@@ -2489,42 +2538,45 @@ char BattleLop(char canRun){
 				if (temp==7){
 					temp=0;
 					ResetAnimation(&(selectedSpell->theAnimation));
-					battleStatus=5;
-					int tempDone = Damage(GetBattlerById(orderOfAction[currentOrder]),GetBattlerById(target),selectedSpell->attack,selectedSpell->magicAttack,selectedSpell->lastMinuteFix);
-					sprintf((char*)&temp2,"%d",tempDone);
+					battleStatus=BATTLESTATUS_SPELLANIMATION;
+					int tempDone = Damage(GetBattlerById(orderOfAction[currentOrder]),GetBattlerById(target),selectedSpell->attack,selectedSpell->magicAttack,selectedSpell->spellSpecialProperty);
+					if (tempDone<0){
+						tempDone*=-1; // Multiply it by -1 so I can easily remove the minus sign
+						sprintf((char*)&temp2,"%d",tempDone);
+						tempDone*=-1; // Fix it
+					}else{
+						sprintf((char*)&temp2,"%d",tempDone);
+					}
 					GetBattlerById(orderOfAction[currentOrder])->mp -= selectedSpell->mpCost;
+					temp3=tempDone;
 				}else{ // Chose target for normal attack
-					battleStatus=3;
-	
-					//moveXPerFrame = ceil((GetBattlerById(target)->x-GetBattlerById(orderOfAction[currentOrder])->x)/60);
-					//moveYPerFrame = ceil((GetBattlerById(target)->y-(GetBattlerById(orderOfAction[currentOrder])->y + (75*3)/2) )/60);
-						
+					battleStatus=BATTLESTATUS_MOVETOTARGET;
 					originalY=GetBattlerById(orderOfAction[currentOrder])->y;
 					originalX=GetBattlerById(orderOfAction[currentOrder])->x;
-						
+					
 					moveXPerFrame=3;
-					moveXPerFrame=floor((GetBattlerById(target)->x - GetBattlerById(orderOfAction[currentOrder])->x - GetBattlerAnimationById(orderOfAction[currentOrder],2)->width*BATTLEENTITYSCALE+32 )/30);
-					moveYPerFrame=floor((GetBattlerById(target)->y - GetBattlerById(orderOfAction[currentOrder])->y + GetBattlerAnimationById(target,1)->height/4)/30);
+					moveXPerFrame=floor((GetBattlerById(target)->x - GetBattlerById(orderOfAction[currentOrder])->x - GetBattlerAnimationById(orderOfAction[currentOrder],ANIMATION_ATTACK)->width*BATTLEENTITYSCALE+32 )/30);
+					moveYPerFrame=floor((GetBattlerById(target)->y - GetBattlerById(orderOfAction[currentOrder])->y + GetBattlerAnimationById(target,ANIMATION_IDLE)->height/4)/30);
 	
 					if (moveXPerFrame==0){
-						moveXPerFrame=ceil((GetBattlerById(target)->x - GetBattlerById(orderOfAction[currentOrder])->x - GetBattlerAnimationById(orderOfAction[currentOrder],2)->width*BATTLEENTITYSCALE+32 )/30);
+						moveXPerFrame=ceil((GetBattlerById(target)->x - GetBattlerById(orderOfAction[currentOrder])->x - GetBattlerAnimationById(orderOfAction[currentOrder],ANIMATION_ATTACK)->width*BATTLEENTITYSCALE+32 )/30);
 					}
 					if (moveYPerFrame==0){
-						moveYPerFrame=ceil((GetBattlerById(target)->y - GetBattlerById(orderOfAction[currentOrder])->y + GetBattlerAnimationById(target,1)->height/4)/30);
+						moveYPerFrame=ceil((GetBattlerById(target)->y - GetBattlerById(orderOfAction[currentOrder])->y + GetBattlerAnimationById(target,ANIMATION_IDLE)->height/4)/30);
 					}
 				}
 
 			}else if (WasJustPressed(bButton)){
-				battleStatus=1;
+				battleStatus=BATTLESTATUS_CHOOSINGMOVE;
 			}
-		}else if (battleStatus==3)/*Moving to  target*/{
+		}else if (battleStatus==BATTLESTATUS_MOVETOTARGET)/*Moving to  target*/{
 			GetBattlerById(orderOfAction[currentOrder])->x=GetBattlerById(orderOfAction[currentOrder])->x+moveXPerFrame;
 			GetBattlerById(orderOfAction[currentOrder])->y=GetBattlerById(orderOfAction[currentOrder])->y+moveYPerFrame;
 			
-			if (moveXPerFrame>=0 && GetBattlerById(orderOfAction[currentOrder])->x>=GetBattlerById(target)->x-GetBattlerAnimationById(orderOfAction[currentOrder],2)->width*BATTLEENTITYSCALE){
+			if (moveXPerFrame>=0 && GetBattlerById(orderOfAction[currentOrder])->x>=GetBattlerById(target)->x-GetBattlerAnimationById(orderOfAction[currentOrder],ANIMATION_ATTACK)->width*BATTLEENTITYSCALE){
 				moveXPerFrame=0;
 			}
-			if (moveXPerFrame<=0 && GetBattlerById(orderOfAction[currentOrder])->x<=GetBattlerById(target)->x+GetBattlerAnimationById(orderOfAction[currentOrder],2)->width*BATTLEENTITYSCALE){
+			if (moveXPerFrame<=0 && GetBattlerById(orderOfAction[currentOrder])->x<=GetBattlerById(target)->x+GetBattlerAnimationById(orderOfAction[currentOrder],ANIMATION_ATTACK)->width*BATTLEENTITYSCALE){
 				moveXPerFrame=0;
 			}
 			if (moveYPerFrame>=0 && GetBattlerById(orderOfAction[currentOrder])->y>=GetBattlerById(target)->y){
@@ -2557,11 +2609,20 @@ char BattleLop(char canRun){
 					}
 				}
 
-				sprintf((char*)&temp2,"%d",temp);
+				// Store the damage as a string into temp2
+				// Negative damage will not have the string start with a negative sign
+				if (temp<0){
+					temp*=-1; // Multiply it by -1 so I can easily remove the minus sign
+					sprintf((char*)&temp2,"%d",temp);
+					temp*=-1; // Fix it
+				}else{
+					sprintf((char*)&temp2,"%d",temp);
+				}
+				temp3=temp;
 
-				battleStatus=4;
+				battleStatus=BATTLESTATUS_MOVEBACKFROMTARGET;
 			}
-		}else if (battleStatus==4)/*Moving back from target*/{
+		}else if (battleStatus==BATTLESTATUS_MOVEBACKFROMTARGET)/*Moving back from target*/{
 			GetBattlerById(orderOfAction[currentOrder])->x=GetBattlerById(orderOfAction[currentOrder])->x+moveXPerFrame;
 			GetBattlerById(orderOfAction[currentOrder])->y=GetBattlerById(orderOfAction[currentOrder])->y+moveYPerFrame;
 			
@@ -2584,23 +2645,24 @@ char BattleLop(char canRun){
 
 			if (moveXPerFrame==0 && moveYPerFrame==0){
 				// We're reggie for next turn.
-				battleStatus=0;
+				battleStatus=BATTLESTATUS_NEXTTURN;
 				// Go to the next turn.
 				currentOrder++;
 			}
-		}else if (battleStatus==5)/*Waiting for spell animation*/{
+		}else if (battleStatus==BATTLESTATUS_SPELLANIMATION)/*Waiting for spell animation*/{
 			UpdateAnimationIfNeed(&(selectedSpell->theAnimation));
 			if (selectedSpell->theAnimation.currentFrame==0 && temp!=0){
 				currentOrder++;
-				battleStatus=0;
+				battleStatus=BATTLESTATUS_NEXTTURN;
 			}
 		}
+
 		StartDrawing();
 		DrawMap();
 		DrawUnusedAreaRect();
 
 		// Draw selection buttons
-		if (battleStatus==1){
+		if (battleStatus==BATTLESTATUS_CHOOSINGMOVE){
 			// Draw later on the bottom screen if on 3ds
 			#if PLATFORM != PLAT_3DS
 				// Draw UI and selector
@@ -2614,7 +2676,7 @@ char BattleLop(char canRun){
 				DrawTexturePartScaleRotate(selectorAnimation.texture,selected*200+selected*32+132,SCREENHEIGHT-128,selectorAnimation.currentFrame*selectorAnimation.width,0,selectorAnimation.width,selectorAnimation.height,3.7,3.7,1.57);
 			#endif
 		}
-		// Draw the good stuff.
+		// Draw the party members and the party member hp and mp
 		for (i=0;i<partySize;i++){
 
 			if (party[i].hp==0){
@@ -2639,12 +2701,12 @@ char BattleLop(char canRun){
 				DrawText(32+i*128+i*16,90,party[i].fighterStats.name,2);
 			#endif
 			// Draws attack animation for person moving to attack
-			if (battleStatus==3){
+			if (battleStatus==BATTLESTATUS_MOVETOTARGET){
 				if (i+1==orderOfAction[currentOrder]){
 					DrawAnimationAsISay(&(partyAttackAnimation[i]),party[i].x,party[i].y,BATTLEENTITYSCALE);
 					continue;
 				}
-			}else if (battleStatus==1 || battleStatus==2){
+			}else if (battleStatus==BATTLESTATUS_CHOOSINGMOVE || battleStatus==BATTLESTATUS_CHOOSINGTARGET){
 				// Draw magic moving
 				if (i+1==orderOfAction[currentOrder]){
 					// Updating magic moving
@@ -2668,12 +2730,13 @@ char BattleLop(char canRun){
 			}
 			DrawAnimationAsISay(&(partyIdleAnimation[i]),party[i].x,party[i].y,BATTLEENTITYSCALE);			
 		}
+		// Draw the enemies
 		for (i=0;i<numberOfEnemies;i++){
 			if (enemies[i].hp==0){
 				continue;
 			}
 
-			if (battleStatus==3){
+			if (battleStatus==BATTLESTATUS_MOVETOTARGET){
 				if (i+5==orderOfAction[currentOrder]){
 					DrawAnimationAsISay((enemyAttackAnimation[i]),enemies[i].x,enemies[i].y,BATTLEENTITYSCALE);
 					continue;
@@ -2682,21 +2745,13 @@ char BattleLop(char canRun){
 			DrawAnimationAsISay(enemyIdleAnimation[i],enemies[i].x,enemies[i].y,BATTLEENTITYSCALE);
 		}
 
-		if (battleStatus==5){// SPELL
+		if (battleStatus==BATTLESTATUS_SPELLANIMATION){// SPELL
 			temp=selectedSpell->theAnimation.currentFrame;
 			DrawAnimationAsISay(&(selectedSpell->theAnimation),GetBattlerById(target)->x,GetBattlerById(target)->y,SPELLSCALE);
-			if (GetBattlerById(target)->y-(8*DAMAGETEXTSIZE)-drawYOffset>=0){
-				DrawText(GetBattlerById(target)->x-floor(strlen(temp2)/2)*(8*DAMAGETEXTSIZE),GetBattlerById(target)->y-(8*DAMAGETEXTSIZE),temp2,DAMAGETEXTSIZE);
-			}else{
-				DrawText(GetBattlerById(target)->x-floor(strlen(temp2)/2)*(8*DAMAGETEXTSIZE),GetBattlerById(target)->y+ GetBattlerAnimationById(target,1)->height+70,temp2,DAMAGETEXTSIZE);
-			}
-		}else if (battleStatus==4){ // BACK FROM ATTACK
-			if (GetBattlerById(target)->y-(8*DAMAGETEXTSIZE)-drawYOffset>=0){
-				DrawText(GetBattlerById(target)->x-floor(strlen(temp2)/2)*(8*DAMAGETEXTSIZE),GetBattlerById(target)->y-(8*DAMAGETEXTSIZE),temp2,DAMAGETEXTSIZE);
-			}else{
-				DrawText(GetBattlerById(target)->x-floor(strlen(temp2)/2)*(8*DAMAGETEXTSIZE),GetBattlerById(target)->y+ GetBattlerAnimationById(target,1)->height+(8*DAMAGETEXTSIZE),temp2,DAMAGETEXTSIZE);
-			}
-		}else if (battleStatus==2){
+			DrawDamageText(target,temp3,temp2);
+		}else if (battleStatus==BATTLESTATUS_MOVEBACKFROMTARGET){ // Moving back from the attack. Draw the resulting damage
+			DrawDamageText(target,temp3,temp2);
+		}else if (battleStatus==BATTLESTATUS_CHOOSINGTARGET){
 			// Fix cursor if selecting dead person.
 			if (GetBattlerById(target)->hp==0){
 				for (i=target;i<=10;i++){
@@ -2716,14 +2771,14 @@ char BattleLop(char canRun){
 			DrawRectangle(GetBattlerById(target)->x,GetBattlerById(target)->y-32,floor(64*BATTLEENTITYSCALE*(((double)GetBattlerById(target)->hp)/GetBattlerById(target)->fighterStats.maxHp)),32,190,0,0,255);
 
 			// Draw the target selector
-			DrawAnimationAsISay(&selectorAnimation,GetBattlerById(target)->x-22*DAMAGETEXTSIZE,GetBattlerById(target)->y,DAMAGETEXTSIZE);
+			DrawAnimationAsISay(&selectorAnimation,GetBattlerById(target)->x-22*DAMAGETEXTSIZE,GetBattlerById(target)->y,DAMAGETEXTSIZE); // Draw cursor // Draw selector
 		}
 		EndDrawing();
 	
 		// Draw bottom screen stuff on 3ds
 		#if PLATFORM == PLAT_3DS
 			sf2d_start_frame(GFX_BOTTOM, GFX_LEFT);
-			if (battleStatus==1){
+			if (battleStatus==BATTLESTATUS_CHOOSINGMOVE){
 				// Draw UI and selector
 				DrawTextureScale(attackButton,100,48,1,1);
 				DrawTextureScale(magicButton,100,112,1,1);
@@ -2762,7 +2817,8 @@ char BattleLop(char canRun){
 			sf2d_swapbuffers();
 		#endif
 
-		EndFrameStuff();
+		ControlsEnd();
+		FpsCapWait();
 	}
 	
 	FreeTexture(attackButton);
@@ -2774,6 +2830,7 @@ char BattleLop(char canRun){
 
 	ClearBottomScreen();
 
+	// Do stuff if the player lost the game. show message and return 0 if they lost
 	if (isOneAlive==0){
 		if (canRun==1){
 			ShowMessage(N_DEADMESSAGE,0);
@@ -2884,14 +2941,10 @@ void TitleLoop(){
 /*
 ///////////////////////////////////////
 // LUA FUNCTIONS
-// Alright, so I had this idea. Instead of having set and get
-// functions, I could just send pointers as light user data and
-// then have a function to set those pointers.
 ///////////////////////////////////////
 */
-
+// I'll put my header files wherever I want, thank you very much.
 #include "LuaFunctions.h"
-
 /*
 ///////////////////////////////////////
 // LUA FUNCTIONS END
@@ -3051,25 +3104,6 @@ int main(int argc, char *argv[]){
 		}
 	}
 
-	// End this stuff
-	#if PLATFORM == PLAT_VITA
-		vita2d_fini();
-		// I really don't get why I need this when the user can just use the PS button.
-		sceKernelExitProcess(0);
-	#elif PLATFORM == PLAT_WINDOWS
-		//Destroy window
-		SDL_DestroyRenderer( mainWindowRenderer );
-		SDL_DestroyWindow( mainWindow );
-		mainWindow = NULL;
-		mainWindowRenderer = NULL;
-		// QUit SDL subsystems
-		IMG_Quit();
-		SDL_Quit();
-		lua_close(L);
-	#elif PLATFORM == PLAT_3DS
-		// TODO 3ds cleanup.
-		// This may actually be used.
-		sf2d_fini();
-	#endif
+	Quit(L);
 	return 0;
 }

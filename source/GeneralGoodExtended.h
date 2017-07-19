@@ -145,6 +145,38 @@
 		}
 	#endif
 
+	// May not actually quit out of the program. You still need to return from the main function
+	void Quit(lua_State* L){
+		lua_close(L);
+		#if RENDERER == REND_VITA2D
+			vita2d_fini();
+		#elif RENDERER == REND_SDL
+			//Destroy window
+			SDL_DestroyRenderer( mainWindowRenderer );
+			SDL_DestroyWindow( mainWindow );
+			mainWindow = NULL;
+			mainWindowRenderer = NULL;
+			// QUit SDL subsystems
+			IMG_Quit();
+		#elif RENDERER == REND_SF2D
+			sf2d_fini();
+		#endif
+		#if SOUNDPLAYER == SND_SDL
+			// TODO sdl mixer quit
+		#endif
+		#if PLATFORM == PLAT_WINDOWS
+			#if RENDERER == REND_SDL
+				SDL_Quit();
+			#else
+				printf("No quit function avalible for Windows without SDL.\n");
+			#endif
+		#elif PLATFORM == PLAT_VITA
+			sceKernelExitProcess(0);
+		#elif PLATFORM == PLAT_3DS
+			// Nothing needed for 3ds?
+		#endif
+	}
+
 	void StartDrawing(){
 		#if RENDERER == REND_VITA2D
 			vita2d_start_drawing();

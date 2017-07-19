@@ -123,11 +123,11 @@
 	
 	// Sets spell stuff
 	// Args - 
-	// spelLUAREGISTER( name, atk, magicAttack, texturePath, mpCost, lastMinuteFix
-	// PLEASE DO NOT LOAD THE ANIMATION'S IMAGE. 
-	// lastMinuteFix is a last minute variable fix thing I made
-	// special values give special results
-	// 1 - damage unchanged by defence
+	// spelLUAREGISTER( name, atk, magicAttack, texturePath, mpCost, (optional) int spellSpecialProperty
+	// PLEASE DO NOT LOAD THE ANIMATION'S IMAGE, PASS IT AS A MALLOC'D STRING
+	// spellSpecialProperty values:
+	// SPELLSPECIAL_NONE - normal spell
+	// SPELLSPECIAL_NODEFENCE - spell's damage is unchanged by defence
 	int L_SetSpell(lua_State* passedState){
 		spell* passedSpell = lua_touserdata(passedState,1);
 		passedSpell->name = (char*)lua_touserdata(passedState,2);
@@ -136,7 +136,7 @@
 		passedSpell->spellPath = (char*)lua_touserdata(passedState,5);
 		passedSpell->mpCost = lua_tonumber(passedState,6);
 		if (lua_gettop(passedState)==7){
-			passedSpell->lastMinuteFix = lua_tonumber(passedState,7);
+			passedSpell->spellSpecialProperty = lua_tonumber(passedState,7);
 		}
 		return 0;
 	}

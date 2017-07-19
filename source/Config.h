@@ -28,7 +28,7 @@
 	#define PRE_3DS 3
 
 	// Change this to change platform
-	#define PRESET PRE_WINDOWS
+	#define PRESET PRE_VITA
 
 	#if PRESET == PRE_WINDOWS
 		#define PLATFORM PLAT_WINDOWS
