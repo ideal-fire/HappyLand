@@ -104,7 +104,6 @@ function Event07()
 
 			-- Party slots are 0 based, party size isn't.
 			AddPartyMember2();
-			AddPartyMember2=nil;
 
 			flags[2]=1;
 			-- Hide Matt

@@ -174,7 +174,7 @@ function Event04()
 			EasyShowBigfoot(8,10);
 			EasyShowBigfoot(11,11);
 			if (Lang==1) then
-					ShowMessageWithPortrait("Hahahaha! I'm more blue than you!",false,BlueBigFootPortrait,0);
+				ShowMessageWithPortrait("Hahahaha! I'm more blue than you!",false,BlueBigFootPortrait,0);
 			elseif (Lang==2) then
 				ShowMessageWithPortrait("'!Jajajaja! '!You soy m'as azul que t'u!",false,BlueBigFootPortrait,0);
 			end
@@ -185,7 +185,7 @@ function Event04()
 		if (Lang==1) then
 			ShowMessageWithPortrait("No, you must fight the Big Foots!",false,NamelessPortrait,0);
 			ShowMessageWithPortrait("Why do you care?",false,PlayerPortrait,0);
-			ShowMessageWithPortrait("Because every person I've scammed so far has fallen for the scam. I don't want to end my streak now!",false,NamelessPortrait,0);
+			ShowMessageWithPortrait("Because every person I've tried to scam so far has fallen for my trick. I don't want to end my streak now!",false,NamelessPortrait,0);
 			ShowMessageWithPortrait("I'll never abide to your demands, scammer!",false,PlayerAngryPortrait,0);
 		elseif (Lang==2) then
 			ShowMessageWithPortrait("'!No, tienes que matar los Pies Grandes!",false,NamelessPortrait,0);
@@ -223,6 +223,7 @@ function Event04()
 				ShowMessageWithPortrait("No0o0o00oOOoo0o0oo! You win this round. I shall now retreat to my hidden fortress.",false,NamelessDeadPortrait,0);
 				ToBlack();
 				ShowMessage("Nathan was happy that he wasn't scammed. He returned to his house and slept for the rest of his life because the world was at peace.",false);
+				ShowMessage("The End. [Harder End]",false);
 				ThanksForPlaying();
 			elseif (Lang==2) then
 				ShowMessageWithPortrait("'!No0o0o00oOOoo0o0oo! T'u ganate. Yo voy a ir a mi fortaleza castillo.",false,NamelessDeadPortrait,0);
@@ -236,7 +237,6 @@ function Event04()
 					ShowMessageWithPortrait("Hahahaha! I have less names than you!",false,NamelessPortrait,0);
 			elseif (Lang==2) then
 				ShowMessageWithPortrait("'!Jajajaja! '!You tengo menos nombres que t'u!",false,NamelessPortrait,0);
-				ShowMessage("Fin. [Fin F'acil]",false);
 			end
 		end
 

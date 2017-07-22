@@ -364,7 +364,7 @@
 		
 			_destRect.w=_srcRect.w*texXScale;
 			_destRect.h=_srcRect.h*texYScale;
-	
+			//printf("Dest dimensionds is %dx%d;%.6f;%.6f\n",_destRect.w,_destRect.h,texXScale,texYScale);
 			_destRect.x=destX;
 			_destRect.y=destY;
 	

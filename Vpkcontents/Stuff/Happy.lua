@@ -2,6 +2,12 @@ PLAT_VITA = 1;
 PLAT_WINDOWS = 2;
 PLAT_3DS = 3;
 
+TYPE_SLOT = 1;
+TYPE_ID = 2;
+
+ANIMATION_IDLE = 1;
+ANIMATION_ATTACK = 2;
+
 function SetFlag(index,val)
 	flags[index]=val;
 end
@@ -29,41 +35,41 @@ function RestoreEntireParty()
 	end
 end
 
--- Nathan
+-- Nathan, id 1
 function AddPartyMember1()
-	tempidle = GetPartyMemberAnimation(0,1)
-	tempatk = GetPartyMemberAnimation(0,2)
+	mattslot = GetPartySize();
+	tempidle = GetPartyMemberAnimation(mattslot,ANIMATION_IDLE, TYPE_SLOT);
+	tempatk = GetPartyMemberAnimation(mattslot,ANIMATION_ATTACK, TYPE_SLOT);
 	SetAnimation(tempidle,35,16,32,-1,true,0,0,LoadPNG(FixString("Stuff/Battle/PlayerIdle.png")));
 	SetAnimation(tempatk,3,44,39,-1,true,0,0,LoadPNG(FixString("Stuff/Battle/PlayerAttack.png")));
-	SetStats(GetPartyMemberStats(0),1,35,10,10,10,10,10,5,0,MallocString("Nathan"));
-	SetPartySize(1);
-	RestorePartyMember(0);
+	SetStats(GetPartyMemberStats(mattslot, TYPE_SLOT),1,35,10,10,10,10,10,5,0,MallocString("Nathan"));
+	RestorePartyMember(mattslot, TYPE_SLOT);
 	tempidle=nil;
 	tempatk=nil;
-	SetStatsSpells(GetPartyMemberStats(0),3);
+	SetStatsSpells(GetPartyMemberStats(mattslot,TYPE_SLOT),3);
+	
+	SetPartySize(mattslot+1);
+	SetSpecialId(mattslot,1);
+	mattslot=nil;
 end
 
--- Matt
+-- Matt, id 2
 function AddPartyMember2()
 	mattslot = GetPartySize();
-	tempidle = GetPartyMemberAnimation(mattslot,1)
-	tempatk = GetPartyMemberAnimation(mattslot,2)
-
+	tempidle = GetPartyMemberAnimation(mattslot,ANIMATION_IDLE, TYPE_SLOT);
+	tempatk = GetPartyMemberAnimation(mattslot,ANIMATION_ATTACK, TYPE_SLOT);
 	SetAnimation(tempidle,30,29,68,-1,false,0,0,LoadPNG(FixString("Stuff/Battle/MattIdle.png")));
 	SetAnimation(tempatk,10,56,68,-1,true,0,0,LoadPNG(FixString("Stuff/Battle/MattAttack.png")));
-	SetStats(GetPartyMemberStats(mattslot),1,35,20,8,8,15,15,7,0,MallocString("Matt"));
-	SetPartySize(mattslot+1);
-	RestorePartyMember(mattslot);
-
+	SetStats(GetPartyMemberStats(mattslot, TYPE_SLOT),1,35,20,8,8,15,15,7,0,MallocString("Matt"));
+	RestorePartyMember(mattslot, TYPE_SLOT);
 	tempidle=nil;
 	tempatk=nil;
+	SetPartySize(mattslot+1);
+	SetSpecialId(mattslot,2);
 	mattslot=nil;
 end
 
 -- Called when game starts
---[[
- 0 - Used big water bottle (0 or 1)
-]]
 flags = {};
 -- Blottle used
 flags[1]=0;
@@ -94,6 +100,8 @@ AddPartyMember1();
 	 5 - Carrot Drill
 
 ]]
+SPELLSPECIAL_NONE = 0;
+SPELLSPECIAL_NODEFENCE = 1;
 
 -- Add spell ice
 animationSpell1 = GetSpellAnimation(GetSpell(0));
@@ -119,9 +127,9 @@ AddSpell();
 animationSpell1 = GetSpellAnimation(GetSpell(2));
 SetAnimation(animationSpell1,6,32,32,4,false,0,0);
 if (Lang==1) then
-	SetSpell(GetSpell(2),MallocString("Heal"),-20,0,MallocString(FixString("Stuff/Spell/Heal.png")),3,1);
+	SetSpell(GetSpell(2),MallocString("Heal"),-20,0,MallocString(FixString("Stuff/Spell/Heal.png")),3,SPELLSPECIAL_NODEFENCE);
 elseif (Lang==2) then
-	SetSpell(GetSpell(2),MallocString("Curar"),-20,0,MallocString(FixString("Stuff/Spell/Heal.png")),3,1);
+	SetSpell(GetSpell(2),MallocString("Curar"),-20,0,MallocString(FixString("Stuff/Spell/Heal.png")),3,SPELLSPECIAL_NODEFENCE);
 end
 
 -- Add Throw Tree

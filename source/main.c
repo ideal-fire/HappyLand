@@ -44,6 +44,9 @@ int LANGUAGE=LANG_ENGLISH;
 #define SPELLSPECIAL_NONE 0
 #define SPELLSPECIAL_NODEFENCE 1
 
+#define TYPE_SLOT 1
+#define TYPE_ID 2
+
 #define ANIMATION_IDLE 1
 #define ANIMATION_ATTACK 2
 
@@ -61,6 +64,8 @@ int LANGUAGE=LANG_ENGLISH;
 // Translatos for hardcoded strings
 #include "HardcodedLanguage.h"
 
+#define ANDROIDTEST 1
+
 #define MAXOBJECTS 15
 #if PLATFORM==PLAT_VITA
 	#define SCREENWIDTH 960
@@ -74,13 +79,13 @@ int LANGUAGE=LANG_ENGLISH;
 	#define MINYBATTLE 106
 	// This is so they don't overlap the selection buttons. Put as the screen height for no restriction
 	#define MAXYBATTLE 416
-
+	
 	// Textbox's y position
 	#define TEXTBOXY 420
 	
 	// Size of letters in textbox
 	#define TEXTBOXFONTSIZE 2.5
-
+	
 	// Lines on one screen of textbox
 	#define LINESPERSCREEN 4
 	// w and height of portertit
@@ -89,25 +94,27 @@ int LANGUAGE=LANG_ENGLISH;
 	// well this is the scale of the text
 	#define DAMAGETEXTSIZE 8
 #elif PLATFORM==PLAT_WINDOWS
-	#define SCREENWIDTH 960
-	#define SCREENHEIGHT 544
-	#define MAPXSCALE 2
-	#define MAPYSCALE 2
-	#define BATTLEENTITYSCALE 3
-	#define SPELLSCALE 4
-	#define MINYBATTLE 106
-	#define MAXYBATTLE 416
-
-	//#define CrossTexture SDL_Texture
-	#define TEXTBOXY 420
-	#define TEXTBOXFONTSIZE 2.5
-
-	// Lines on one screen of textbox
-	#define LINESPERSCREEN 4
-
-	#define DEFAULTPORTRAITSIZE 200
-
-	#define DAMAGETEXTSIZE 8
+	#if ANDROIDTEST == 0
+		#define SCREENWIDTH 960
+		#define SCREENHEIGHT 544
+		#define MAPXSCALE 2
+		#define MAPYSCALE 2
+		#define BATTLEENTITYSCALE 3
+		#define SPELLSCALE 4
+		#define MINYBATTLE 106
+		#define MAXYBATTLE 416
+	
+		//#define CrossTexture SDL_Texture
+		#define TEXTBOXY 420
+		#define TEXTBOXFONTSIZE 2.5
+	
+		// Lines on one screen of textbox
+		#define LINESPERSCREEN 4
+	
+		#define DEFAULTPORTRAITSIZE 200
+	
+		#define DAMAGETEXTSIZE 8
+	#endif
 #elif PLATFORM==PLAT_3DS
 	#define SCREENWIDTH 400
 	#define SCREENHEIGHT 240
@@ -142,6 +149,24 @@ int LANGUAGE=LANG_ENGLISH;
 
 	#define DAMAGETEXTSIZE 2
 #endif
+
+
+#if ANDROIDTEST
+	#define SCREENWIDTH 1024 // 2.5
+	#define SCREENHEIGHT 768 // 1.875
+	#define MAPXSCALE 3
+	#define MAPYSCALE 3
+	#define BATTLEENTITYSCALE 4
+	#define SPELLSCALE 4
+	#define MINYBATTLE 106
+	#define MAXYBATTLE 600
+	#define TEXTBOXY 500
+	#define DEFAULTPORTRAITSIZE 400
+	#define UISCALE 3
+	#define DAMAGETEXTSIZE fontSize
+#endif
+
+
 
 // UNCHANGED BY SCALE
 int drawXOffset=0;
@@ -195,6 +220,7 @@ char tempPathFixBuffer[256];
 #include "GeneralGoodExtended.h"
 #include "FpsCapper.h"
 #include "pathfinding.h"
+
 //TODO - Make this
 // main.h
 	// Make stuff fresh
@@ -248,6 +274,7 @@ char tempPathFixBuffer[256];
 		int y; // Position on screen //
 		short hp;
 		short mp;
+		short partyMemberScriptID; // The function called AddPartyMember x ( NO SPACE BETWEEN THEM ) with X being partyMemberScriptID is called when this party member is loaded.
 	}partyMember;
 	typedef struct Q_spell{
 		char* name;
@@ -437,6 +464,12 @@ void DrawMap(){
 	if (cameraPartialOffsetY>0){
 		yAmount++;
 	}
+	if (xAmount>tileOtherData.width){
+		xAmount = tileOtherData.width;
+	}
+	if (yAmount>tileOtherData.height){
+		yAmount = tileOtherData.height;
+	}
 
 	int x,y,i;
 	for (i=0;i<numberOfLayers;i++){
@@ -613,7 +646,7 @@ void BasicMessage(char* _tempMsg){
 
 	// This will loop through the entire message, looking for where I need to add new lines. When it finds a spot that
 	// needs a new line, that spot in the message will become 0. So, when looking for the place to 
-	int lastNewlinePosition=0;
+	int lastNewlinePosition=-1;
 	for (i = 0; i < totalMessageLength; i++){
 		if (message[i]==32){ // Only check when we meet a space. 32 is a space in ASCII
 			message[i]='\0';
@@ -638,6 +671,15 @@ void BasicMessage(char* _tempMsg){
 				}
 			}else{
 				message[i]=32;
+			}
+		}
+	}
+	// This code will make a new line if there needs to be one because of the last word
+	if (TextWidth(fontSize,&(message[lastNewlinePosition+1]))>SCREENWIDTH-20){
+		for (j=totalMessageLength-1;j>lastNewlinePosition+1;j--){
+			if (message[j]==32){
+				message[j]='\0';
+				break;
 			}
 		}
 	}
@@ -759,7 +801,7 @@ char ShowMessageWithPortrait(char* _tempMsg, char isQuestion, CrossTexture* port
 
 	// This will loop through the entire message, looking for where I need to add new lines. When it finds a spot that
 	// needs a new line, that spot in the message will become 0. So, when looking for the place to 
-	int lastNewlinePosition=0;
+	int lastNewlinePosition=-1; // If this doesn't start at -1, the first character will be cut off
 	for (i = 0; i < totalMessageLength; i++){
 		if (message[i]==32){ // Only check when we meet a space. 32 is a space in ASCII
 			message[i]='\0';
@@ -784,6 +826,15 @@ char ShowMessageWithPortrait(char* _tempMsg, char isQuestion, CrossTexture* port
 				}
 			}else{
 				message[i]=32;
+			}
+		}
+	}
+	// This code will make a new line if there needs to be one because of the last word
+	if (TextWidth(fontSize,&(message[lastNewlinePosition+1]))>SCREENWIDTH-20){
+		for (j=totalMessageLength-1;j>lastNewlinePosition+1;j--){
+			if (message[j]==32){
+				message[j]='\0';
+				break;
 			}
 		}
 	}
@@ -960,6 +1011,18 @@ void LoadMap(char* path){
 	legfinderMapWidth = tileOtherData.width;
 	legfinderMapHeight = tileOtherData.height;
 	LegfinderFixList();
+}
+
+// Give it a special id. Returns -1 if not found
+int PartyMemberIDToSlot(int _tempId){
+	int i;
+	for (i=0;i<partySize;i++){
+		if (party[i].partyMemberScriptID==_tempId){
+			return i;
+		}
+	}
+	printf("Party member with special id %d not in party right now.\n",_tempId);
+	return -1;
 }
 
 void UnloadMap(){
@@ -1338,6 +1401,110 @@ void LevelDown(partyMember* passedMember){
 	passedMember->mp=passedMember->fighterStats.maxMp;
 }
 
+// Call this after removing party members
+// _forcedPartySize is the party size if you want to force it because you changed the variable elsewhere.
+// set _forcedPartySize to -1 if you want to use partySize as the party size. If you do set it to -1, the variable will be changed to the fixed party size after.
+char FixPartyOrder(int _forcedPartySize){
+	int i;
+	int _partySizeCache;
+	if (_forcedPartySize==-1){
+		_partySizeCache = partySize;
+	}else{
+		_partySizeCache = _forcedPartySize;
+	}
+	partyMember _tempPartySwap;
+	for (i=0;i<_forcedPartySize;i++){
+		if (party[i].fighterStats.maxHp==-1){
+			if (i!=partySize-1){
+				_tempPartySwap=party[i];
+				party[i]=party[i+1];
+				party[i+1]=_tempPartySwap;
+			}
+		}
+	}
+	int _tempCounter=0;
+	for (i=0;i<4;i++){
+		if (party[i].fighterStats.maxHp!=-1){
+			_tempCounter++;
+		}else{
+			break;
+		}
+	}
+	if (_forcedPartySize==-1){
+		partySize = _tempCounter;
+	}
+	return _tempCounter;
+}
+
+// Free a party member and all their resources
+// slot is 1 through 4 and corresponds to the party array
+// _changePartySize_DO_NOT_USE is 1 if you want to change the party size variable
+// IT IS RECOMMENDED THAT YOU DON'T DO THIS
+// Instead, call FixPartyOrder(-1) after this command
+void DestroyPartyMember(int _slot, int _changePartySize_DO_NOT_USE){
+	if (_changePartySize_DO_NOT_USE==1){
+		partySize--;
+	}
+	party[_slot].hp=-1;
+	party[_slot].fighterStats.maxHp=-1;
+	free(party[_slot].fighterStats.name);
+	FreeTexture(partyAttackAnimation[_slot].texture);
+	FreeTexture(partyIdleAnimation[_slot].texture);
+}
+
+void DestroyEntireParty(){
+	int i=0;
+	int _partySizeCache=partySize;
+	for (i=0;i<_partySizeCache;i++){
+		DestroyPartyMember(i,0);
+	}
+	FixPartyOrder(-1);
+}
+
+void AddPartyMemberViaLua(int specialId){
+	if (specialId>=100){
+		printf("Something horrible happened. The value passed was over 100. Either I've wasted my time making over 100 party members, or the value is corrupted. The value is %d\n",specialId);
+	}
+	// enough for double digit id
+	char happy[17];
+	sprintf((char*)(&happy),"AddPartyMember%d",specialId);
+	if (lua_getglobal(L,happy)==0){
+		printf("Party member %d does not exist in LUA land\n",happy);
+	}else{
+		printf("Call %s\n",happy);
+		lua_call(L,0,0);
+	}
+}
+
+/*
+short pathLength ( the length of the string of the last map )
+string currentMapFilepath ( as long as pathLength )
+short playerObject->x
+short playerObject->y
+char partySize
+for (i=0;i<partySize;i++){
+short party member i special id
+}
+for (i=0;i<partySize;i++){
+short party member i current level
+short party member i current exp
+short party member i current hp
+short party member i current mp
+}
+char number of flags
+for (i=1;i<passedNumberOfFlags;i++){
+	char flag value
+}
+for (j=0;j<partySize;j++){
+	for (i=0;i<20;i++){
+		if party[j] has spell
+			char spell i for party member j
+		else
+			break
+	}
+	char 0
+}
+*/
 void Save(){
 	int i=0;
 	int j=0;
@@ -1359,7 +1526,10 @@ void Save(){
 	fwrite(&(playerObject->x),2,1,fp);
 	fwrite(&(playerObject->y),2,1,fp);
 	fwrite(&(partySize),1,1,fp);
-	for (i=0;i<4;i++){
+	for (i=0;i<partySize;i++){
+		fwrite(&(party[i].partyMemberScriptID),2,1,fp);
+	}
+	for (i=0;i<partySize;i++){
 		fwrite(&(party[i].fighterStats.level),2,1,fp);
 		fwrite(&(party[i].fighterStats.exp),2,1,fp);
 		fwrite(&(party[i].hp),2,1,fp);
@@ -1388,7 +1558,7 @@ void Save(){
 	char zero=0;
 	// Save the skills of the party members
 	// Write 0 at the end
-	for (j=0;j<4;j++){
+	for (j=0;j<partySize;j++){
 		for (i=0;i<20;i++){
 			if (party[j].fighterStats.spells[i]!=0){
 				printf("Wrote %d for party member %d\n",party[j].fighterStats.spells[i],j);
@@ -1401,13 +1571,14 @@ void Save(){
 		fwrite(&(zero),1,1,fp);
 	}
 
-
-
 	fclose(fp);
 	ShowMessage("Saved.",0);
 }
 
 void Load(){
+	printf("Party size is load %dA\n",partySize);
+	DestroyEntireParty();
+	printf("Party size is load %dB\n",partySize);
 	int i=0;
 	int j=0;
 
@@ -1424,14 +1595,6 @@ void Load(){
 	////fread
 	//fwrite(playerObject->x,2,1,fp);
 	//fwrite(playerObject->y,2,1,fp);
-
-	
-
-	// Remove levels
-	for (j=2;j<=party[i].fighterStats.level;j++){
-		printf("Leveled down %d/%d\n",j-1,party[i].fighterStats.level);
-		LevelDown(&(party[i]));
-	}
 
 	short pathLength;
 	fread(&pathLength,2,1,fp);
@@ -1454,20 +1617,15 @@ void Load(){
 	char newPartySize;
 	fread(&(newPartySize),1,1,fp);
 
-	printf("party size is %d\n", newPartySize);
+	printf("loaded party size is %d\n", newPartySize);
 
-	char happy[17];
-	if (newPartySize>partySize){
-		for (i=partySize+1;i<=newPartySize;i++){
-			sprintf((char*)(&happy),"AddPartyMember%d",i);
-			lua_getglobal(L,happy);
-			lua_call(L,0,0);
-		}
+	short _lastReadSpecialId;
+	for (i=0;i<newPartySize;i++){
+		fread(&(_lastReadSpecialId),2,1,fp);
+		AddPartyMemberViaLua(_lastReadSpecialId); // partySize will be fixed here
 	}
 
-
-
-	for (i=0;i<4;i++){
+	for (i=0;i<partySize;i++){
 		fread(&(readLevels[i]),2,1,fp);
 		fread(&(party[i].fighterStats.exp),2,1,fp);
 		fread(&(readHp[i]),2,1,fp);
@@ -1495,7 +1653,7 @@ void Load(){
 	// I think I should've added it before the game was released.
 
 	char lastRead;
-	for (j=0;j<4;j++){
+	for (j=0;j<partySize;j++){
 		for (i=0;i<20;i++){
 			fread(&lastRead,1,1,fp);
 			if (lastRead!=0){
@@ -1511,7 +1669,7 @@ void Load(){
 
 	fclose(fp);
 
-	for (i=0;i<4;i++){
+	for (i=0;i<partySize;i++){
 		
 		for (j=1;j<readLevels[i];j++){
 			//printf("Leveled up %d\n",j);
@@ -1855,7 +2013,6 @@ void Overworld(){
 		if (IsDown(SCE_TOUCH)){
 			int _touchedTileX = floor( ((touchX-drawXOffset)/MAPXSCALE)/32)+cameraWholeOffsetX;
 			int _touchedTileY = floor( ((touchY-drawYOffset)/MAPYSCALE)/32)+cameraWholeOffsetY;
-			LegfinderFixList();
 			currentListValue=1;
 			free(pathfindingPath);
 			pathfindingPath = FindPath(&foundPathLength,playerObject->x/32,playerObject->y/32,_touchedTileX,_touchedTileY);
@@ -1984,7 +2141,7 @@ void Overworld(){
 					isWalking=0;
 			}else{
 				isWalking=0;
-				if (!((IsDown(SCE_CTRL_UP)) || (IsDown(SCE_CTRL_DOWN)) || (IsDown(SCE_CTRL_LEFT)) || (IsDown(SCE_CTRL_RIGHT)))){
+				if (!((IsDown(SCE_CTRL_UP)) || (IsDown(SCE_CTRL_DOWN)) || (IsDown(SCE_CTRL_LEFT)) || (IsDown(SCE_CTRL_RIGHT)) || IsDown(SCE_TOUCH))){
 					// Stop
 					playerObject->theAnimation.addOnChange=1;
 					playerObject->theAnimation.numberOfFrames=1;
@@ -2771,7 +2928,7 @@ char BattleLop(char canRun){
 			DrawRectangle(GetBattlerById(target)->x,GetBattlerById(target)->y-32,floor(64*BATTLEENTITYSCALE*(((double)GetBattlerById(target)->hp)/GetBattlerById(target)->fighterStats.maxHp)),32,190,0,0,255);
 
 			// Draw the target selector
-			DrawAnimationAsISay(&selectorAnimation,GetBattlerById(target)->x-22*DAMAGETEXTSIZE,GetBattlerById(target)->y,DAMAGETEXTSIZE); // Draw cursor // Draw selector
+			DrawAnimationAsISay(&selectorAnimation,GetBattlerById(target)->x-selectorAnimation.width*UISCALE ,GetBattlerAnimationById(target,ANIMATION_IDLE)->height*BATTLEENTITYSCALE/2+GetBattlerById(target)->y-selectorAnimation.height*UISCALE/2 ,UISCALE); // Draw cursor // Draw selector
 		}
 		EndDrawing();
 	
@@ -2868,11 +3025,7 @@ void TitleLoop(){
 		StartFrameStuff();
 
 		if (IsDown(aButton)){
-			if (LANGUAGE == LANG_ENGLISH){
-				lua_pushnumber(L,1);
-			}else if (LANGUAGE==LANG_SPANISH){
-				lua_pushnumber(L,2);
-			}
+			lua_pushnumber(L,LANGUAGE);
 			lua_setglobal(L,"Lang");
 
 			SetupHardcodedLanguage();
@@ -3013,6 +3166,8 @@ void Init(){
 	for (i=0;i<10;i++){
 		// -1 hp means that the slot isn't used.
 		possibleEnemies[i].maxHp=-1;
+		party[i].hp=-1;
+		party[i].fighterStats.maxHp=-1;
 	}
 
 	playerDown=LoadEmbeddedPNG("Stuff/PlayerDown.png");
@@ -3080,6 +3235,11 @@ void Init(){
 
 	// Init pathfinding list.
 	LegfinderInit();
+
+	#if ANDROIDTEST==1
+		fontSize=50;
+		LoadFont();
+	#endif
 }
 
 int main(int argc, char *argv[]){

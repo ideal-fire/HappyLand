@@ -17,7 +17,7 @@ end
 function Event11()
 	tempPort = LoadPNG(FixString("Stuff/Portraits/Note.png"));
 
-	ShowMessageWithPortrait("plz don't sue me",false,tempPort,0);
+	ShowMessageWithPortrait("What are you stil doing here? You have to go and fight BigFoot to get our potatoes back!",false,tempPort,0);
 
 	UnloadTexture(tempPort);
 	tempPort=nil;
