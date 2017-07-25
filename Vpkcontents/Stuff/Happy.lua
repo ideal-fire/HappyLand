@@ -57,6 +57,10 @@ end
 function AddPartyMember(_specialID)
 	-- Will return 1 if there is 1 party member in the party
 	mattslot = GetPartySize();
+	if (mattslot>=4) then
+		print("oh no, we're out of slots. R.I.P world.\n");
+		DebugMsg("oh no, we're out of party member slots. R.I.P world. We already have " .. mattslot .. "/4 slots.");
+	end
 	-- But, remember, slots are 0 based. So GetPartySize() is actually the next free slot
 	SetSpecialId(mattslot,_specialID);
 	-- We need to do this too. Increase party size to, for example, 2.
@@ -90,13 +94,13 @@ function AddPartyMember2()
 	RestorePartyMember(2, TYPE_ID);
 	tempidle=nil;
 	tempatk=nil;
-
 end
 
 --[[
 	EXAMPLE PARTY MEMBER CODE
 	function AddPartyMemberSPECIALIDHERE()
 		_theSpecialID = SPECIALIDHERE
+		AddPartyMember(SPECIALIDHERE);
 		tempidle = GetPartyMemberAnimation(_theSpecialID,ANIMATION_IDLE, TYPE_ID);
 		tempatk = GetPartyMemberAnimation(_theSpecialID,ANIMATION_ATTACK, TYPE_ID);
 		SetAnimation(tempidle,30,29,68,-1,false,0,0,LoadPNG(FixString("Stuff/Battle/MattIdle.png")));
