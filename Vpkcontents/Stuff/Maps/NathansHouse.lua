@@ -199,3 +199,5 @@ end
 tileset0=LoadPNG(FixString("Stuff/Tilesets/Inside1.png"));
 SetTileset(tileset0,0);
 tileset0=nil;
+
+PlayBGM(FixString("Stuff/Sound/Town-Matt.ogg"))

@@ -2,6 +2,9 @@ PLAT_VITA = 1;
 PLAT_WINDOWS = 2;
 PLAT_3DS = 3;
 
+SUB_NONE = 0;
+SUB_ANDROID = 1;
+
 TYPE_SLOT = 1;
 TYPE_ID = 2;
 
@@ -12,8 +15,22 @@ function SetFlag(index,val)
 	flags[index]=val;
 end
 
+-- Includes the dot
+-- Example return value:
+-- .png
+function GetFileExtention(_toFindExtention)
+	return string.sub(_toFindExtention,string.len(_toFindExtention)-3,-1);
+end
+
 function FixString(passedString)
-	if (Platform==PLAT_VITA) then
+	if (Subplatform == SUB_ANDROID) then
+		_tempExtention = GetFileExtention(passedString);
+		if (_tempExtention~=".png" and _tempExtention~=".ogg" and _tempExtention~=".wav") then
+			return ("/sdcard/Android/data/" .. ANDROIDPACKAGENAME .. "/" .. passedString);
+		else
+			return passedString;
+		end
+	elseif (Platform==PLAT_VITA) then
 		return ("app0:" .. passedString);
 	elseif (Platform==PLAT_WINDOWS) then
 		return ("./" .. passedString);
@@ -35,39 +52,62 @@ function RestoreEntireParty()
 	end
 end
 
+-- Only argument is the party member special id
+-- Please reference the party member using TYPE_ID
+function AddPartyMember(_specialID)
+	-- Will return 1 if there is 1 party member in the party
+	mattslot = GetPartySize();
+	-- But, remember, slots are 0 based. So GetPartySize() is actually the next free slot
+	SetSpecialId(mattslot,_specialID);
+	-- We need to do this too. Increase party size to, for example, 2.
+	SetPartySize(mattslot+1);
+end
+
 -- Nathan, id 1
 function AddPartyMember1()
-	mattslot = GetPartySize();
-	tempidle = GetPartyMemberAnimation(mattslot,ANIMATION_IDLE, TYPE_SLOT);
-	tempatk = GetPartyMemberAnimation(mattslot,ANIMATION_ATTACK, TYPE_SLOT);
+	AddPartyMember(1);
+
+	tempidle = GetPartyMemberAnimation(1,ANIMATION_IDLE, TYPE_ID);
+	tempatk = GetPartyMemberAnimation(1,ANIMATION_ATTACK, TYPE_ID);
 	SetAnimation(tempidle,35,16,32,-1,true,0,0,LoadPNG(FixString("Stuff/Battle/PlayerIdle.png")));
 	SetAnimation(tempatk,3,44,39,-1,true,0,0,LoadPNG(FixString("Stuff/Battle/PlayerAttack.png")));
-	SetStats(GetPartyMemberStats(mattslot, TYPE_SLOT),1,35,10,10,10,10,10,5,0,MallocString("Nathan"));
-	RestorePartyMember(mattslot, TYPE_SLOT);
+	SetStats(GetPartyMemberStats(1, TYPE_ID),1,35,10,10,10,10,10,5,0,MallocString("Nathan"));
+	RestorePartyMember(1, TYPE_ID);
+	SetStatsSpells(GetPartyMemberStats(1,TYPE_ID),3);
 	tempidle=nil;
 	tempatk=nil;
-	SetStatsSpells(GetPartyMemberStats(mattslot,TYPE_SLOT),3);
-	
-	SetPartySize(mattslot+1);
-	SetSpecialId(mattslot,1);
-	mattslot=nil;
 end
 
 -- Matt, id 2
 function AddPartyMember2()
-	mattslot = GetPartySize();
-	tempidle = GetPartyMemberAnimation(mattslot,ANIMATION_IDLE, TYPE_SLOT);
-	tempatk = GetPartyMemberAnimation(mattslot,ANIMATION_ATTACK, TYPE_SLOT);
+	AddPartyMember(2);
+
+	tempidle = GetPartyMemberAnimation(2,ANIMATION_IDLE, TYPE_ID);
+	tempatk = GetPartyMemberAnimation(2,ANIMATION_ATTACK, TYPE_ID);
 	SetAnimation(tempidle,30,29,68,-1,false,0,0,LoadPNG(FixString("Stuff/Battle/MattIdle.png")));
 	SetAnimation(tempatk,10,56,68,-1,true,0,0,LoadPNG(FixString("Stuff/Battle/MattAttack.png")));
-	SetStats(GetPartyMemberStats(mattslot, TYPE_SLOT),1,35,20,8,8,15,15,7,0,MallocString("Matt"));
-	RestorePartyMember(mattslot, TYPE_SLOT);
+	SetStats(GetPartyMemberStats(2, TYPE_ID),1,35,20,8,8,15,15,7,0,MallocString("Matt"));
+	RestorePartyMember(2, TYPE_ID);
 	tempidle=nil;
 	tempatk=nil;
-	SetPartySize(mattslot+1);
-	SetSpecialId(mattslot,2);
-	mattslot=nil;
+
 end
+
+--[[
+	EXAMPLE PARTY MEMBER CODE
+	function AddPartyMemberSPECIALIDHERE()
+		_theSpecialID = SPECIALIDHERE
+		tempidle = GetPartyMemberAnimation(_theSpecialID,ANIMATION_IDLE, TYPE_ID);
+		tempatk = GetPartyMemberAnimation(_theSpecialID,ANIMATION_ATTACK, TYPE_ID);
+		SetAnimation(tempidle,30,29,68,-1,false,0,0,LoadPNG(FixString("Stuff/Battle/MattIdle.png")));
+		SetAnimation(tempatk,10,56,68,-1,true,0,0,LoadPNG(FixString("Stuff/Battle/MattAttack.png")));
+		SetStats(GetPartyMemberStats(_theSpecialID, TYPE_ID),1,35,20,8,8,15,15,7,0,MallocString("Matt"));
+		RestorePartyMember(_theSpecialID, TYPE_ID);
+		tempidle=nil;
+		tempatk=nil;
+		_theSpecialID=nil;
+	end
+]]
 
 -- Called when game starts
 flags = {};

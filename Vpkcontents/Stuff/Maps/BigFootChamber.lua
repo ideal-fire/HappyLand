@@ -253,3 +253,6 @@ if (GetLevel(0)<6) then
 		ShowMessage("T'u piensas que debes matar m'as enemigos f'aciles.",false)
 	end
 end
+
+
+PlayBGM(FixString("Stuff/Sound/HolFix - Savior.ogg"))

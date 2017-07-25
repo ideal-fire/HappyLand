@@ -66,9 +66,9 @@ function Event04()
 		ShowMessageWithPortrait("You have to fight us first. That was the point of the portal.",false,BigFootPackPortrait,0);
 		ShowMessageWithPortrait("What?!",false,PlayerSurprised,0);
 		ShowMessageWithPortrait("I see, so you're scared.",false,BigFootPackPortrait,0);
-		ShowMessageWithPortrait("No, that's not it. This is not what I signed up for! I was told that all I had to do was fight Big Foot and grab some potatoes. No more, no less. I wasn't informed that there would be more Big Foots! I was scammed!",false,PlayerPortrait,0);
+		ShowMessageWithPortrait("No, that's not it. This is not what I signed up for! I was told that all I had to do was fight Big Foot and grab some potatoes. No more, no less. I wasn't informed that there would be more big foots! I was scammed!",false,PlayerPortrait,0);
 		ShowMessageWithPortrait("Oh....",false,BigFootPackPortrait,0);
-		questionAnswer = ShowMessageWithPortrait("Should I fight? (Yes - Level 9) (No - Level 11) (You're level " .. GetLevel(0) .. ".)",true,PlayerPortrait,0);
+		questionAnswer = ShowMessageWithPortrait("Should I fight?",true,PlayerPortrait,0);
 	elseif (Lang==2) then
 		ShowMessageWithPortrait("'?Qu'e est'as haciendo? No puedes tomar las papas.",false,BigFootPackPortrait,0);
 		ShowMessageWithPortrait("'?Por que no?",false,PlayerPortrait,0);
@@ -78,6 +78,19 @@ function Event04()
 		ShowMessageWithPortrait('No, ' .. "'el dijo " .. '"' .. "T'u tienes que matar Pie Grande y tocar las papas!" .. '"' .. ". 'el no dijo que yo tengo que matar m'as Pies Grandes. '!Esta es una estafa!",false,PlayerPortrait,0);
 		ShowMessageWithPortrait("Oh....",false,BigFootPackPortrait,0);
 		questionAnswer = ShowMessageWithPortrait("'?Debo pelear? (S'i - Lv 9) (No - Lv 11) (Eres Lv " .. GetLevel(0) .. ".)",true,PlayerPortrait,0);
+	end
+
+	-- Warn the player if they're too weak.
+	if (questionAnswer==false) then
+		if (GetLevel(1,TYPE_ID)<11) then
+			ShowMessageWithPortrait("I don't know. Maybe I should fight. I have the feeling I'll get destroyed if I don't choose to fight the big foots.",false,PlayerPortrait,0);
+			questionAnswer = ShowMessageWithPortrait("Should I really not fight them despite me being super weak? I think I should be at least " .. tostring(math.floor(11-GetLevel(1,TYPE_ID))) .. " levels stronger...",true,PlayerPortrait,0);
+			if (questionAnswer==false) then
+				questionAnswer=true;
+			else
+				questionAnswer=false
+			end
+		end
 	end
 
 	if (questionAnswer==true) then
@@ -266,3 +279,5 @@ end
 tileset0=LoadPNG(FixString("Stuff/Tilesets/BigFootLand.png"));
 SetTileset(tileset0,0);
 tileset0=nil;
+
+PlayBGM(FixString("Stuff/Sound/HolFix - The Search.ogg"))

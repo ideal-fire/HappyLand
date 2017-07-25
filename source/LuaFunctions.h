@@ -1,8 +1,33 @@
 #ifndef HAPPYLUAFUNCTIONS
 #define HAPPYLUAFUNCTIONS
 	
+	// Ez pz
 	#define LUAREGISTER(x,y) lua_pushcfunction(L,x);\
 	lua_setglobal(L,y);
+
+	// Returns the party member slot when given the lua state, the slot OR id argument, and TYPE_SLOT or TYPE_ID
+	int EasyIdOrSlot(int _slotArg, int _identifyArg){
+		if (_identifyArg == TYPE_SLOT){
+			return _slotArg;
+		}else if (_identifyArg==TYPE_ID){
+			return PartyMemberIDToSlot(_slotArg);
+		}else{
+			printf("Invalid identification arg\n");
+			return 1;
+		}
+	}
+
+	// Similar to EasyIdOrSlot, but you give it the LUA state and the ARGUMENT SLOT of the slot or ID argument and the identification argument
+	// This will return the number as a slot argument if there are less arguments than the identification argument slot
+	// Ex EasyLuaIdOrSlot(passedState, 1, 2);
+	// Returs the slot or id stored at argument spot 1 with identifier at argument slot 2
+	int EasyLuaIdOrSlot(lua_State* passedState,int _slotArg, int _identifyArg){
+		if (_identifyArg>=lua_gettop(passedState)){
+			return EasyIdOrSlot(lua_tonumber(passedState,_slotArg), lua_tonumber(passedState,_identifyArg));
+		}else{
+			return lua_tonumber(passedState,_slotArg);
+		}
+	}
 
 	// X, Y, layer, Tileset, Tile
 	int L_SetMapImageData(lua_State* passedState){
@@ -207,7 +232,6 @@
 		return 0;
 	}
 	
-	
 	// Set stats data
 	// ARGS -
 	// stats* passedStats
@@ -310,16 +334,7 @@
 	*/
 	int L_GetPartyMemberStats(lua_State* passedState){
 		if (lua_isnumber(passedState,1)){
-			int _tempSlot;
-			if (lua_tonumber(passedState,2)==TYPE_ID){
-				int _tempId = lua_tonumber(passedState,1);
-				_tempSlot = PartyMemberIDToSlot(_tempId);
-				if (_tempSlot==-1){
-					return 0;
-				}
-			}else{
-				_tempSlot = lua_tonumber(passedState,1);
-			}
+			int _tempSlot = EasyLuaIdOrSlot(passedState,1,2);
 			lua_pushlightuserdata(passedState,&(party[_tempSlot].fighterStats));
 			return 1;
 		}else{
@@ -360,17 +375,7 @@
 	// TYPE_SLOT or TYPE_ID
 	// whichone is 1 for idle and 2 for attack
 	int L_GetPartyMemberAnimation(lua_State* passedState){
-		int passedSlot;
-		if (lua_tonumber(passedState,3)==TYPE_ID){
-			int _tempId = lua_tonumber(passedState,1);
-			passedSlot = PartyMemberIDToSlot(_tempId);
-			if (passedSlot==-1){
-				return 0;
-			}
-		}else{
-			passedSlot = lua_tonumber(passedState,1);
-		}
-
+		int passedSlot = EasyLuaIdOrSlot(passedState,1,3);
 		int whichone = lua_tonumber(passedState,2);
 		if (whichone==ANIMATION_IDLE){
 			lua_pushlightuserdata(passedState,&(partyIdleAnimation[passedSlot]));
@@ -379,7 +384,6 @@
 		}else{
 			printf("Invalid animation\n");
 		}
-	
 		return 1;
 	}
 	
@@ -395,16 +399,7 @@
 	// (optional) TYPE_ID or TYPE_SLOT
 	// IF THE SECOND ARGUMENT IS NOT PASSED, IT IS ASSUMED THAT IT IS A SLOT
 	int L_RestorePartyMember(lua_State* passedState){\
-		int passedSlot;
-		if (lua_gettop(passedState)==2 && lua_tonumber(passedState,2)==TYPE_ID){
-			int _tempId = lua_tonumber(passedState,2);
-			passedSlot = PartyMemberIDToSlot(_tempId);
-			if (passedSlot==-1){
-				return 0;
-			}
-		}else{
-			passedSlot = lua_tonumber(passedState,1);
-		}
+		int passedSlot = EasyLuaIdOrSlot(passedState,1,2);
 		party[passedSlot].hp=party[passedSlot].fighterStats.maxHp;
 		party[passedSlot].mp=party[passedSlot].fighterStats.maxMp;
 		return 0;
@@ -531,25 +526,13 @@
 		}
 		return 0;
 	}
-	
-	int L_Level(lua_State* passedState){
-		int passedMemberId = lua_tonumber(passedState,1);
-		int numLevels = lua_tonumber(passedState,2);
-		int i=0;
-		for (i=0;i<numLevels;i++){
-			
-			party[passedMemberId].fighterStats.level++;
-			party[passedMemberId].fighterStats.attack+=3;
-			party[passedMemberId].fighterStats.magicAttack+=3;
-			party[passedMemberId].fighterStats.defence+=3;
-			party[passedMemberId].fighterStats.magicDefence+=3;
-			party[passedMemberId].fighterStats.speed+=3;
-			party[passedMemberId].fighterStats.maxHp+=3;
-			party[passedMemberId].fighterStats.maxMp+=3;
-			party[passedMemberId].hp=party[passedMemberId].fighterStats.maxHp;
-			party[passedMemberId].mp=party[passedMemberId].fighterStats.maxMp;
-					
-		}
+
+	// int slot or id
+	// int TYPE_SLOT or TYPE_ID
+	// bool remove exp
+	int L_LevelUp(lua_State* passedState){
+		int passedMemberId = EasyLuaIdOrSlot(passedState,1,2);
+		LevelUp(&party[passedMemberId],lua_toboolean(passedState,3));
 		return 0;
 	}
 	
@@ -611,16 +594,7 @@
 	// TYPE_SLOT or TYPE_ID
 	// if there is no second argument, TYPE_SLOT is assumed
 	int L_GetLevel(lua_State* passedState){
-		int passedMemberSlot;
-		if (lua_gettop(passedState)==2){
-			if (lua_tonumber(passedState,2)==TYPE_ID){
-				passedMemberSlot = PartyMemberIDToSlot(lua_tonumber(passedState,2));
-				if (passedMemberSlot==-1){
-					return 0;
-				}
-			}
-		}
-		passedMemberSlot = lua_tonumber(passedState,1);
+		int passedMemberSlot=EasyLuaIdOrSlot(passedState,1,2);
 		lua_pushnumber(passedState,party[passedMemberSlot].fighterStats.level);
 		return 1;
 	}
@@ -654,6 +628,22 @@
 				}
 			}
 		}
+		return 0;
+	}
+
+	int L_SDL_Log(lua_State* passedState){
+		printf("%s\n",lua_tostring(passedState,1));
+		return 0;
+	}
+
+	int L_PlayBGM(lua_State* passedState){
+		#if BGMENABLE==1
+			if (currentBGM!=NULL){
+				FreeMusic(currentBGM);
+			}
+			currentBGM = LoadMusic((char*)lua_tostring(passedState,1));
+			PlayMusic(currentBGM);
+		#endif
 		return 0;
 	}
 	
@@ -698,11 +688,13 @@
 		LUAREGISTER(L_FreeAnimationImage,"FreeAnimationImage");
 		LUAREGISTER(L_StartSpecificBattle,"StartSpecificBattle");
 		LUAREGISTER(L_SetStatsSpells,"SetStatsSpells");
-		LUAREGISTER(L_Level,"Level");
+		LUAREGISTER(L_LevelUp,"LevelUp");
 		LUAREGISTER(L_GetLevel,"GetLevel");
 		LUAREGISTER(L_EndGame,"ThanksForPlaying");
 		LUAREGISTER(L_ToBlack,"ToBlack");
 		LUAREGISTER(L_SetPartyMemberSpecialId,"SetSpecialId");
+		LUAREGISTER(L_SDL_Log,"SDL_Log");
+		LUAREGISTER(L_PlayBGM,"PlayBGM");
 	}
 
 #endif

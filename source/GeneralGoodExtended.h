@@ -8,6 +8,10 @@
 	int screenWidth = 960;
 
 	#include <stdio.h>
+	#include <math.h>
+	#include <string.h>
+	#include <stdlib.h>
+	#include <unistd.h>
 
 	int SCE_TOUCH = 19;
 	int SCE_ANDROID_BACK = 20;
@@ -126,7 +130,7 @@
 		float fontSize = 1.7;
 	#endif
 	#if TEXTRENDERER == TEXT_FONTCACHE
-		int fontSize = 32;
+		int fontSize = 20;
 	#endif
 	#if TEXTRENDERER == TEXT_VITA2D
 		int fontSize=32;
@@ -449,17 +453,50 @@
 	}
 
 	// Checks if the byte is the one for a newline
-	// If it's 0D, it seeks past 0A
+	// If it's 0D, it seeks past the 0A that it assumes is next and returns 1
+	// TODO - Add support for \r only new line. It's pre OSX new line
 	signed char IsNewLine(FILE* fp, unsigned char _temp){
-		if (_temp==13){
+		if (_temp==0x0D){
 			fseek(fp,1,SEEK_CUR);
 			return 1;
 		}
-		if (_temp=='\n' || _temp==10){
+		if (_temp=='\n' || _temp==0x0A){
 			// It seems like the other newline char is skipped for me?
 			return 1;
 		}
 		return 0;
+	}
+
+	void FixPath(char* filename,char _buffer[], char type){
+		#if SUBPLATFORM == SUB_ANDROID
+			if (type==TYPE_DATA || type==TYPE_ANDROID_DATA_OR_EMBEDDED){
+				strcpy((char*)_buffer,"/sdcard/Android/data/"ANDROIDPACKAGENAME"/");
+			}else if (type==TYPE_EMBEDDED){
+				strcpy((char*)_buffer,"");
+			}
+			strcat((char*)_buffer,filename);
+		#elif PLATFORM == PLAT_WINDOWS
+			if (type==TYPE_DATA){
+				strcpy((char*)_buffer,"./");
+			}else if (type==TYPE_EMBEDDED || type==TYPE_ANDROID_DATA_OR_EMBEDDED){
+				strcpy((char*)_buffer,"./");
+			}
+			strcat((char*)_buffer,filename);
+		#elif PLATFORM == PLAT_VITA
+			if (type==TYPE_DATA){
+				strcpy((char*)_buffer,"ux0:data/MYLEGNOOB/");
+			}else if (type==TYPE_EMBEDDED || type==TYPE_ANDROID_DATA_OR_EMBEDDED){
+				strcpy((char*)_buffer,"app0:");
+			}
+			strcat((char*)_buffer,filename);
+		#endif
+	}
+
+	void MakeDataDirectory(){
+		FixPath("",tempPathFixBuffer,TYPE_DATA);
+		if (DirectoryExists((const char*)tempPathFixBuffer)==0){
+			MakeDirectory((const char*)tempPathFixBuffer);
+		}
 	}
 
 #endif

@@ -239,3 +239,5 @@ dofile(FixString("Stuff/BattleLua/Slime.lua"));
 --
 
 SetEncounterRate(10);
+
+PlayBGM(FixString("Stuff/Sound/HolFix - Pixel Parade.ogg"))

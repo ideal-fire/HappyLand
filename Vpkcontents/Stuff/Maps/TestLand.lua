@@ -23,7 +23,17 @@ function Event11()
 	tempPort=nil;
 end
 
+-- Angry tree
+function Event07()
+	StartWildBattle();
+end
+
 
 tileset0=LoadPNG(FixString("Stuff/Tilesets/TestLand.png"));
 SetTileset(tileset0,0);
 tileset0=nil;
+
+--
+battleEnemyLoadId=0;
+dofile(FixString("Stuff/BattleLua/Slime.lua"));
+SetEncounterRate(999);

@@ -26,6 +26,9 @@
 	#define PRE_WINDOWS 1
 	#define PRE_VITA 2
 	#define PRE_3DS 3
+	#define PRE_ANDROID 4
+
+	#define ANDROIDPACKAGENAME "com.mylegguy.happy.land"
 
 	// Change this to change platform
 	#define PRESET PRE_WINDOWS
@@ -36,21 +39,24 @@
 		#define SOUNDPLAYER SND_SDL
 		#define RENDERER REND_SDL
 		#define TEXTRENDERER TEXT_FONTCACHE
-		#define SUBPLATFORM SUB_NONE
 	#elif PRESET == PRE_VITA
 		#define PLATFORM PLAT_VITA
 		#define SUBPLATFORM SUB_NONE
 		#define SOUNDPLAYER SND_NONE
 		#define RENDERER REND_VITA2D
 		#define TEXTRENDERER TEXT_DEBUG
-		#define SUBPLATFORM SUB_NONE
 	#elif PRESET == PRE_3DS
 		#define PLATFORM PLAT_3DS
 		#define SUBPLATFORM SUB_NONE
 		#define SOUNDPLAYER SND_NONE
 		#define RENDERER REND_SF2D
 		#define TEXTRENDERER TEXT_DEBUG
-		#define SUBPLATFORM SUB_NONE
+	#elif PRESET == PRE_ANDROID
+		#define PLATFORM PLAT_WINDOWS
+		#define SUBPLATFORM SUB_ANDROID
+		#define SOUNDPLAYER SND_SDL
+		#define RENDERER REND_SDL
+		#define TEXTRENDERER TEXT_FONTCACHE
 	#else
 		// Put custom stuff here
 		// #define PLATFORM a

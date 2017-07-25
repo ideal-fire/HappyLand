@@ -1,6 +1,11 @@
 #ifndef GENERALGOODSTUFF
 #define GENERALGOODSTUFF
 
+	#include <stdio.h>
+	#include <math.h>
+	#include <string.h>
+	#include <stdlib.h>
+	#include <unistd.h>
 	
 	typedef uint8_t 	u8;
 	typedef uint16_t 	u16;
@@ -88,6 +93,14 @@
 	== SOUND
 	=================================================
 	*/
+
+	void InitAudio(){
+		#if SOUNDPLAYER == SND_SDL
+			SDL_Init( SDL_INIT_AUDIO );
+			Mix_Init(MIX_INIT_OGG);
+			Mix_OpenAudio( 44100, MIX_DEFAULT_FORMAT, 2, 2048 );
+		#endif
+	}
 
 	int GetMusicVolume(){
 		#if SOUNDPLAYER == SND_SDL

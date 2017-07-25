@@ -73,7 +73,7 @@
 typedef struct pfn {
    unsigned short parentX;
    unsigned short parentY;
-   char status;
+   signed char status;
    unsigned short fScore;
    unsigned short fromStart;
 } pathfindingNode;
@@ -90,7 +90,7 @@ typedef struct coordinateshidden{
 } coordinates;
 
 //static pathfindingNode mapPathListHolder[20][20];
-static Good2dArray mapPathListHolder;
+static Good2dArray mapPathListHolder={NULL,0,0,0};
 
 // This is a value. If mapPathListHolder has currentListValue in a spot, then
 // the spot is open. If mapPathListHolder has negative currentListValue in a spot,
@@ -148,7 +148,8 @@ unsigned short CalculateFScore(short _x, short _y, short _g, short endX, short e
 
 void AddToClosedList(short _x, short _y){
 	//(*EasyGetListHolder(_x,_y)).status=(currentListValue*-1);
-	((*EasyGetListHolder(_x,_y))).status=(currentListValue*-1);
+	EasyGetListHolder(_x,_y)->status=(currentListValue*-1);
+	//printf("(%d,%d) is closed with parent (%d,%d)\n",_x,_y,EasyGetListHolder(_x,_y)->parentX,EasyGetListHolder(_x,_y)->parentY);
 	//printf("(%d,%d) to closed list\n", _x,_y);
 }
 void AddToOpenList(short _x, short _y, short _xParent, short _yParent, short _fromStart, short endX, short endY){
@@ -257,7 +258,7 @@ coordinates* FindPath(short* resultLength, short startX, short startY, short end
 		lastNodeReturned = GetWithLowestFScore();
 
 		if (lastNodeReturned.theNode.fScore==65535){
-			//printf("No path is possible.");
+			printf("No path is possible.");
 			*resultLength = -1;
 			// Should I really do this? I don't really care.
 			return (coordinates*)0;
@@ -276,7 +277,7 @@ coordinates* FindPath(short* resultLength, short startX, short startY, short end
 		//printf("FindSesstion end\n");
 	}
 	//printf("StartUDES!\n");
-	////printf("%d x %d y\n",mapPathListHolder[7][11].parentX,mapPathListHolder[7][11].parentY);
+	//printf("%d x %d y\n",mapPathListHolder[7][11].parentX,mapPathListHolder[7][11].parentY);
 
 	unsigned short pathLength=1;
 
@@ -288,17 +289,19 @@ coordinates* FindPath(short* resultLength, short startX, short startY, short end
 		if(_x==startX && _y==startY){
 			break;
 		}else{
-			tempX=(*EasyGetListHolder(_x,_y)).parentX;
-			tempY=(*EasyGetListHolder(_x,_y)).parentY;
+			tempX=EasyGetListHolder(_x,_y)->parentX;
+			tempY=EasyGetListHolder(_x,_y)->parentY;
+			//printf("(%d,%d) parent (%d,%d),%d\n",_x,_y,tempX,tempY,pathLength+1);
 			_x=tempX;
 			_y=tempY;
+			
 			pathLength=pathLength+1;
 		}
 	}
 
 	_x=endX;
 	_y=endY;
-
+	//printf("Bout to malloc\n");
 	//coordinates* returnArray = calloc(pathLength,sizeof(coordinates));
 	coordinates* returnArray = malloc(sizeof(coordinates)*pathLength);
 
