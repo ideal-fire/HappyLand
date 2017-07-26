@@ -424,8 +424,8 @@
 
 	void ControlsReset(){
 		#if PLATFORM != PLAT_VITA
-			memset(&pad,0,sizeof(pad));
-			memset(&lastPad,0,sizeof(lastPad));
+			memset(&pad,0xFF,sizeof(pad));
+			memset(&lastPad,0xFF,sizeof(lastPad));
 		#elif PLATFORM == PLAT_VITA
 			memset(&pad.buttons,0xFF,sizeof(pad.buttons));
 			memset(&lastPad.buttons,0xFF,sizeof(pad.buttons));

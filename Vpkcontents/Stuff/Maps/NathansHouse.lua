@@ -83,55 +83,10 @@ function Event06()
 end
 function Event07()
 	if (flags[2]==0 and flags[5]==0) then
-		signport = LoadPNG(FixString("Stuff/Portraits/Matt.png"));
-		nathanport = LoadPNG(FixString("Stuff/Portraits/Player.png"));
-		if (Lang==1) then
-			ShowMessageWithPortrait("Waaaaaait, I want to come with you!",false,signport,0);
-			questionanswer = ShowMessageWithPortrait("Can Matt come? (The game will be very hard without him.)",true,nathanport,0);
-		elseif (Lang==2) then
-			ShowMessageWithPortrait("'!Nooooo, yo quiero ir contigo!",false,signport,0);
-			questionanswer = ShowMessageWithPortrait("'?Matt puede ir conmigo? (Sin Matt, el juego va a ser muy dif'icil.)",true,nathanport,0);
-		end
-
-		if (questionanswer==true) then
-			-- Don't know if I need to or how to translate these
-			if (Lang==1) then
-				ShowMessageWithPortrait("o0o0oOOo, okay!!", false, signport, 0);
-				ShowMessage("Matt joined the party!",false);
-			elseif (Lang==2) then
-				ShowMessageWithPortrait(":)", false, signport, 0);
-			end
-
-			-- Party slots are 0 based, party size isn't.
-			AddPartyMember2();
-
-			flags[2]=1;
-			-- Hide Matt
-			SetMapOtherData(6,12,false,0);
-			SetMapImageData(6,12,1,0,0);
-		elseif (questionanswer==false) then
-			if (Lang==1) then
-				questionanswer = ShowMessageWithPortrait("k, fiiiine", false, signport, 0);
-			elseif (Lang==2) then
-				questionanswer = ShowMessageWithPortrait("'!NOo0oo0oOo!", false, signport, 0);
-			end
-			-- Matt has been denied. He won't ask again.
-			flags[5]=1;
-		end
-
-		UnloadTexture(signport);
-		UnloadTexture(nathanport);
-		questionanswer=nil;
-		signport=nil;
-		nathanport=nil;
-
-
-		SetPlayerPosition(6,8);
-		ChangeMap(FixString("Stuff/Maps/StartTown"));
-	else
-		SetPlayerPosition(6,8);
-		ChangeMap(FixString("Stuff/Maps/StartTown"));
+		Event08();
 	end
+	SetPlayerPosition(6,8);
+	ChangeMap(FixString("Stuff/Maps/StartTown"));
 end
 -- Matt
 function Event08()
@@ -163,6 +118,7 @@ function Event08()
 			elseif (Lang==2) then
 				questionanswer = ShowMessageWithPortrait("'!NOo0oo0oOo!", false, signport, 0);
 			end
+			flags[5]=1;
 		end
 		UnloadTexture(signport);
 		questionanswer=nil;
@@ -186,15 +142,11 @@ function Event09()
 	tempPort=nil;
 end
 
-
 if (flags[2]==1) then
 	-- Hide Matt
 	SetMapOtherData(6,12,false,0);
 	SetMapImageData(6,12,1,0,0);
 end
-
-
-
 
 tileset0=LoadPNG(FixString("Stuff/Tilesets/Inside1.png"));
 SetTileset(tileset0,0);
