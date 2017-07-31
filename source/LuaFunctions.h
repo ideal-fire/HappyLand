@@ -22,7 +22,7 @@
 	// Ex EasyLuaIdOrSlot(passedState, 1, 2);
 	// Returs the slot or id stored at argument spot 1 with identifier at argument slot 2
 	int EasyLuaIdOrSlot(lua_State* passedState,int _slotArg, int _identifyArg){
-		if (_identifyArg>=lua_gettop(passedState)){
+		if (lua_gettop(passedState)>=_identifyArg){
 			return EasyIdOrSlot(lua_tonumber(passedState,_slotArg), lua_tonumber(passedState,_identifyArg));
 		}else{
 			return lua_tonumber(passedState,_slotArg);
@@ -118,14 +118,6 @@
 		return 0;
 	}
 	
-	// Adds a spell
-	// ARGS - 
-	// name, attack, magicAttack, texturePath
-	int L_AddAttack(lua_State* passedState){
-	
-		return 0;
-	}
-	
 	// Returns a spell
 	// ARGS - 
 	// slot
@@ -135,7 +127,7 @@
 		lua_pushlightuserdata(passedState,&(GetSpellList(lua_tonumber(passedState,1))->theSpell));
 		return 1;
 	}
-	
+
 	// Adds to the end of the spell list.
 	// Returns
 	// spell
@@ -145,7 +137,15 @@
 		lua_pushlightuserdata(passedState, &(returnedSpell->theSpell));
 		return 1;
 	}
-	
+
+	// Adds a spell
+	// ARGS - 
+	// name, attack, magicAttack, texturePath
+	int L_AddAttack(lua_State* passedState){
+		L_AddSpell(passedState);
+		return 0;
+	}
+
 	// Sets spell stuff
 	// Args - 
 	// spelLUAREGISTER( name, atk, magicAttack, texturePath, mpCost, (optional) int spellSpecialProperty
@@ -244,7 +244,7 @@
 	// unsigned char magicDefence;
 	// unsigned char speed;
 	// short exp;
-	// char* name
+	// char* name (optional)
 	int L_SetStats(lua_State* passedState){
 		stats* passedMember = lua_touserdata(passedState,1);
 		char level = lua_tonumber(passedState,2);
@@ -398,7 +398,7 @@
 	// slot OR id
 	// (optional) TYPE_ID or TYPE_SLOT
 	// IF THE SECOND ARGUMENT IS NOT PASSED, IT IS ASSUMED THAT IT IS A SLOT
-	int L_RestorePartyMember(lua_State* passedState){\
+	int L_RestorePartyMember(lua_State* passedState){
 		int passedSlot = EasyLuaIdOrSlot(passedState,1,2);
 		party[passedSlot].hp=party[passedSlot].fighterStats.maxHp;
 		party[passedSlot].mp=party[passedSlot].fighterStats.maxMp;
@@ -646,6 +646,11 @@
 		#endif
 		return 0;
 	}
+
+	int L_Gooddofile(lua_State* passedState){
+		luaL_dofile(passedState,lua_tostring(passedState,1));
+		return 0;
+	}
 	
 	// Makes Lua useful.
 	void PushCFunctions(){
@@ -695,6 +700,7 @@
 		LUAREGISTER(L_SetPartyMemberSpecialId,"SetSpecialId");
 		LUAREGISTER(L_SDL_Log,"SDL_Log");
 		LUAREGISTER(L_PlayBGM,"PlayBGM");
+		LUAREGISTER(L_Gooddofile,"Gooddofile");
 	}
 
 #endif

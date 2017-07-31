@@ -1,5 +1,7 @@
 #ifndef NATHANHAPPYCONFIG
 #define NATHANHAPPYCONFIG
+
+	#define ANDROIDPACKAGENAME "com.mylegguy.happy.land"
 	
 	#define PLAT_VITA 1
 	#define PLAT_WINDOWS 2
@@ -28,7 +30,7 @@
 	#define PRE_3DS 3
 	#define PRE_ANDROID 4
 
-	#define ANDROIDPACKAGENAME "com.mylegguy.happy.land"
+	#define DOFIXCOORDS 1
 
 	// Change this to change platform
 	#define PRESET PRE_VITA

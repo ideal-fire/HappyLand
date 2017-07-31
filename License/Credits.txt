@@ -1,7 +1,9 @@
 Happy Land
 -----
 Programming and beautiful art - MyLegGuy
-================================================
+=================
+==== MUSIC ======
+=================
 
 ==Pixel Parade==
 https://www.youtube.com/watch?v=-xpqcOCNHjw
@@ -11,9 +13,16 @@ https://www.youtube.com/holfix
 https://www.youtube.com/watch?v=dBeqaFd_Tmo
 https://www.youtube.com/holfix
 
+(Right button to continue)
 ==The Search==
 https://www.youtube.com/watch?v=LoaQVgmYYUE
 https://www.youtube.com/holfix
 
 ==Town - Matt==
 PumPkiNot
+
+===============
+==== OTHER ====
+===============
+This uses SDL2, SDL_Mixer, SDL_TTF, Lua, and others.
+This software is based in part of the work of the FreeType Team.

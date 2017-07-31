@@ -3,13 +3,14 @@
 --O-O-O-O--O---O-OO---O---O---O-O-O-
 -O--OO--O--O---O-O----O---O--O--OO--
 O---O---O--OOOOO-O----OOOOO-O---O---
-
-TODO - Don't crash when trying to load without a save file
-
+TODO - Put a scale factor in the animation struct. That scale factor will be changed depending on size of sprite. Normally, it will be the same as ENTITYSCALE. But, in cases like BIg Foot in battle, it will be less than ENTITYSCALE. That is so I can have higher resolution images.
+TODO - Sometimes, enemy attack animations dissapear.
+	Jon said that the slime ones dissapeared after fighting angry tree
+	Snowmen ones dissapeared after angry tree also
+	Nobo Big Foot had animatioin
+TODO - Make it easier to select the spell you want.
+	Users get confused. They think they need to move the cursor somehow. 
 */
-
-//urgent note2self
-//remove all manual FixX and FixY commands. I'll integreate it directly into GeneralGood.h and GeneralGoodExtended.h
 
 #define BGMENABLE 1
 
@@ -34,7 +35,6 @@ int LANGUAGE=LANG_ENGLISH;
 #define TYPE_UNDEFINED 0
 #define TYPE_DATA 1
 #define TYPE_EMBEDDED 2
-#define TYPE_ANDROID_DATA_OR_EMBEDDED 3 // If on Android, the file will be in the data folder. For other platforms, it's embedded.
 
 #define QUEUE_X 1
 #define QUEUE_O 6
@@ -75,9 +75,9 @@ int LANGUAGE=LANG_ENGLISH;
 // Translatos for hardcoded strings
 #include "HardcodedLanguage.h"
 
-#define ANDROIDTEST 1
-
 #define MAXOBJECTS 15
+
+#define ANDROIDTEST 1
 
 #if PLATFORM==PLAT_VITA
 	#define SAFEDRAW 1
@@ -111,30 +111,20 @@ int LANGUAGE=LANG_ENGLISH;
 	#define SELECTIONBUTTONSCALE 2
 #elif PLATFORM==PLAT_WINDOWS
 	#define SAFEDRAW 0
-	#if ANDROIDTEST == 0
-		#define SCREENWIDTH 960
-		#define SCREENHEIGHT 544
-		#define MAPXSCALE 2
-		#define MAPYSCALE 2
-		#define BATTLEENTITYSCALE 3
-		#define SPELLSCALE 4
-		#define MINYBATTLE 106
-		#define MAXYBATTLE 416
-	
-		//#define CrossTexture SDL_Texture
-		#define TEXTBOXY 420
-		#define TEXTBOXFONTSIZE 2.5
-	
-		// Lines on one screen of textbox
-		#define LINESPERSCREEN 4
-	
-		#define DEFAULTPORTRAITSIZE 200
-	
-		#define DAMAGETEXTSIZE 8
-
-		#define YESNOSCALE 2
-		#define SELECTIONBUTTONSCALE 2
-	#endif
+	#define SCREENWIDTH 704
+	#define SCREENHEIGHT 512
+	#define MAPXSCALE 2
+	#define MAPYSCALE 2
+	#define BATTLEENTITYSCALE 2.5
+	#define SPELLSCALE 3
+	#define MINYBATTLE 106
+	#define MAXYBATTLE 300
+	#define TEXTBOXY 300
+	#define DEFAULTPORTRAITSIZE 200
+	#define UISCALE 3
+	#define DAMAGETEXTSIZE fontSize
+	#define YESNOSCALE 3
+	#define SELECTIONBUTTONSCALE 1.7
 #elif PLATFORM==PLAT_3DS
 	#define SAFEDRAW 1
 	#define SCREENWIDTH 400
@@ -169,25 +159,6 @@ int LANGUAGE=LANG_ENGLISH;
 	#define DEFAULTPORTRAITSIZE 100
 	#define YESNOSCALE 1
 	#define DAMAGETEXTSIZE 2
-#endif
-
-#if ANDROIDTEST
-	//#define SCREENWIDTH 1024 // 2.5
-	//#define SCREENHEIGHT 768 // 1.875
-	#define SCREENWIDTH 704
-	#define SCREENHEIGHT 512
-	#define MAPXSCALE 2
-	#define MAPYSCALE 2
-	#define BATTLEENTITYSCALE 2.5
-	#define SPELLSCALE 3
-	#define MINYBATTLE 106
-	#define MAXYBATTLE 300
-	#define TEXTBOXY 300
-	#define DEFAULTPORTRAITSIZE 200
-	#define UISCALE 3
-	#define DAMAGETEXTSIZE fontSize
-	#define YESNOSCALE 3
-	#define SELECTIONBUTTONSCALE 1.7
 #endif
 
 // CAHNGED BY SCALE
@@ -243,6 +214,7 @@ char tempPathFixBuffer[256];
 #include "GoodArray.h"
 #include "FpsCapper.h"
 #include "pathfinding.h"
+#include "SDLLua_GeneralGood.h"
 
 //TODO - Make this
 // main.h
@@ -443,14 +415,26 @@ int FixX(int x){
 int FixY(int y){
 	return y+drawYOffset;
 }
+int NegativeFixX(int x){
+	#if DOFIXCOORDS == 1
+		return x-drawXOffset;
+	#else
+		return x;
+	#endif
+}
+int NegativeFixY(int y){
+	#if DOFIXCOORDS == 1
+		return y-drawYOffset;
+	#else
+		return y;
+	#endif
+}
 // Fix x that needs to be applied on ALL drawing ... (that's done on the map?)
 int FixXMap(int x){
-	return FixX(x*MAPXSCALE);
-	return ((floor(x/32))*singleTileWidth+((x%32)*MAPXSCALE))+drawXOffset;
+	return x*MAPXSCALE;
 }
 int FixYMap(int x){
-	return FixY(x*MAPYSCALE);
-	return ((floor(x/32))*singleTileHeight+((x%32)*MAPYSCALE))+drawYOffset;
+	return x*MAPYSCALE;
 }
 // Make objects appear where they should when the screen scrolls.
 int FixXObjects(int x){
@@ -476,7 +460,7 @@ tileSpotData* GetMapSpotData(short x, short y){
 }
 
 void DrawGrayBackground(){
-	DrawRectangle(FixX(0),FixY(0),SCREENWIDTH,SCREENHEIGHT,GOODGRAY,255);
+	DrawRectangle(0,0,SCREENWIDTH,SCREENHEIGHT,GOODGRAY,255);
 }
 
 void DrawMap(){
@@ -604,19 +588,19 @@ void UpdateCameraValues(object* theThingie){
 
 void DrawUnusedAreaRect(){
 	// Top
-	DrawRectangle(0,0,SCREENWIDTH,drawYOffset,unusedAreaColor);
+	DrawRectangle(NegativeFixX(0),NegativeFixY(0),SCREENWIDTH,drawYOffset,unusedAreaColor);
 	// Left
-	DrawRectangle(0,0,drawXOffset,SCREENHEIGHT,unusedAreaColor);
+	DrawRectangle(NegativeFixX(0),NegativeFixY(0),drawXOffset,SCREENHEIGHT,unusedAreaColor);
 	#if SAFEDRAW == 1
 		// Right
-		DrawRectangle((cameraWidth)*(32*MAPXSCALE)+drawXOffset,0,drawXOffset,SCREENHEIGHT,unusedAreaColor);
+		DrawRectangle(NegativeFixX((cameraWidth)*(32*MAPXSCALE)+drawXOffset),NegativeFixY(0),drawXOffset,SCREENHEIGHT,unusedAreaColor);
 		// Bottom
-		DrawRectangle(0,SCREENHEIGHT-drawYOffset,SCREENWIDTH,drawYOffset,unusedAreaColor);
+		DrawRectangle(NegativeFixX(0),NegativeFixY(SCREENHEIGHT-drawYOffset),SCREENWIDTH,drawYOffset,unusedAreaColor);
 	#else
 		// Right
-		DrawRectangle((cameraWidth)*(32*MAPXSCALE)+drawXOffset,0,32*MAPXSCALE,SCREENHEIGHT,unusedAreaColor);
+		DrawRectangle(NegativeFixX((cameraWidth)*(32*MAPXSCALE)+drawXOffset),NegativeFixY(0),32*MAPXSCALE,SCREENHEIGHT,unusedAreaColor);
 		// Bottom
-		DrawRectangle(0,(cameraHeight)*(32*MAPYSCALE)+drawYOffset,SCREENWIDTH,32*MAPYSCALE,unusedAreaColor);
+		DrawRectangle(NegativeFixX(0),NegativeFixY((cameraHeight)*(32*MAPYSCALE)+drawYOffset),SCREENWIDTH,32*MAPYSCALE,unusedAreaColor);
 	#endif
 }
 
@@ -679,7 +663,7 @@ void RunHappyLua(){
 		lua_pushnumber(L,LANGUAGE);
 		lua_setglobal(L,"Lang");
 		// Need to load here as Lang variable has been set.
-		FixPath("Stuff/Happy.lua",tempPathFixBuffer,TYPE_ANDROID_DATA_OR_EMBEDDED);
+		FixPath("Stuff/Happy.lua",tempPathFixBuffer,TYPE_EMBEDDED);
 		luaL_dofile(L,tempPathFixBuffer);
 		_luaAlreadyInit=1;
 	}
@@ -930,7 +914,6 @@ char ShowMessageWithPortrait(char* _tempMsg, char isQuestion, CrossTexture* port
 					currentSelected--;
 				}
 			}else if (WasJustPressed(SCE_TOUCH)){
-				printf("Touched at %d,%d\n",FixTouchX(touchX),FixTouchY(touchY));
 				if (FixTouchX(touchX)>=(SCREENWIDTH-GetTextureWidth(yesButtonTexture)*YESNOSCALE) && FixTouchX(touchX)<SCREENWIDTH){
 					if (FixTouchY(touchY)>(TEXTBOXY-GetTextureHeight(yesButtonTexture)*YESNOSCALE*2)){
 						if (FixTouchY(touchY)<(TEXTBOXY-GetTextureHeight(yesButtonTexture)*YESNOSCALE)){ // Pressed yes
@@ -997,27 +980,27 @@ char ShowMessageWithPortrait(char* _tempMsg, char isQuestion, CrossTexture* port
 		StartDrawing();
 		
 		DrawMapThings();
-		DrawRectangle(FixX(0),FixY(TEXTBOXY),SCREENWIDTH,SCREENHEIGHT-TEXTBOXY,255,255,255,255);
+		DrawRectangle(0,TEXTBOXY,SCREENWIDTH,SCREENHEIGHT-TEXTBOXY,255,255,255,255);
 
 		// We need this variable so we know the offset in the message for the text that is for the next line
 		int _lastStrlen=0;
 		for (i=0;i<currentlyVisibleLines;i++){
-			DrawText(FixX(5),FixY(TEXTBOXY+TextHeight(fontSize)*i),&message[_lastStrlen+offsetStrlen],fontSize);
+			DrawText(5,TEXTBOXY+TextHeight(fontSize)*i,&message[_lastStrlen+offsetStrlen],fontSize);
 			// This offset will have the first letter for the next line
 			_lastStrlen = strlen(&message[_lastStrlen+offsetStrlen])+1+_lastStrlen;
 		}
 
 		// Draw questions
 		if (isQuestion==1){
-			DrawTextureScale(yesButtonTexture,FixX(SCREENWIDTH-GetTextureWidth(yesButtonTexture)*YESNOSCALE),FixY(TEXTBOXY-GetTextureHeight(yesButtonTexture)*YESNOSCALE-GetTextureHeight(yesButtonTexture)*YESNOSCALE),YESNOSCALE,YESNOSCALE);
-			DrawTextureScale(noButtonTexture,FixX(SCREENWIDTH-GetTextureWidth(noButtonTexture)*YESNOSCALE),FixY(TEXTBOXY-GetTextureHeight(noButtonTexture)*YESNOSCALE),YESNOSCALE,YESNOSCALE);
+			DrawTextureScale(yesButtonTexture,SCREENWIDTH-GetTextureWidth(yesButtonTexture)*YESNOSCALE,TEXTBOXY-GetTextureHeight(yesButtonTexture)*YESNOSCALE-GetTextureHeight(yesButtonTexture)*YESNOSCALE,YESNOSCALE,YESNOSCALE);
+			DrawTextureScale(noButtonTexture,SCREENWIDTH-GetTextureWidth(noButtonTexture)*YESNOSCALE,TEXTBOXY-GetTextureHeight(noButtonTexture)*YESNOSCALE,YESNOSCALE,YESNOSCALE);
 			#if PLATFORM != PLAT_WINDOWS
-				DrawAnimationAsISay(&selectorAnimation,FixX(SCREENWIDTH-GetTextureWidth(yesButtonTexture)*YESNOSCALE-YESNOSCALE*22-5),FixY(TEXTBOXY-(currentSelected)*(GetTextureHeight(yesButtonTexture)*YESNOSCALE)-((GetTextureHeight(yesButtonTexture)*YESNOSCALE)/2)),YESNOSCALE);
+				DrawAnimationAsISay(&selectorAnimation,SCREENWIDTH-GetTextureWidth(yesButtonTexture)*YESNOSCALE-YESNOSCALE*22-5,TEXTBOXY-(currentSelected)*(GetTextureHeight(yesButtonTexture)*YESNOSCALE)-((GetTextureHeight(yesButtonTexture)*YESNOSCALE)/2),YESNOSCALE);
 			#endif
 		}
 		
 		if (portrait!=NULL){
-			DrawTextureScale(portrait,FixX(0),FixY(TEXTBOXY-GetTextureHeight(portrait)*portScale),portScale,portScale);
+			DrawTextureScale(portrait,0,TEXTBOXY-GetTextureHeight(portrait)*portScale,portScale,portScale);
 		}
 
 		EndDrawing();
@@ -1029,14 +1012,14 @@ char ShowMessageWithPortrait(char* _tempMsg, char isQuestion, CrossTexture* port
 }
 
 void LoadMap(char* path){
-	FILE* openedFile;
-	openedFile = fopen(path,"r");
+	CROSSFILE* openedFile;
+	openedFile = Crossfopen(path,"r");
 	unsigned short _width;
 	unsigned short _height;
 
 	// Read width and height
-	fread(&_width,2,1,openedFile);
-	fread(&_height,2,1,openedFile);
+	Crossfread(&_width,2,1,openedFile);
+	Crossfread(&_height,2,1,openedFile);
 	// Set array to the size it needs
 	SetGoodArray(&(tileOtherData),_width,_height,sizeof(tileOtherData));
 	int x,y,i;
@@ -1044,12 +1027,12 @@ void LoadMap(char* path){
 	for (y=0;y<_height;y++){
 		for (x=0;x<_width;x++){
 			// Read isSolid and then event
-			fread(&(GetMapSpotData(x,y)->isSolid),1,1,openedFile);
-			fread(&(GetMapSpotData(x,y)->event),1,1,openedFile);
+			Crossfread(&(GetMapSpotData(x,y)->isSolid),1,1,openedFile);
+			Crossfread(&(GetMapSpotData(x,y)->event),1,1,openedFile);
 		}
 	}
 	// Read number of loayers
-	fread(&numberOfLayers,1,1,openedFile);
+	Crossfread(&numberOfLayers,1,1,openedFile);
 	for (i=0;i<numberOfLayers;i++){
 		SetGoodArray(&(layers[i]),tileOtherData.width,tileOtherData.height,sizeof(tileImageData));
 	}
@@ -1060,12 +1043,12 @@ void LoadMap(char* path){
 		for (y=0;y<_height;y++){
 			for (x=0;x<_width;x++){
 				// Tile then tileset
-				fread(&(GetMapImageData(x,y,i)->tile),1,1,openedFile);
-				fread(&(GetMapImageData(x,y,i)->tileset),1,1,openedFile);
+				Crossfread(&(GetMapImageData(x,y,i)->tile),1,1,openedFile);
+				Crossfread(&(GetMapImageData(x,y,i)->tileset),1,1,openedFile);
 			}
 		}
 	}
-	fclose (openedFile);
+	Crossfclose (openedFile);
 
 	char withDotLua[strlen(path)+strlen(".lua")+1];
 	sprintf(withDotLua,"%s%s",path,".lua");
@@ -1249,7 +1232,6 @@ void InitWildBattle(){
 void BattleInit(){
 	//numberOfEnemies=1;
 	int i=0;
-	
 	// Generates random positions for characters.
 	for (i=0;i<numberOfEnemies;i++){
 		enemies[i].y=RandBetween(MINYBATTLE, MAXYBATTLE-enemyIdleAnimation[i]->height*BATTLEENTITYSCALE);
@@ -1327,7 +1309,7 @@ void DrawDamageText(int battlerId, int damage, char _passedString[]){
 // Returns spell id selected
 signed char SelectSpell(partyMember member){
 	unsigned char selected=0;
-	char tempMessage[30];
+	char tempMessage[255];
 	short numberOfSkillsSelect=0;
 
 	int i=0;
@@ -1348,10 +1330,9 @@ signed char SelectSpell(partyMember member){
 
 		char _actionQueue;
 		if (WasJustPressed(SCE_TOUCH)){
-			//DrawText(88,SCREENHEIGHT-currentTextHeight,"Back",6);
-			DrawText(88,(i+1)*currentTextHeight,tempMessage,6);
+			//DrawText(88,(i+1)*currentTextHeight+currentTextHeight/2,tempMessage,6);
 			int _oldSelected=selected;
-			selected=FixTouchY(touchY)/currentTextHeight-1;
+			selected=FixTouchY(touchY)/(currentTextHeight+currentTextHeight/2);
 			if (selected>200){
 				selected=0;
 			}else if (selected>=numberOfSkillsSelect){
@@ -1398,8 +1379,6 @@ signed char SelectSpell(partyMember member){
 		StartDrawing();
 		DrawGrayBackground();
 
-
-
 		#if PLATFORM != PLAT_3DS
 
 			DrawText( CenterText(N_MAGICLIST,6),2,N_MAGICLIST,6);
@@ -1408,12 +1387,18 @@ signed char SelectSpell(partyMember member){
 				if (member.fighterStats.spells[i]!=0){
 					spellLinkedList* tempList = GetSpellList(member.fighterStats.spells[i]-1);
 					sprintf((char*)tempMessage,"[%s:%d]",tempList->theSpell.name,tempList->theSpell.mpCost);
-					DrawText(88,(i+1)*currentTextHeight,tempMessage,6);
+					if (member.mp>=tempList->theSpell.mpCost){
+						DrawRectangle(88,(i+1)*currentTextHeight+(currentTextHeight/4)*i,TextWidth(fontSize,tempMessage)<SCREENWIDTH-100 ? (SCREENWIDTH-100) : TextWidth(fontSize,tempMessage),currentTextHeight+(currentTextHeight/4),0,162,0,255);
+					}else{
+						DrawRectangle(88,(i+1)*currentTextHeight+(currentTextHeight/4)*i,SCREENWIDTH-88,currentTextHeight+(currentTextHeight/4),162,0,0,255);
+					}
+					
+					DrawText(88,(i+1)*currentTextHeight+(currentTextHeight/4)*i,tempMessage,6);
 				}else{
 					break;
 				}
 			}
-			DrawAnimationAsISay(&selectorAnimation,0,selected*48+selected*2+64-10,4);
+			DrawAnimationAsISay(&selectorAnimation,0,(selected+1)*currentTextHeight+(currentTextHeight/4)*selected,4);
 			#if PLATFORM == PLAT_WINDOWS
 				DrawText(88,SCREENHEIGHT-currentTextHeight,"Back",6);
 			#endif
@@ -1599,6 +1584,14 @@ void AddPartyMemberViaLua(int specialId){
 	}
 }
 
+char DoesSavefileExist(){
+	FixPath("savefile",tempPathFixBuffer,TYPE_DATA);
+	if (CheckFileExist(tempPathFixBuffer)==1){
+		return 1;
+	}
+	return 0;
+}
+
 /*
 char savefile version ( this byte is only in savefile version 1+ )
 short pathLength ( the length of the string of the last map )
@@ -1698,6 +1691,9 @@ void Save(){
 }
 
 void Load(){
+	if (DoesSavefileExist()==0){
+		BasicMessage("No savefile found AND YOU STILL TRIED TO LOAD! The game will now crash.");
+	}
 	DestroyEntireParty();
 	int i=0;
 	int j=0;
@@ -2137,6 +2133,12 @@ void StatusLoop(){
 			FpsCapStart();
 
 			ControlsStart();
+
+			if (WasJustPressed(SCE_ANDROID_BACK)){
+				place=PLACE_OVERWORLD;
+				break;
+			}
+
 			if (WasJustPressed(SCE_TOUCH)){
 				if (FixTouchX(touchX)>CenterSomething(GetTextureWidth(yesButton)*_buttonScale) && FixTouchX(touchX)<CenterSomething(GetTextureWidth(yesButton)*_buttonScale)+GetTextureWidth(yesButton)*_buttonScale){
 					int i;
@@ -2173,7 +2175,11 @@ void StatusLoop(){
 						}
 					}else if (submenu==SUBMENU_LOADCONFIRM){
 						if (i==1){
-							Load();
+							if (DoesSavefileExist()==0){
+								BasicMessage("No savefile found.");
+							}else{
+								Load();
+							}
 							place = PLACE_OVERWORLD;
 							PlayMenuSoundEffect();
 							break;
@@ -2189,18 +2195,18 @@ void StatusLoop(){
 			StartDrawing();
 			DrawGrayBackground();
 			if (submenu==SUBMENU_MAIN){
-				DrawTextureScale(resumeButton,FixX(CenterSomething(GetTextureWidth(resumeButton)*_buttonScale)),FixY(GetTextureHeight(resumeButton)*_buttonScale*0),_buttonScale,_buttonScale);
-				DrawTextureScale(saveButton,FixX(CenterSomething(GetTextureWidth(resumeButton)*_buttonScale)),FixY(GetTextureHeight(resumeButton)*_buttonScale*1),_buttonScale,_buttonScale);
-				DrawTextureScale(loadButton,FixX(CenterSomething(GetTextureWidth(resumeButton)*_buttonScale)),FixY(GetTextureHeight(resumeButton)*_buttonScale*2),_buttonScale,_buttonScale);
-				DrawTextureScale(backButton,FixX(CenterSomething(GetTextureWidth(resumeButton)*_buttonScale)),FixY(GetTextureHeight(resumeButton)*_buttonScale*3),_buttonScale,_buttonScale);
+				DrawTextureScale(resumeButton,CenterSomething(GetTextureWidth(resumeButton)*_buttonScale),GetTextureHeight(resumeButton)*_buttonScale*0,_buttonScale,_buttonScale);
+				DrawTextureScale(saveButton,CenterSomething(GetTextureWidth(resumeButton)*_buttonScale),GetTextureHeight(resumeButton)*_buttonScale*1,_buttonScale,_buttonScale);
+				DrawTextureScale(loadButton,CenterSomething(GetTextureWidth(resumeButton)*_buttonScale),GetTextureHeight(resumeButton)*_buttonScale*2,_buttonScale,_buttonScale);
+				DrawTextureScale(backButton,CenterSomething(GetTextureWidth(resumeButton)*_buttonScale),GetTextureHeight(resumeButton)*_buttonScale*3,_buttonScale,_buttonScale);
 			}else if (submenu==SUBMENU_SAVECONFIRM){
 				DrawText(CenterSomething(TextWidth(fontSize,"Really save?")),currentTextHeight/2,"Really save?",fontSize);
-				DrawTextureScale(yesButton,FixX(CenterSomething(GetTextureWidth(yesButton)*_buttonScale)),FixY(GetTextureHeight(resumeButton)*_buttonScale*1),_buttonScale,_buttonScale);
-				DrawTextureScale(noButton,FixX(CenterSomething(GetTextureWidth(noButton)*_buttonScale)),FixY(GetTextureHeight(resumeButton)*_buttonScale*2),_buttonScale,_buttonScale);
+				DrawTextureScale(yesButton,CenterSomething(GetTextureWidth(yesButton)*_buttonScale),GetTextureHeight(resumeButton)*_buttonScale*1,_buttonScale,_buttonScale);
+				DrawTextureScale(noButton,CenterSomething(GetTextureWidth(noButton)*_buttonScale),GetTextureHeight(resumeButton)*_buttonScale*2,_buttonScale,_buttonScale);
 			}else if (submenu==SUBMENU_LOADCONFIRM){
 				DrawText(CenterSomething(TextWidth(fontSize,"Really load?")),currentTextHeight/2,"Really load?",fontSize);
-				DrawTextureScale(yesButton,FixX(CenterSomething(GetTextureWidth(yesButton)*_buttonScale)),FixY(GetTextureHeight(resumeButton)*_buttonScale*1),_buttonScale,_buttonScale);
-				DrawTextureScale(noButton,FixX(CenterSomething(GetTextureWidth(noButton)*_buttonScale)),FixY(GetTextureHeight(resumeButton)*_buttonScale*2),_buttonScale,_buttonScale);
+				DrawTextureScale(yesButton,CenterSomething(GetTextureWidth(yesButton)*_buttonScale),GetTextureHeight(resumeButton)*_buttonScale*1,_buttonScale,_buttonScale);
+				DrawTextureScale(noButton,CenterSomething(GetTextureWidth(noButton)*_buttonScale),GetTextureHeight(resumeButton)*_buttonScale*2,_buttonScale,_buttonScale);
 			}
 			EndDrawing();
 
@@ -2212,14 +2218,171 @@ void StatusLoop(){
 		FreeTexture(loadButton);
 		FreeTexture(yesButton);
 		FreeTexture(noButton);
-		ControlsEnd();
+		ControlsReset();
 	}
 #endif
+
+void CreditsView(){
+	// Squint to view.
+	#if TEXTRENDERER == TEXT_FONTCACHE
+		fontSize = 20;
+		LoadFont();
+	#endif
+
+
+	const char* _creditsFileList[] = {
+	"Credits.txt",
+	"Liberation-Sans-License.txt",
+	"libvita2d-License.txt",
+	"LICENSE.FLAC.txt",
+	"LICENSE.freetype.txt",
+	//"LICENSE.modplug.txt",
+	"LICENSE.ogg-vorbis.txt",
+	"LICENSE.smpeg.txt",
+	//"LICENSE.zlib.txt",
+	"Lua-License.txt",
+	"SDL_FontCache-License.txt" };
+	//"SDL-License.txt",
+	//"SDL-Mixer-License.txt",
+	//"SDL-ttf-License.txt" };
+	int selected=0;
+	const int _selectedMax=sizeof(_creditsFileList)/sizeof(char*);
+	CrossTexture* leftButton = LoadPNG("Stuff/Battle/LeftIcon.png");
+	CrossTexture* rightButton = LoadPNG("Stuff/Battle/RightIcon.png");
+	CrossTexture* selectButton = LoadPNG("Stuff/Battle/SelectIcon.png");
+	CrossTexture* backButton = LoadPNG("Stuff/Battle/BackIcon.png");
+
+	int _creditsLinePerScreen = floor(((SCREENHEIGHT-32-GetTextureHeight(selectButton)*2))/(double)currentTextHeight);
+	char _currentLoadedCredits[_creditsLinePerScreen][200];
+
+	while (1){
+		FpsCapStart();
+		ControlsStart();
+		if (WasJustPressed(SCE_TOUCH)){
+			if (FixTouchX(touchX)<GetTextureWidth(leftButton)*2 && FixTouchY(touchY)>SCREENHEIGHT-GetTextureHeight(leftButton)*2){
+				selected--;
+				if (selected<0){
+					selected=_selectedMax-1;
+				}
+			}else if (FixTouchX(touchX)>SCREENWIDTH-GetTextureWidth(leftButton)*2 && FixTouchY(touchY)>SCREENHEIGHT-GetTextureHeight(leftButton)*2){
+				selected++;
+				if (selected>=_selectedMax){
+					selected=0;
+				}
+			}else if (FixTouchX(touchX)>((SCREENWIDTH/2)-GetTextureWidth(selectButton)*2/2) && FixTouchX(touchX)<((SCREENWIDTH/2)-GetTextureWidth(selectButton)*2/2)+GetTextureWidth(selectButton)*2 && FixTouchY(touchY)>SCREENHEIGHT-GetTextureHeight(selectButton)*2){
+				break;
+			}
+		}
+		ControlsEnd();
+
+		StartDrawing();
+		DrawGrayBackground();
+		DrawTextureScale(leftButton,0,SCREENHEIGHT-GetTextureHeight(leftButton)*2,2,2);
+		DrawTextureScale(rightButton,SCREENWIDTH-GetTextureWidth(leftButton)*2,SCREENHEIGHT-GetTextureHeight(leftButton)*2,2,2);
+		DrawTextureScale(selectButton,(SCREENWIDTH/2)-GetTextureWidth(selectButton)*2/2,SCREENHEIGHT-GetTextureHeight(selectButton)*2,2,2);
+		
+		//DrawText(int x, int y, const char* text, float size)
+		DrawText(32,32,"Use the buttons to select a credits or license file.",fontSize);
+		DrawText(32,32+currentTextHeight*2,_creditsFileList[selected],fontSize);
+		EndDrawing();
+
+		FpsCapWait();
+	}
+	printf("Player selected License/%s\n",_creditsFileList[selected]);
+	CROSSFILE* currentCreditsFile;
+	char _tempCreditsFilepathConcat[strlen(_creditsFileList[selected])+strlen("License/")+1];
+	strcpy(_tempCreditsFilepathConcat,"License/");
+	strcat(_tempCreditsFilepathConcat,_creditsFileList[selected]);
+	FixPath(_tempCreditsFilepathConcat,tempPathFixBuffer, TYPE_EMBEDDED);
+	currentCreditsFile = Crossfopen(_tempCreditsFilepathConcat,"r");
+	if (currentCreditsFile==NULL){
+		BasicMessage("Failed to load file.");
+	}
+	char _quit=0;
+	while (_quit==0){
+		int i, j;
+		for (i=0;i<_creditsLinePerScreen;i++){
+			for (j=0;j<199;j++){
+				_currentLoadedCredits[i][j]=0;
+			}
+		}
+		for (i=0;i<_creditsLinePerScreen;i++){
+			for (j=0;j<199;j++){
+				if (Crossfread((&(_currentLoadedCredits[i][j])),1,1,currentCreditsFile)==0){
+					if (j==0 && i==0){
+						_quit=1;
+					}
+					break;
+				}
+				if (IsNewLine(currentCreditsFile,_currentLoadedCredits[i][j])==1){
+					break;
+				}
+				_currentLoadedCredits[i][j+1]='\0';
+				//printf("%s;%d\n",_currentLoadedCredits[i],TextWidth(fontSize,_currentLoadedCredits[i]));
+				if (TextWidth(fontSize,_currentLoadedCredits[i])>=SCREENWIDTH-32){
+					Crossseek(currentCreditsFile,-1,CROSSFILE_CUR);
+					break;
+				}
+			}
+			_currentLoadedCredits[i][j]='\0';
+			//printf("%s\n",_currentLoadedCredits[i],i,_creditsLinePerScreen);
+		}
+		ControlsResetEmpty();
+		if (_quit==1){
+			break;
+		}
+		while (1){
+			FpsCapStart();
+			ControlsStart();
+			if (WasJustPressed(SCE_TOUCH)){
+				if (FixTouchX(touchX)<GetTextureWidth(leftButton)*2 && FixTouchY(touchY)>SCREENHEIGHT-GetTextureHeight(leftButton)*2){
+					_quit=1;
+					break;
+				}else if (FixTouchX(touchX)>SCREENWIDTH-GetTextureWidth(leftButton)*2 && FixTouchY(touchY)>SCREENHEIGHT-GetTextureHeight(leftButton)*2){
+					break;
+				}
+			}
+			ControlsEnd();
+			StartDrawing();
+			DrawGrayBackground();
+			DrawTextureScale(backButton,0,SCREENHEIGHT-GetTextureHeight(leftButton)*2,2,2);
+			DrawTextureScale(rightButton,SCREENWIDTH-GetTextureWidth(leftButton)*2,SCREENHEIGHT-GetTextureHeight(leftButton)*2,2,2);
+			
+			//DrawText(int x, int y, const char* text, float size)
+			for (i=0;i<_creditsLinePerScreen;i++){
+				DrawText(32,32+i*currentTextHeight,_currentLoadedCredits[i],fontSize);
+			}
+			
+			//DrawText(32,32+currentTextHeight*2,_creditsFileList[selected],fontSize);
+			
+			EndDrawing();
+			FpsCapWait();
+		}
+	}
+	Crossfclose(currentCreditsFile);
+	FreeTexture(leftButton);
+	FreeTexture(rightButton);
+	FreeTexture(selectButton);
+	FreeTexture(backButton);
+	#if TEXTRENDERER == TEXT_FONTCACHE
+		fontSize = 50;
+		LoadFont();
+	#endif
+}
 
 void Overworld(){
 	FpsCapStart();
 	ControlsStart();
 	// Main logic
+	if (WasJustPressed(SCE_TOUCH)){
+		if (FixTouchX(touchX)<32*MAPXSCALE && FixTouchY(touchY)<32*MAPYSCALE){
+			PlaySoftMenuSoundEffect();
+			place=1;
+			foundPathLength=-1;
+			ControlsEnd();
+			ControlsReset();
+		}
+	}
 
 	// Controls only if not walking
 	if (isWalking==0){
@@ -2366,7 +2529,7 @@ void Overworld(){
 					isWalking=0;
 			}else{
 				isWalking=0;
-				if (!(IsDown(SCE_CTRL_UP) || (IsDown(SCE_CTRL_DOWN)) || (IsDown(SCE_CTRL_LEFT)) || (IsDown(SCE_CTRL_RIGHT)) || IsDown(SCE_TOUCH) || foundPathLength!=-1)){
+				if (!(IsDown(SCE_CTRL_UP) || (IsDown(SCE_CTRL_DOWN)) || (IsDown(SCE_CTRL_LEFT)) || (IsDown(SCE_CTRL_RIGHT)) || foundPathLength!=-1)){
 					// Stop
 					playerObject->theAnimation.addOnChange=1;
 					playerObject->theAnimation.numberOfFrames=1;
@@ -2390,13 +2553,6 @@ void Overworld(){
 			}
 		}
 	}
-	if (WasJustPressed(SCE_TOUCH)){
-		if (FixTouchX(touchX)<32*MAPXSCALE && FixTouchY(touchY)<32*MAPYSCALE){
-			PlaySoftMenuSoundEffect();
-			place=1;
-			foundPathLength=-1;
-		}
-	}
 	if (WasJustPressed(SCE_CTRL_START)){
 		place=1;
 	}
@@ -2407,7 +2563,7 @@ void Overworld(){
 	StartDrawing();
 	DrawMapThings();
 	#if PLATFORM == PLAT_WINDOWS
-		DrawTextureScale(pauseButtonTexture,FixX(0),FixY(0),MAPXSCALE,MAPYSCALE);
+		DrawTextureScale(pauseButtonTexture,0,0,MAPXSCALE,MAPYSCALE);
 	#endif
 	EndDrawing();
 	ControlsEnd();
@@ -2567,7 +2723,6 @@ char BattleLop(char canRun){
 		}
 
 		char whileVar=1;
-
 		while(whileVar){
 			StartFrameStuff();
 			StartDrawing();
@@ -2626,6 +2781,7 @@ char BattleLop(char canRun){
 	}
 
 	// This is the main battle loop
+	ControlsResetEmpty();
 	while (1){
 		FpsCapStart();
 		ControlsStart();
@@ -2693,13 +2849,13 @@ char BattleLop(char canRun){
 							DrawGrayBackground();
 							DrawTextureScale(winTexture,CenterSomething(GetTextureWidth(winTexture)*2),3,2,2);
 
-							DrawText(0,206+64,"EXP:",8);
-							DrawText(256,206+64,temp2,8);
+							DrawText(0,10+GetTextureHeight(winTexture)*2,"EXP:",8);
+							DrawText(TextWidth(fontSize,"EXP: "),10+GetTextureHeight(winTexture)*2,temp2,8);
 					
 							for (i=0;i<partySize;i++){
 								if (didLevelUp[i]==1){
-									DrawText(0,300+i*32+i*5+64,party[i].fighterStats.name,4);
-									DrawText(strlen(party[i].fighterStats.name)*32+32,300+i*32+i*5+64,N_LEVELEDUP,4);
+									DrawText(0,10+GetTextureHeight(winTexture)*2+(i+1)*currentTextHeight,party[i].fighterStats.name,4);
+									DrawText(TextWidth(fontSize,party[i].fighterStats.name)+TextWidth(fontSize," "),10+GetTextureHeight(winTexture)*2+(i+1)*currentTextHeight,N_LEVELEDUP,4);
 								}
 							}
 						#else
@@ -2797,7 +2953,6 @@ char BattleLop(char canRun){
 			}
 		}else if (battleStatus==BATTLESTATUS_CHOOSINGMOVE)/*Choosing type of move*/{
 			char _actionQueue=0;
-
 			if (WasJustPressed(SCE_TOUCH)){
 				if (FixTouchY(touchY)>SCREENHEIGHT-GetTextureHeight(attackButton)*SELECTIONBUTTONSCALE){
 					if ( FixTouchX(touchX)>(SCREENWIDTH-(GetTextureWidth(attackButton)*4*SELECTIONBUTTONSCALE))/2 ){
@@ -3022,10 +3177,11 @@ char BattleLop(char canRun){
 			GetBattlerById(orderOfAction[currentOrder])->x=GetBattlerById(orderOfAction[currentOrder])->x+moveXPerFrame;
 			GetBattlerById(orderOfAction[currentOrder])->y=GetBattlerById(orderOfAction[currentOrder])->y+moveYPerFrame;
 			
-			if (moveXPerFrame>=0 && GetBattlerById(orderOfAction[currentOrder])->x>=GetBattlerById(target)->x-GetBattlerAnimationById(orderOfAction[currentOrder],ANIMATION_ATTACK)->width*BATTLEENTITYSCALE){
+			if (moveXPerFrame>0 && GetBattlerById(orderOfAction[currentOrder])->x>=GetBattlerById(target)->x-GetBattlerAnimationById(orderOfAction[currentOrder],ANIMATION_ATTACK)->width*BATTLEENTITYSCALE){
 				moveXPerFrame=0;
 			}
-			if (moveXPerFrame<=0 && GetBattlerById(orderOfAction[currentOrder])->x<=GetBattlerById(target)->x+GetBattlerAnimationById(orderOfAction[currentOrder],ANIMATION_ATTACK)->width*BATTLEENTITYSCALE){
+			if (moveXPerFrame<0 && GetBattlerById(orderOfAction[currentOrder])->x<=GetBattlerById(target)->x+GetBattlerAnimationById(target,ANIMATION_IDLE)->width*BATTLEENTITYSCALE){
+				moveXPerFrame=GetBattlerById(target)->x+GetBattlerAnimationById(target,ANIMATION_IDLE)->width*BATTLEENTITYSCALE;
 				moveXPerFrame=0;
 			}
 			if (moveYPerFrame>=0 && GetBattlerById(orderOfAction[currentOrder])->y>=GetBattlerById(target)->y){
@@ -3138,6 +3294,7 @@ char BattleLop(char canRun){
 		#endif
 
 		// Draw the party members and the party member hp and mp
+		int _lastPartyUIX=32;
 		for (i=0;i<partySize;i++){
 
 			if (party[i].hp==0){
@@ -3146,20 +3303,23 @@ char BattleLop(char canRun){
 
 			#if PLATFORM==PLAT_WINDOWS || PLATFORM==PLAT_VITA
 				// Draw health and MP bar for party member
-				// hp
-				DrawRectangle(32+i*128+i*16,16,128,32,0,0,0,255);
-				if (party[i].hp>=party[i].fighterStats.maxHp+15){
-					// Draw more red rectangle if overheal
-					DrawRectangle(32+i*128+i*16,16,floor(128*(((double)party[i].hp)/party[i].fighterStats.maxHp)),32,255,0,0,255);
-				}else{
-					// Draw normal health red
-					DrawRectangle(32+i*128+i*16,16,floor(128*(((double)party[i].hp)/party[i].fighterStats.maxHp)),32,190,0,0,255);
+
+				if (i!=0){
+					if (TextWidth(fontSize,party[i-1].fighterStats.name)+TextWidth(fontSize, " ")>144){
+						_lastPartyUIX+=TextWidth(fontSize,party[i-1].fighterStats.name)+TextWidth(fontSize, " ");
+					}else{
+						_lastPartyUIX+=144;
+					}
 				}
+
+				// hp
+				DrawRectangle(_lastPartyUIX,16,128,32,0,0,0,255);
+				DrawRectangle(_lastPartyUIX,16,floor(128*(((double)party[i].hp)/party[i].fighterStats.maxHp)),32,party[i].hp>=party[i].fighterStats.maxHp+15 ? 255: 190,0,0,255);
 				// mp
-				DrawRectangle(32+i*128+i*16,48,128,32,0,0,0,255);
-				DrawRectangle(32+i*128+i*16,48,floor(128*(((double)party[i].mp)/party[i].fighterStats.maxMp)),32,0,0,190,255);
+				DrawRectangle(_lastPartyUIX,48,128,32,0,0,0,255);
+				DrawRectangle(_lastPartyUIX,48,floor(128*(((double)party[i].mp)/party[i].fighterStats.maxMp)),32,0,0,190,255);
 				// name
-				DrawText(32+i*128+i*16,90,party[i].fighterStats.name,2);
+				DrawText(_lastPartyUIX,90,party[i].fighterStats.name,2);
 			#endif
 			// Draws attack animation for person moving to attack
 			if (battleStatus==BATTLESTATUS_MOVETOTARGET){
@@ -3228,11 +3388,11 @@ char BattleLop(char canRun){
 			}
 
 			// hp
-			DrawRectangle(FixX(GetBattlerById(target)->x),FixY(GetBattlerById(target)->y-32),64*BATTLEENTITYSCALE,32,0,0,0,255);
-			DrawRectangle(FixX(GetBattlerById(target)->x),FixY(GetBattlerById(target)->y-32),floor(64*BATTLEENTITYSCALE*(((double)GetBattlerById(target)->hp)/GetBattlerById(target)->fighterStats.maxHp)),32,190,0,0,255);
+			DrawRectangle(GetBattlerById(target)->x,GetBattlerById(target)->y-32,64*BATTLEENTITYSCALE,32,0,0,0,255);
+			DrawRectangle(GetBattlerById(target)->x,GetBattlerById(target)->y-32,floor(64*BATTLEENTITYSCALE*(((double)GetBattlerById(target)->hp)/GetBattlerById(target)->fighterStats.maxHp)),32,190,0,0,255);
 
 			// Draw the target selector
-			DrawAnimationAsISay(&selectorAnimation,FixX(GetBattlerById(target)->x-selectorAnimation.width*UISCALE),FixY(GetBattlerAnimationById(target,ANIMATION_IDLE)->height*BATTLEENTITYSCALE/2+GetBattlerById(target)->y-selectorAnimation.height*UISCALE/2),UISCALE); // Draw cursor // Draw selector
+			DrawAnimationAsISay(&selectorAnimation,GetBattlerById(target)->x-selectorAnimation.width*UISCALE,GetBattlerAnimationById(target,ANIMATION_IDLE)->height*BATTLEENTITYSCALE/2+GetBattlerById(target)->y-selectorAnimation.height*UISCALE/2,UISCALE); // Draw cursor // Draw selector
 		}
 		EndDrawing();
 	
@@ -3322,6 +3482,8 @@ char BattleLop(char canRun){
 	return 1;
 }
 
+// Press back 3 times and tap in top left
+// Hold up and O as you press X
 void TitleLoop(){
 	#if PLATFORM != PLAT_WINDOWS
 		CrossTexture* titleImage = LoadEmbeddedPNG("Stuff/Title.png");
@@ -3329,24 +3491,56 @@ void TitleLoop(){
 		CrossTexture* titleImage = LoadEmbeddedPNG("Stuff/TitleAndroid.png");
 	#endif
 	char _actionQueue=0;
+	char _didSecretCode=0;
+
 	while (place!=2){
 		StartFrameStuff();
 
+		if (WasJustPressed(SCE_ANDROID_BACK)){
+			if (_didSecretCode==0){
+				_didSecretCode=2;
+			}else{
+				_didSecretCode++;
+			}
+			if (_didSecretCode==5){
+				place=PLACE_QUIT;
+				break;
+			}
+		}
 
+		// 445
+		// 74
 		if (WasJustPressed(SCE_TOUCH)){
+			if (FixTouchX(touchX)<100 && FixTouchY(touchY)<100){
+				if (_didSecretCode==4){
+					_didSecretCode=1;
+					_actionQueue=QUEUE_X;
+				}
+			}
 			if (FixTouchY(touchY)>352 && FixTouchY(touchY)<471){
 				if (FixTouchX(touchX)>8 && FixTouchX(touchX)<222){
 					_actionQueue=QUEUE_X;
 				}
 				if (FixTouchX(touchX)>233 && FixTouchX(touchX)<447){
-					RunHappyLua();
-					Load();
-					_actionQueue=QUEUE_LEFT;
+					if (DoesSavefileExist()==1){
+						RunHappyLua();
+						Load();
+						_actionQueue=QUEUE_LEFT;
+					}else{
+						_actionQueue=QUEUE_X;
+					}
 				}
+			}
+			if (FixTouchX(touchX)>445 && FixTouchY(touchY)<74){
+				CreditsView();
+				ControlsResetEmpty();
 			}
 		}
 
 		if (WasJustPressed(aButton)){
+			if (IsDown(SCE_CTRL_UP)==1 && IsDown(SCE_CTRL_CROSS)==1 && IsDown(SCE_CTRL_CIRCLE)==1){
+				_didSecretCode=1;
+			}
 			_actionQueue = QUEUE_X;
 		}
 
@@ -3364,7 +3558,7 @@ void TitleLoop(){
 			ControlsEnd();
 			SetupHardcodedLanguage();
 			RunHappyLua();
-			if (IsDown(SCE_CTRL_UP)==1 && IsDown(SCE_CTRL_CROSS)==1 && IsDown(SCE_CTRL_CIRCLE)==1){
+			if (_didSecretCode==1){
 				BasicMessage("You activated the top secret key combo. You will get a high level. Restart the game to play normally");
 				party[0].fighterStats.maxHp=999;
 				party[0].fighterStats.speed=999;
@@ -3374,7 +3568,7 @@ void TitleLoop(){
 				party[0].fighterStats.level=100;
 			}
 			
-			FixPath(STARTINGMAP,tempPathFixBuffer,TYPE_ANDROID_DATA_OR_EMBEDDED);
+			FixPath(STARTINGMAP,tempPathFixBuffer,TYPE_EMBEDDED);
 			LoadMap(tempPathFixBuffer);
 			place=0;	
 			
@@ -3396,7 +3590,7 @@ void TitleLoop(){
 		StartDrawing();
 
 		//DrawTexture(titleImage,0,0);
-		DrawTextureScale(titleImage,FixX(0),FixY(0),(float)SCREENWIDTH/GetTextureWidth(titleImage),(float)SCREENHEIGHT/GetTextureHeight(titleImage));
+		DrawTextureScale(titleImage,0,0,(float)SCREENWIDTH/GetTextureWidth(titleImage),(float)SCREENHEIGHT/GetTextureHeight(titleImage));
 		//DrawUnusedAreaRect();
 		#if PLATFORM != PLAT_WINDOWS
 			#if PLATFORM != PLAT_3DS
@@ -3482,6 +3676,30 @@ void Init(){
 		sf2d_init();
 		sf2d_set_clear_color(RGBA8(212, 208, 200, 0xFF));
 	#endif
+
+	#if SHOWSPLASH==1
+			#if PLATFORM == PLAT_VITA
+				CrossTexture* happy = LoadEmbeddedPNG("OtherStuff/Splash.png");
+			#else
+				CrossTexture* happy = LoadEmbeddedPNG("Stuff/AndroidSplash.png");
+			#endif
+
+			StartDrawing();
+			DrawTextureScale(happy,0,0,(double)SCREENWIDTH/GetTextureWidth(happy),(double)SCREENHEIGHT/GetTextureHeight(happy));
+			EndDrawing();
+			
+			StartFrameStuff();
+			//sceCtrlPeekBufferPositive(0, &pad, 1);
+			#if PLATFORM == PLAT_VITA
+				if (!(IsDown(SCE_CTRL_LTRIGGER))){
+					Wait(700);
+				}
+			#endif
+			
+			FreeTexture(happy);
+	#endif
+
+
 	InitAudio();
 	MakeDataDirectory();
 	LoadFont();
@@ -3564,24 +3782,6 @@ void Init(){
 
 	place=5;
 
-	#if SHOWSPLASH==1
-		#if PLATFORM == PLAT_VITA
-			CrossTexture* happy = LoadEmbeddedPNG("OtherStuff/Splash.png");
-
-			StartDrawing();
-			DrawTexture(happy,0,0);
-			EndDrawing();
-			
-			StartFrameStuff();
-			//sceCtrlPeekBufferPositive(0, &pad, 1);
-			if (!(IsDown(SCE_CTRL_LTRIGGER))){
-				Wait(700);
-			}
-			
-			FreeTexture(happy);
-		#endif
-	#endif
-
 	pathfindingPath = malloc(1);
 	foundPathLength=-1;
 
@@ -3602,11 +3802,11 @@ void Init(){
 		double foundRatio;
 		if (FitToWidth(displayMode.w,displayMode.h)==1){
 			foundRatio = ((double)displayMode.w)/SCREENWIDTH;
-			printf("Fit to width %f\n",foundRatio);
+			//printf("Fit to width %f\n",foundRatio);
 		}else{
 			// 736/800 = .92
 			foundRatio = (double)displayMode.h/SCREENHEIGHT;
-			printf("Fit to height %f\n",(double)displayMode.h/SCREENHEIGHT);
+			//printf("Fit to height %f\n",(double)displayMode.h/SCREENHEIGHT);
 		}
 		androidXScale = foundRatio;
 		androidYScale = foundRatio;
@@ -3632,8 +3832,8 @@ void Init(){
 		*/
 	
 		SDL_RenderSetScale(mainWindowRenderer,androidXScale,androidYScale);
-		printf("%.6fx%.6f is scale.",androidXScale,androidYScale);
-		printf("%d,%d is offset\n",drawXOffset,drawYOffset);
+		//printf("%.6fx%.6f is scale.",androidXScale,androidYScale);
+		//printf("%d,%d is offset\n",drawXOffset,drawYOffset);
 	#else
 		// drawXOffset and drawYOffset are already set from SetCameraValues
 		androidXScale=1;

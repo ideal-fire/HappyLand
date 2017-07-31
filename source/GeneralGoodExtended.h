@@ -1,6 +1,24 @@
 #ifndef GENERALGOODSTUFFEXTENDED
 #define GENERALGOODSTUFFEXTENDED
 
+	#define ISUSINGEXTENDED 1
+
+	#if DOFIXCOORDS == 1
+		int FixX(int x);
+		int FixY(int y);
+	#endif
+
+	#if DOFIXCOORDS == 1
+		void FixCoords(int* _x, int* _y){
+			*_x = FixX(*_x);
+			*_y = FixY(*_y);
+		}
+		#define EASYFIXCOORDS(x, y) FixCoords(x,y)
+	#else
+		#define EASYFIXCOORDS(x,y)
+	#endif
+
+
 	unsigned char isSkipping=0;
 	signed char InputValidity = 1;
 
@@ -76,6 +94,9 @@
 		#include <sys/stat.h>
 		// So we can see console output with adb logcat
 		#define printf SDL_Log
+
+		//#include <android/asset_manager.h>
+		//#include <android/asset_manager_jni.h>
 	#endif
 
 	// Renderer stuff
@@ -130,7 +151,8 @@
 		float fontSize = 1.7;
 	#endif
 	#if TEXTRENDERER == TEXT_FONTCACHE
-		int fontSize = 20;
+		//int fontSize = 20;
+		int fontSize=50;
 	#endif
 	#if TEXTRENDERER == TEXT_VITA2D
 		int fontSize=32;
@@ -216,7 +238,7 @@
 		#elif TEXTRENDERER == TEXT_VITA2D
 			return vita2d_font_text_height(fontImage,scale,"a");
 		#elif TEXTRENDERER == TEXT_FONTCACHE
-			return floor(FC_GetRealHeight(fontImage)*.90);
+			return floor(FC_GetRealHeight(fontImage));
 		#endif
 	}
 
@@ -241,6 +263,7 @@
 	#endif
 	void DrawText(int x, int y, const char* text, float size){
 		#if TEXTRENDERER == TEXT_VITA2D
+			EASYFIXCOORDS(&x,&y);
 			vita2d_font_draw_text(fontImage,x,y+TextHeight(size), RGBA8(255,255,255,255),floor(size),text);
 		#elif TEXTRENDERER == TEXT_DEBUG
 			int i=0;
@@ -248,12 +271,14 @@
 				DrawLetter(text[i],(x+(i*(8*size))+i),(y),size);
 			}
 		#elif TEXTRENDERER == TEXT_FONTCACHE
+			EASYFIXCOORDS(&x,&y);
 			FC_Draw(fontImage, mainWindowRenderer, x, y, "%s", text);
 		#endif
 	}
 	
 	void DrawTextColored(int x, int y, const char* text, float size, unsigned char r, unsigned char g, unsigned char b){
 		#if TEXTRENDERER == TEXT_VITA2D
+			EASYFIXCOORDS(&x,&y);
 			vita2d_font_draw_text(fontImage,x,y+TextHeight(size), RGBA8(r,g,b,255),floor(size),text);
 		#elif TEXTRENDERER == TEXT_DEBUG
 			int i=0;
@@ -263,6 +288,7 @@
 				notICounter++;
 			}
 		#elif TEXTRENDERER == TEXT_FONTCACHE
+			EASYFIXCOORDS(&x,&y);
 			SDL_Color _tempcolor;
 			_tempcolor.r = r;
 			_tempcolor.g = g;
@@ -422,13 +448,27 @@
 		#endif
 	}
 
-	void ControlsReset(){
+	void ControlsResetFull(){
 		#if PLATFORM != PLAT_VITA
 			memset(&pad,0xFF,sizeof(pad));
 			memset(&lastPad,0xFF,sizeof(lastPad));
 		#elif PLATFORM == PLAT_VITA
 			memset(&pad.buttons,0xFF,sizeof(pad.buttons));
 			memset(&lastPad.buttons,0xFF,sizeof(pad.buttons));
+		#endif
+	}
+
+	void ControlsReset(){
+		ControlsResetFull();
+	}
+
+	void ControlsResetEmpty(){
+		#if PLATFORM != PLAT_VITA
+			memset(&pad,0,sizeof(pad));
+			memset(&lastPad,0,sizeof(lastPad));
+		#elif PLATFORM == PLAT_VITA
+			memset(&pad.buttons,0,sizeof(pad.buttons));
+			memset(&lastPad.buttons,0,sizeof(pad.buttons));
 		#endif
 	}
 
@@ -452,25 +492,10 @@
 		return 0;
 	}
 
-	// Checks if the byte is the one for a newline
-	// If it's 0D, it seeks past the 0A that it assumes is next and returns 1
-	// TODO - Add support for \r only new line. It's pre OSX new line
-	signed char IsNewLine(FILE* fp, unsigned char _temp){
-		if (_temp==0x0D){
-			fseek(fp,1,SEEK_CUR);
-			return 1;
-		}
-		if (_temp=='\n' || _temp==0x0A){
-			// It seems like the other newline char is skipped for me?
-			return 1;
-		}
-		return 0;
-	}
-
 	void FixPath(char* filename,char _buffer[], char type){
 		#if SUBPLATFORM == SUB_ANDROID
-			if (type==TYPE_DATA || type==TYPE_ANDROID_DATA_OR_EMBEDDED){
-				strcpy((char*)_buffer,"/sdcard/Android/data/"ANDROIDPACKAGENAME"/");
+			if (type==TYPE_DATA){
+				strcpy((char*)_buffer,"/data/data/"ANDROIDPACKAGENAME"/");
 			}else if (type==TYPE_EMBEDDED){
 				strcpy((char*)_buffer,"");
 			}
@@ -478,14 +503,14 @@
 		#elif PLATFORM == PLAT_WINDOWS
 			if (type==TYPE_DATA){
 				strcpy((char*)_buffer,"./");
-			}else if (type==TYPE_EMBEDDED || type==TYPE_ANDROID_DATA_OR_EMBEDDED){
+			}else if (type==TYPE_EMBEDDED){
 				strcpy((char*)_buffer,"./");
 			}
 			strcat((char*)_buffer,filename);
 		#elif PLATFORM == PLAT_VITA
 			if (type==TYPE_DATA){
 				strcpy((char*)_buffer,"ux0:data/MYLEGNOOB/");
-			}else if (type==TYPE_EMBEDDED || type==TYPE_ANDROID_DATA_OR_EMBEDDED){
+			}else if (type==TYPE_EMBEDDED){
 				strcpy((char*)_buffer,"app0:");
 			}
 			strcat((char*)_buffer,filename);
