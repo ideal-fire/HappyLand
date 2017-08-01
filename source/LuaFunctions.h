@@ -647,9 +647,18 @@
 		return 0;
 	}
 
+	// At the top of happy.lua, dofile = Gooddofile is used. 
 	int L_Gooddofile(lua_State* passedState){
 		luaL_dofile(passedState,lua_tostring(passedState,1));
 		return 0;
+	}
+
+	int L_AutosaveIfNoSavefile(lua_State* passedState){
+		if (DoesSavefileExist()==0){
+			Save();
+		}else{
+			printf("Savefile exists. Will not autosave.\n");
+		}
 	}
 	
 	// Makes Lua useful.
@@ -701,6 +710,7 @@
 		LUAREGISTER(L_SDL_Log,"SDL_Log");
 		LUAREGISTER(L_PlayBGM,"PlayBGM");
 		LUAREGISTER(L_Gooddofile,"Gooddofile");
+		LUAREGISTER(L_AutosaveIfNoSavefile,"AutosaveIfNoSavefile");
 	}
 
 #endif

@@ -33,7 +33,7 @@
 	#define DOFIXCOORDS 1
 
 	// Change this to change platform
-	#define PRESET PRE_VITA
+	#define PRESET PRE_WINDOWS
 
 	#if PRESET == PRE_WINDOWS
 		#define PLATFORM PLAT_WINDOWS

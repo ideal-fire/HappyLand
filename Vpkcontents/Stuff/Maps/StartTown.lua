@@ -156,6 +156,8 @@ function Event07()
 			didWin = StartSpecificBattle(1,WierdSlimeHybridMember,enemyidle0,enemyatk0);
 			if (didWin==true) then
 				flags[3]=1;
+				SetMapImageData(0,7,1,0,0);
+				SetMapOtherData(0,7,false,0);
 			else
 				if (Lang==1) then
 					ShowMessageWithPortrait("Hahahaha! I'm more angry than you!",false,treeport,0);
@@ -178,7 +180,6 @@ function Event07()
 			enemyatk0 = nil;
 
 			RestoreEntireParty();
-		
 	else
 		if (Lang==1) then
 			ShowMessageWithPortrait("Ouch.", false, treeport, 0);
@@ -240,4 +241,10 @@ dofile(FixString("Stuff/BattleLua/Slime.lua"));
 
 SetEncounterRate(10);
 
-PlayBGM(FixString("Stuff/Sound/HolFix - Pixel Parade.ogg"))
+PlayBGM(FixString("Stuff/Sound/HolFix-PixelParade.ogg"))
+
+if (flags[3]==1) then
+	-- Remove the tree if you've fought it
+	SetMapImageData(0,7,1,0,0);
+	SetMapOtherData(0,7,false,0);
+end

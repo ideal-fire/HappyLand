@@ -7,9 +7,7 @@ TODO - Put a scale factor in the animation struct. That scale factor will be cha
 TODO - Sometimes, enemy attack animations dissapear.
 	Jon said that the slime ones dissapeared after fighting angry tree
 	Snowmen ones dissapeared after angry tree also
-	Nobo Big Foot had animatioin
-TODO - Make it easier to select the spell you want.
-	Users get confused. They think they need to move the cursor somehow. 
+	Noob Big Foot had animatioin
 */
 
 #define BGMENABLE 1
@@ -1330,17 +1328,20 @@ signed char SelectSpell(partyMember member){
 
 		char _actionQueue;
 		if (WasJustPressed(SCE_TOUCH)){
-			//DrawText(88,(i+1)*currentTextHeight+currentTextHeight/2,tempMessage,6);
-			int _oldSelected=selected;
-			selected=FixTouchY(touchY)/(currentTextHeight+currentTextHeight/2);
-			if (selected>200){
-				selected=0;
-			}else if (selected>=numberOfSkillsSelect){
-				_actionQueue=QUEUE_O;
-			}else if (_oldSelected==selected){
-				_actionQueue=QUEUE_X;
-			}else{
-				PlaySoftMenuSoundEffect();
+			if (FixTouchY(touchY)>currentTextHeight){
+				//DrawText(88,(i+1)*currentTextHeight+currentTextHeight/2,tempMessage,6);
+				//DrawRectangle(88,(i+1)*currentTextHeight+(currentTextHeight/4)*i,TextWidth(fontSize,tempMessage)<SCREENWIDTH-100 ? (SCREENWIDTH-100) : TextWidth(fontSize,tempMessage),currentTextHeight+(currentTextHeight/4),0,162,0,255);
+				int _oldSelected=selected;
+				selected=(FixTouchY(touchY)-currentTextHeight)/(currentTextHeight+(currentTextHeight/4));
+				if (selected>200){
+					selected=0;
+				}else if (selected>=numberOfSkillsSelect){
+					_actionQueue=QUEUE_O;
+				}else if (_oldSelected==selected){
+					_actionQueue=QUEUE_X;
+				}else{
+					PlaySoftMenuSoundEffect();
+				}
 			}
 		}
 		if (WasJustPressed(aButton)){
@@ -1390,7 +1391,7 @@ signed char SelectSpell(partyMember member){
 					if (member.mp>=tempList->theSpell.mpCost){
 						DrawRectangle(88,(i+1)*currentTextHeight+(currentTextHeight/4)*i,TextWidth(fontSize,tempMessage)<SCREENWIDTH-100 ? (SCREENWIDTH-100) : TextWidth(fontSize,tempMessage),currentTextHeight+(currentTextHeight/4),0,162,0,255);
 					}else{
-						DrawRectangle(88,(i+1)*currentTextHeight+(currentTextHeight/4)*i,SCREENWIDTH-88,currentTextHeight+(currentTextHeight/4),162,0,0,255);
+						DrawRectangle(88,(i+1)*currentTextHeight+(currentTextHeight/4)*i,TextWidth(fontSize,tempMessage)<SCREENWIDTH-100 ? (SCREENWIDTH-100) : TextWidth(fontSize,tempMessage),currentTextHeight+(currentTextHeight/4),162,0,0,255);
 					}
 					
 					DrawText(88,(i+1)*currentTextHeight+(currentTextHeight/4)*i,tempMessage,6);
@@ -2290,8 +2291,8 @@ void CreditsView(){
 	}
 	printf("Player selected License/%s\n",_creditsFileList[selected]);
 	CROSSFILE* currentCreditsFile;
-	char _tempCreditsFilepathConcat[strlen(_creditsFileList[selected])+strlen("License/")+1];
-	strcpy(_tempCreditsFilepathConcat,"License/");
+	char _tempCreditsFilepathConcat[strlen(_creditsFileList[selected])+strlen("Stuff/License/")+1];
+	strcpy(_tempCreditsFilepathConcat,"Stuff/License/");
 	strcat(_tempCreditsFilepathConcat,_creditsFileList[selected]);
 	FixPath(_tempCreditsFilepathConcat,tempPathFixBuffer, TYPE_EMBEDDED);
 	currentCreditsFile = Crossfopen(_tempCreditsFilepathConcat,"r");
@@ -3657,6 +3658,9 @@ void Init(){
 			//ShowErrorIfNull(mainWindow);
 			//screenWidth=1024;
 			//screenHeight=736;
+			SDL_DisplayMode displayMode;
+			displayMode.w=SCREENWIDTH;
+			displayMode.h=SCREENHEIGHT;
 		#endif
 		if (USEVSYNC){
 			mainWindowRenderer = SDL_CreateRenderer( mainWindow, -1, SDL_RENDERER_PRESENTVSYNC);
@@ -3678,14 +3682,20 @@ void Init(){
 	#endif
 
 	#if SHOWSPLASH==1
+			int _screenWidthReal=0;
+			int _screenHeightReal=0;
 			#if PLATFORM == PLAT_VITA
+				_screenWidthReal=960;
+				_screenHeightReal=544;
 				CrossTexture* happy = LoadEmbeddedPNG("OtherStuff/Splash.png");
 			#else
+				_screenWidthReal=displayMode.w;
+				_screenHeightReal=displayMode.h;
 				CrossTexture* happy = LoadEmbeddedPNG("Stuff/AndroidSplash.png");
 			#endif
 
 			StartDrawing();
-			DrawTextureScale(happy,0,0,(double)SCREENWIDTH/GetTextureWidth(happy),(double)SCREENHEIGHT/GetTextureHeight(happy));
+			DrawTextureScale(happy,0,0,(double)_screenWidthReal/GetTextureWidth(happy),(double)_screenHeightReal/GetTextureHeight(happy));
 			EndDrawing();
 			
 			StartFrameStuff();
@@ -3794,11 +3804,6 @@ void Init(){
 	#endif
 
 	#if PLATFORM == PLAT_WINDOWS
-		#if SUBPLATFORM != SUB_ANDROID
-			SDL_DisplayMode displayMode;
-			displayMode.w=SCREENWIDTH;
-			displayMode.h=SCREENHEIGHT;
-		#endif
 		double foundRatio;
 		if (FitToWidth(displayMode.w,displayMode.h)==1){
 			foundRatio = ((double)displayMode.w)/SCREENWIDTH;

@@ -1,3 +1,6 @@
+-- The normal dofile will call luaL_loadfile, which we don't want. We redirect dofile to our function which uses the correct loadfile function
+dofile = Gooddofile;
+
 PLAT_VITA = 1;
 PLAT_WINDOWS = 2;
 PLAT_3DS = 3;
@@ -24,12 +27,13 @@ end
 
 function FixString(passedString)
 	if (Subplatform == SUB_ANDROID) then
-		_tempExtention = GetFileExtention(passedString);
-		if (_tempExtention~=".png" and _tempExtention~=".ogg" and _tempExtention~=".wav") then
-			return ("/sdcard/Android/data/" .. ANDROIDPACKAGENAME .. "/" .. passedString);
-		else
-			return passedString;
-		end
+		--_tempExtention = GetFileExtention(passedString);
+		--if (_tempExtention~=".png" and _tempExtention~=".ogg" and _tempExtention~=".wav") then
+		--	return ("/sdcard/Android/data/" .. ANDROIDPACKAGENAME .. "/" .. passedString);
+		--else
+		--	return passedString;
+		--end
+		return passedString;
 	elseif (Platform==PLAT_VITA) then
 		return ("app0:" .. passedString);
 	elseif (Platform==PLAT_WINDOWS) then
@@ -78,6 +82,7 @@ function AddPartyMember1()
 	SetStats(GetPartyMemberStats(1, TYPE_ID),1,35,10,10,10,10,10,5,0,MallocString("Nathan"));
 	RestorePartyMember(1, TYPE_ID);
 	SetStatsSpells(GetPartyMemberStats(1,TYPE_ID),3);
+	--SetStatsSpells(GetPartyMemberStats(1,TYPE_ID),1,2,3,4,5);
 	tempidle=nil;
 	tempatk=nil;
 end
