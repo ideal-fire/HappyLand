@@ -659,6 +659,7 @@
 		}else{
 			printf("Savefile exists. Will not autosave.\n");
 		}
+		return 0;
 	}
 	
 	// Makes Lua useful.
