@@ -54,6 +54,7 @@ Temporary Items
 *.3dsx
 *.dll
 *.bat
+*.keystore
 
 /BuildMoronFiles/
 /happy/
