@@ -89,7 +89,7 @@
 	// an image pointer
 	int L_LoadPNG(lua_State* passedState){
 		char* passedPath = (char*)lua_tostring(passedState,1);
-		lua_pushlightuserdata(passedState,LoadPNG(passedPath));
+		lua_pushlightuserdata(passedState,loadPNG(passedPath));
 		return 1;
 	}
 	
@@ -97,7 +97,7 @@
 	// ARGS - 
 	// some_imgage_pointer
 	int L_UnloadTexture(lua_State* passedState){
-		FreeTexture(lua_touserdata(passedState,1));
+		freeTexture(lua_touserdata(passedState,1));
 		return 0;
 	}
 	
@@ -114,7 +114,7 @@
 	// slot
 	int L_DestroyTileset(lua_State* passedState){
 		int passedNumber = lua_tonumber(passedState,1);
-		FreeTexture(tilesets[passedNumber]);
+		freeTexture(tilesets[passedNumber]);
 		return 0;
 	}
 	
@@ -195,7 +195,7 @@
 		}
 		if (lua_tonumber(passedState,5)==-1){
 			if (passedAnimation->texture!=NULL){
-				passedAnimation->numberOfFrames = (GetTextureWidth(passedAnimation->texture)/passedAnimation->width);
+				passedAnimation->numberOfFrames = (getTextureWidth(passedAnimation->texture)/passedAnimation->width);
 			}else{
 				BasicMessage("No will work!");
 			}
@@ -449,7 +449,7 @@
 	// miliseconds
 	int L_Wait(lua_State* passedState){
 		int miliseconds = lua_tonumber(passedState,1);
-		Wait(miliseconds);
+		wait(miliseconds);
 		return 0;
 	}
 	
@@ -459,12 +459,12 @@
 		UpdateCameraValues(playerObject);
 	
 		// Drawing
-		StartDrawing();
+		startDrawing();
 	
 		DrawMapThings();
 		//DrawText(60,60,"Hello world",2);
 	
-		EndDrawing();
+		endDrawing();
 		return 0;
 	}
 	
@@ -521,7 +521,7 @@
 	int L_FreeAnimationImage(lua_State* passedState){
 		animation* passedAnimation = lua_touserdata(passedState,1);
 		if (passedAnimation->texture!=NULL){
-			FreeTexture(passedAnimation->texture);
+			freeTexture(passedAnimation->texture);
 			passedAnimation->texture=NULL;
 		}
 		return 0;
@@ -564,7 +564,7 @@
 		place=3;
 		lua_pushboolean(passedState,BattleLop(0));
 	
-		ControlsEnd();
+		controlsEnd();
 		FpsCapWait();
 		return 1;
 	}
@@ -639,10 +639,10 @@
 	int L_PlayBGM(lua_State* passedState){
 		#if BGMENABLE==1
 			if (currentBGM!=NULL){
-				FreeMusic(currentBGM);
+				freeMusic(currentBGM);
 			}
-			currentBGM = LoadMusic((char*)lua_tostring(passedState,1));
-			PlayMusic(currentBGM);
+			currentBGM = loadMusic((char*)lua_tostring(passedState,1));
+			playMusic(currentBGM,0);
 		#endif
 		return 0;
 	}
