@@ -4,6 +4,7 @@ dofile = Gooddofile;
 PLAT_VITA = 1;
 PLAT_WINDOWS = 2;
 PLAT_3DS = 3;
+PLAT_SWITCH = 4;
 
 SUB_NONE = 0;
 SUB_ANDROID = 1;
@@ -40,6 +41,8 @@ function FixString(passedString)
 		return ("./" .. passedString);
 	elseif (Platform==PLAT_3DS) then
 		return ("/3ds/data/HappyLand/" .. passedString);
+	elseif (Platform==PLAT_SWITCH) then
+		return ("romfs:" .. passedString)
 	end
 end
 

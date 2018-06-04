@@ -47,7 +47,7 @@ ARCH	:=	-march=armv8-a -mtune=cortex-a57 -mtp=soft -fPIE
 CFLAGS	:=	-DSWITCH -g -Wall -O2 -ffunction-sections \
 			$(ARCH) $(DEFINES)
 
-CFLAGS	+=	$(INCLUDE) -D__SWITCH__ -Wno-unused-variable
+CFLAGS	+=	$(INCLUDE) -D__SWITCH__ -Wno-unused-variable -Wno-unused-but-set-variable
 
 CXXFLAGS	:= $(CFLAGS) -fno-rtti -fno-exceptions -std=gnu++11
 

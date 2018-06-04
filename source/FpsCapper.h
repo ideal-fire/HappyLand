@@ -8,7 +8,7 @@
 	u64 numberOfFrames;
 	u64 tempHold;
 	
-	#define CAPISENABLED 0
+	#define CAPISENABLED 1
 	#if CAPISENABLED
 	
 		void FpsCapStart(){

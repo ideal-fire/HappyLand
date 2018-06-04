@@ -8,6 +8,9 @@ TODO - Sometimes, enemy attack animations dissapear.
 	Jon said that the slime ones dissapeared after fighting angry tree
 	Snowmen ones dissapeared after angry tree also
 	Noob Big Foot had animatioin
+TODO - Slight rumble when you walk into wall
+TODO - Why lag?
+	The animations are slow, so I'm probably not getting milliseconds correctly.
 */
 
 #define BGMENABLE 1
@@ -165,8 +168,8 @@ int LANGUAGE=LANG_ENGLISH;
 	#define SAFEDRAW 1
 	#define SCREENWIDTH 1280
 	#define SCREENHEIGHT 720
-	#define MAPXSCALE 4
-	#define MAPYSCALE 4
+	#define MAPXSCALE 3
+	#define MAPYSCALE 3
 	#define BATTLEENTITYSCALE 3
 	#define SPELLSCALE 4
 	// Minimum y position for an entity to be at during a battle.
@@ -255,8 +258,9 @@ char tempPathFixBuffer[256];
 #include "GoodArray.h"
 #include "FpsCapper.h"
 #include "pathfinding.h"
-//#include "SDLLua_GeneralGood.h"
-
+#if PLATFORM == PLAT_COMPUTER
+	#include "SDLLua_GeneralGood.h"
+#endif
 //TODO - Make this
 // main.h
 	// Make stuff fresh
@@ -419,6 +423,17 @@ animation possibleEnemiesAttackAnimation[10];
 // 
 ///////////////////////////////////////////////
 */
+
+void clearDebugFile(){
+	FILE* fp = fopen("/a.txt","w");
+	fclose(fp);
+}
+void writeToDebugFile(const char* _messageToWrite){
+	FILE* fp = fopen("/a.txt","a");
+	fprintf(fp,"%s\n",_messageToWrite);
+	fclose(fp);
+}
+
 // Same as fixing a path and then loading a PNG
 CrossTexture* LoadEmbeddedPNG(char* filename){
 	fixPath(filename,tempPathFixBuffer,TYPE_EMBEDDED);
@@ -3569,7 +3584,6 @@ void TitleLoop(){
 	#endif
 	char _actionQueue=0;
 	char _didSecretCode=0;
-
 	while (place!=2){
 		StartFrameStuff();
 
@@ -3616,6 +3630,7 @@ void TitleLoop(){
 		#endif
 
 		if (wasJustPressed(aButton)){
+			// TODO - Crash on NIntendo Switch after this
 			if (isDown(SCE_CTRL_UP)==1 && isDown(SCE_CTRL_CROSS)==1 && isDown(SCE_CTRL_CIRCLE)==1){
 				_didSecretCode=1;
 			}
