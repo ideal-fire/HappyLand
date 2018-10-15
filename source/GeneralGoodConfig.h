@@ -109,7 +109,7 @@
 		#define PLATFORM PLAT_SWITCH
 		#define SOUNDPLAYER SND_SDL
 		#define RENDERER REND_SDL
-		#define TEXTRENDERER TEXT_UNDEFINED
+		#define TEXTRENDERER TEXT_DEBUG
 	#else
 		#warning Put custom stuff here
 		// #define PLATFORM a

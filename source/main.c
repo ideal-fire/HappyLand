@@ -43,7 +43,8 @@ int LANGUAGE=LANG_ENGLISH;
 #define QUEUE_RIGHT 3
 #define QUEUE_DOWN 4
 #define QUEUE_UP 5
-//#define ??? 7
+#define QUEUE_NONE 7
+//#define ??? 8
 
 // Change the place variable to one of these
 #define PLACE_OVERWORLD 0
@@ -78,7 +79,7 @@ int LANGUAGE=LANG_ENGLISH;
 
 #define MAXOBJECTS 15
 
-#define ANDROIDTEST 1
+#define ANDROIDTEST 0
 
 #define TOUCHENABLED 0
 
@@ -179,18 +180,18 @@ int LANGUAGE=LANG_ENGLISH;
 	#define MAXYBATTLE 416
 	
 	// Textbox's y position
-	#define TEXTBOXY 420
+	#define TEXTBOXY 520
 	
 	// Size of letters in textbox
-	#define TEXTBOXFONTSIZE 2.5
+	#define TEXTBOXFONTSIZE 4
 	
 	// Lines on one screen of textbox
 	#define LINESPERSCREEN 4
 	// w and height of portertit
-	#define DEFAULTPORTRAITSIZE 200
+	#define DEFAULTPORTRAITSIZE 250
 	// You know how in the battle when you hit somebody it shows the damage
 	// well this is the scale of the text
-	#define DAMAGETEXTSIZE 8
+	#define DAMAGETEXTSIZE 3
 
 	#define YESNOSCALE 2
 	#define SELECTIONBUTTONSCALE 2
@@ -442,7 +443,10 @@ CrossTexture* LoadEmbeddedPNG(char* filename){
 
 void LoadFont(){
 	#if TEXTRENDERER == TEXT_DEBUG
-		fontImage=LoadEmbeddedPNG("Stuff/Font.png");
+
+		//fontImage=LoadEmbeddedPNG("Stuff/Font.png");
+		fixPath("Stuff/liberationsansbitmap",tempPathFixBuffer,TYPE_EMBEDDED);
+		loadFont(tempPathFixBuffer);
 	#elif TEXTRENDERER == TEXT_FONTCACHE
 		//fontSize = (SCREENHEIGHT-TEXTBOXY)/3.5;
 		FC_FreeFont(fontImage);
@@ -452,8 +456,9 @@ void LoadFont(){
 		FC_LoadFont(fontImage, mainWindowRenderer, tempPathFixBuffer, fontSize, FC_MakeColor(0,0,0,255), TTF_STYLE_NORMAL);
 	#elif TEXTRENDERER == TEXT_VITA2D
 		// TODO - Change this
-		fixPath("Stuff/LiberationSans-Regular.ttf",tempPathFixBuffer,TYPE_EMBEDDED);
-		fontImage=loadPNG(tempPathFixBuffer);
+		//fixPath("Stuff/LiberationSans-Regular.ttf",tempPathFixBuffer,TYPE_EMBEDDED);
+		//fontImage=loadPNG(tempPathFixBuffer);
+		#error todo
 	#endif
 	currentTextHeight = textHeight(fontSize);
 }
@@ -1390,7 +1395,7 @@ signed char SelectSpell(partyMember member){
 	while (1){
 		StartFrameStuff();
 
-		char _actionQueue;
+		char _actionQueue=QUEUE_NONE;
 		#if TOUCHENABLED
 			if (wasJustPressed(SCE_TOUCH)){
 				if (FixTouchY(touchY)>currentTextHeight){
@@ -3814,7 +3819,7 @@ void Init(){
 
 	initAudio();
 	makeDataDirectory();
-	loadFont("TODO - Make font filename");
+	LoadFont();
 
 	InitGoodArray(&tileOtherData);
 	int i=0;

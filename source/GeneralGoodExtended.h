@@ -106,4 +106,7 @@ possibleControlNumberType wasJustReleased(possibleControlNumberType value);
 		controlsStart(); \
 		controlsEnd();
 
+extern int touchX;
+extern int touchY;
+
 #endif /* GENERALGOODEXTENDED_H */

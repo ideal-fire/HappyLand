@@ -1,4 +1,0 @@
-(This is a note2self. You may ignore it.)
-
-DO NOT EDIT THESE FILES, EDIT ./happy/stuff/!
-THESE FILES WILL ALWAYS BE OVERWRITTEN!

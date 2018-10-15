@@ -60,3 +60,10 @@ Temporary Items
 /happy/
 /NoGithub/
 /copyrite/
+/Include/
+/lib/
+
+*.nro
+*.nso
+*.nacp
+*.pfs0
