@@ -67,3 +67,7 @@ Temporary Items
 *.nso
 *.nacp
 *.pfs0
+
+
+/NewHappyLandMapConverter/bin
+/NewHappyLandMapConverter/obj

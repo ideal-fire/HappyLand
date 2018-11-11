@@ -9,8 +9,6 @@ TODO - Sometimes, enemy attack animations dissapear.
 	Snowmen ones dissapeared after angry tree also
 	Noob Big Foot had animatioin
 TODO - Slight rumble when you walk into wall
-TODO - Why lag?
-	The animations are slow, so I'm probably not getting milliseconds correctly.
 */
 
 #define BGMENABLE 1
@@ -419,11 +417,21 @@ stats possibleEnemies[10];
 animation possibleEnemiesIdleAnimation[10];
 animation possibleEnemiesAttackAnimation[10];
 
+
+#if RENDERER == REND_SDL
+	extern SDL_Window* mainWindow;
+	extern SDL_Renderer* mainWindowRenderer;
+#endif
+
 /*
 ////////////////////////////////////////////////
 // 
 ///////////////////////////////////////////////
 */
+
+void blackDrawText(int x, int y, const char* message, double fontSize){
+	goodDrawTextColored(x,y,message,fontSize,0,0,0);
+}
 
 void clearDebugFile(){
 	FILE* fp = fopen("/a.txt","w");
@@ -449,11 +457,9 @@ void LoadFont(){
 		loadFont(tempPathFixBuffer);
 	#elif TEXTRENDERER == TEXT_FONTCACHE
 		//fontSize = (SCREENHEIGHT-TEXTBOXY)/3.5;
-		FC_FreeFont(fontImage);
-		fontImage = NULL;
-		fontImage = FC_CreateFont();
+
 		fixPath("Stuff/LiberationSans-Regular.ttf",tempPathFixBuffer,TYPE_EMBEDDED);
-		FC_LoadFont(fontImage, mainWindowRenderer, tempPathFixBuffer, fontSize, FC_MakeColor(0,0,0,255), TTF_STYLE_NORMAL);
+		loadFont(tempPathFixBuffer);
 	#elif TEXTRENDERER == TEXT_VITA2D
 		// TODO - Change this
 		//fixPath("Stuff/LiberationSans-Regular.ttf",tempPathFixBuffer,TYPE_EMBEDDED);
@@ -846,7 +852,7 @@ void BasicMessage(char* _tempMsg){
 		// We need this variable so we know the offset in the message for the text that is for the next line
 		int _lastStrlen=0;
 		for (i=0;i<currentlyVisibleLines;i++){
-			goodDrawText(5,TEXTBOXY+textHeight(fontSize)*i,&message[_lastStrlen+offsetStrlen],fontSize);
+			blackDrawText(5,TEXTBOXY+textHeight(fontSize)*i,&message[_lastStrlen+offsetStrlen],fontSize);
 			// This offset will have the first letter for the next line
 			_lastStrlen = strlen(&message[_lastStrlen+offsetStrlen])+1+_lastStrlen;
 		}
@@ -1052,7 +1058,7 @@ char ShowMessageWithPortrait(char* _tempMsg, char isQuestion, CrossTexture* port
 		// We need this variable so we know the offset in the message for the text that is for the next line
 		int _lastStrlen=0;
 		for (i=0;i<currentlyVisibleLines;i++){
-			goodDrawText(5,TEXTBOXY+textHeight(fontSize)*i,&message[_lastStrlen+offsetStrlen],fontSize);
+			blackDrawText(5,TEXTBOXY+textHeight(fontSize)*i,&message[_lastStrlen+offsetStrlen],fontSize);
 			// This offset will have the first letter for the next line
 			_lastStrlen = strlen(&message[_lastStrlen+offsetStrlen])+1+_lastStrlen;
 		}
@@ -1399,7 +1405,7 @@ signed char SelectSpell(partyMember member){
 		#if TOUCHENABLED
 			if (wasJustPressed(SCE_TOUCH)){
 				if (FixTouchY(touchY)>currentTextHeight){
-					//goodDrawText(88,(i+1)*currentTextHeight+currentTextHeight/2,tempMessage,6);
+					//blackDrawText(88,(i+1)*currentTextHeight+currentTextHeight/2,tempMessage,6);
 					//drawRectangle(88,(i+1)*currentTextHeight+(currentTextHeight/4)*i,textWidth(fontSize,tempMessage)<SCREENWIDTH-100 ? (SCREENWIDTH-100) : textWidth(fontSize,tempMessage),currentTextHeight+(currentTextHeight/4),0,162,0,255);
 					int _oldSelected=selected;
 					selected=(FixTouchY(touchY)-currentTextHeight)/(currentTextHeight+(currentTextHeight/4));
@@ -1453,7 +1459,7 @@ signed char SelectSpell(partyMember member){
 
 		#if PLATFORM != PLAT_3DS
 
-			goodDrawText( CenterText(N_MAGICLIST,6),2,N_MAGICLIST,6);
+			blackDrawText( CenterText(N_MAGICLIST,6),2,N_MAGICLIST,6);
 	
 			for (i=0;i<numberOfSkillsSelect;i++){
 				if (member.fighterStats.spells[i]!=0){
@@ -1465,24 +1471,24 @@ signed char SelectSpell(partyMember member){
 						drawRectangle(88,(i+1)*currentTextHeight+(currentTextHeight/4)*i,textWidth(fontSize,tempMessage)<SCREENWIDTH-100 ? (SCREENWIDTH-100) : textWidth(fontSize,tempMessage),currentTextHeight+(currentTextHeight/4),162,0,0,255);
 					}
 					
-					goodDrawText(88,(i+1)*currentTextHeight+(currentTextHeight/4)*i,tempMessage,6);
+					blackDrawText(88,(i+1)*currentTextHeight+(currentTextHeight/4)*i,tempMessage,6);
 				}else{
 					break;
 				}
 			}
 			DrawAnimationAsISay(&selectorAnimation,0,(selected+1)*currentTextHeight+(currentTextHeight/4)*selected,4);
 			#if PLATFORM == PLAT_COMPUTER
-				goodDrawText(88,SCREENHEIGHT-currentTextHeight,"Back",6);
+				blackDrawText(88,SCREENHEIGHT-currentTextHeight,"Back",6);
 			#endif
 		#else
-			goodDrawText( CenterText(N_MAGICLIST,2),2,N_MAGICLIST,2);
+			blackDrawText( CenterText(N_MAGICLIST,2),2,N_MAGICLIST,2);
 	
 			for (i=0;i<numberOfSkillsSelect;i++){
 				if (member.fighterStats.spells[i]!=0){
 					//ShowMessage("a",0);
 					spellLinkedList* tempList = GetSpellList(member.fighterStats.spells[i]-1);
 					sprintf((char*)tempMessage,"%s:%d",tempList->theSpell.name,tempList->theSpell.mpCost);
-					goodDrawText(88,i*16+i*2+20,tempMessage,2);
+					blackDrawText(88,i*16+i*2+20,tempMessage,2);
 				}else{
 					break;
 				}
@@ -1906,33 +1912,33 @@ void StatusLoop(){
 		startDrawing();
 		DrawGrayBackground();
 		#if PLATFORM != PLAT_3DS
-			goodDrawText(SCREENWIDTH/2-strlen(party[selectedMember].fighterStats.name)*64/2,3,party[selectedMember].fighterStats.name,8);
-			goodDrawText(3,69,N_ATK,4);
+			blackDrawText(SCREENWIDTH/2-strlen(party[selectedMember].fighterStats.name)*64/2,3,party[selectedMember].fighterStats.name,8);
+			blackDrawText(3,69,N_ATK,4);
 			sprintf((char*)&statNumberString,"%d",party[selectedMember].fighterStats.attack);
-			goodDrawText(strlen(N_ATK)*32+32,69,statNumberString,4);
-			goodDrawText(3,106,N_MATK,4);
+			blackDrawText(strlen(N_ATK)*32+32,69,statNumberString,4);
+			blackDrawText(3,106,N_MATK,4);
 			sprintf((char*)&statNumberString,"%d",party[selectedMember].fighterStats.magicAttack);
-			goodDrawText(strlen(N_MATK)*32+32,106,statNumberString,4);
-			goodDrawText(3,143,N_DEF,4);
+			blackDrawText(strlen(N_MATK)*32+32,106,statNumberString,4);
+			blackDrawText(3,143,N_DEF,4);
 			sprintf((char*)&statNumberString,"%d",party[selectedMember].fighterStats.defence);
-			goodDrawText(strlen(N_DEF)*32+32,143,statNumberString,4);
-			goodDrawText(3,180,N_MDEF,4);
+			blackDrawText(strlen(N_DEF)*32+32,143,statNumberString,4);
+			blackDrawText(3,180,N_MDEF,4);
 			sprintf((char*)&statNumberString,"%d",party[selectedMember].fighterStats.magicDefence);
-			goodDrawText(strlen(N_MDEF)*32+32,180,statNumberString,4);
-			goodDrawText(3,217,N_SPEED,4);
+			blackDrawText(strlen(N_MDEF)*32+32,180,statNumberString,4);
+			blackDrawText(3,217,N_SPEED,4);
 			sprintf((char*)&statNumberString,"%d",party[selectedMember].fighterStats.speed);
-			goodDrawText(strlen(N_SPEED)*32+32,217,statNumberString,4);
+			blackDrawText(strlen(N_SPEED)*32+32,217,statNumberString,4);
 	
 			sprintf((char*)&statNumberString,"%d/%d",party[selectedMember].hp,party[selectedMember].fighterStats.maxHp);
-			goodDrawText(strlen(N_HP)*32+32,254,statNumberString,4);
-			goodDrawText(3,254,N_HP,4);
+			blackDrawText(strlen(N_HP)*32+32,254,statNumberString,4);
+			blackDrawText(3,254,N_HP,4);
 			sprintf((char*)&statNumberString,"%d/%d",party[selectedMember].mp,party[selectedMember].fighterStats.maxMp);
-			goodDrawText(strlen(N_MP)*32+32,291,statNumberString,4);
-			goodDrawText(3,291,N_MP,4);
+			blackDrawText(strlen(N_MP)*32+32,291,statNumberString,4);
+			blackDrawText(3,291,N_MP,4);
 			
 			sprintf((char*)&statNumberString,"%d",party[selectedMember].fighterStats.level);
-			goodDrawText(strlen(N_LV)*32+32,328,statNumberString,4);
-			goodDrawText(3,328,N_LV,4);
+			blackDrawText(strlen(N_LV)*32+32,328,statNumberString,4);
+			blackDrawText(3,328,N_LV,4);
 			
 			double animationScale=(SCREENHEIGHT-180)/ partyIdleAnimation[selectedMember].height;
 			DrawAnimationAsISay(&partyIdleAnimation[selectedMember],SCREENWIDTH-partyIdleAnimation[selectedMember].width*animationScale-100,180,animationScale);
@@ -1942,49 +1948,49 @@ void StatusLoop(){
 			sf2d_start_frame(GFX_BOTTOM, GFX_LEFT);
 			
 			// Draw name
-			goodDrawText(CenterTextCustomWidth(party[selectedMember].fighterStats.name,3,BOTTOMSCREENWIDTH),3,party[selectedMember].fighterStats.name,3);
+			blackDrawText(CenterTextCustomWidth(party[selectedMember].fighterStats.name,3,BOTTOMSCREENWIDTH),3,party[selectedMember].fighterStats.name,3);
 			
 			int i=0;
 			// Draw attack
 			i++;
-			goodDrawText(3,20*i+2*i+10,N_ATK,2);
+			blackDrawText(3,20*i+2*i+10,N_ATK,2);
 			sprintf((char*)&statNumberString,"%d",party[selectedMember].fighterStats.attack);
-			goodDrawText(strlen(N_ATK)*16+16,20*i+2*i+10,statNumberString,2);
+			blackDrawText(strlen(N_ATK)*16+16,20*i+2*i+10,statNumberString,2);
 
 			i++;
-			goodDrawText(3,20*i+2*i+10,N_MATK,2);
+			blackDrawText(3,20*i+2*i+10,N_MATK,2);
 			sprintf((char*)&statNumberString,"%d",party[selectedMember].fighterStats.magicAttack);
-			goodDrawText(strlen(N_MATK)*16+16,20*i+2*i+10,statNumberString,2);
+			blackDrawText(strlen(N_MATK)*16+16,20*i+2*i+10,statNumberString,2);
 
 			i++;
-			goodDrawText(3,20*i+2*i+10,N_DEF,2);
+			blackDrawText(3,20*i+2*i+10,N_DEF,2);
 			sprintf((char*)&statNumberString,"%d",party[selectedMember].fighterStats.defence);
-			goodDrawText(strlen(N_DEF)*16+16,20*i+2*i+10,statNumberString,2);
+			blackDrawText(strlen(N_DEF)*16+16,20*i+2*i+10,statNumberString,2);
 
 			i++;
-			goodDrawText(3,20*i+2*i+10,N_MDEF,2);
+			blackDrawText(3,20*i+2*i+10,N_MDEF,2);
 			sprintf((char*)&statNumberString,"%d",party[selectedMember].fighterStats.magicDefence);
-			goodDrawText(strlen(N_MDEF)*16+16,20*i+2*i+10,statNumberString,2);
+			blackDrawText(strlen(N_MDEF)*16+16,20*i+2*i+10,statNumberString,2);
 
 			i++;
-			goodDrawText(3,20*i+2*i+10,N_SPEED,2);
+			blackDrawText(3,20*i+2*i+10,N_SPEED,2);
 			sprintf((char*)&statNumberString,"%d",party[selectedMember].fighterStats.speed);
-			goodDrawText(strlen(N_SPEED)*16+16,20*i+2*i+10,statNumberString,2);
+			blackDrawText(strlen(N_SPEED)*16+16,20*i+2*i+10,statNumberString,2);
 			
 			i++;
 			sprintf((char*)&statNumberString,"%d/%d",party[selectedMember].hp,party[selectedMember].fighterStats.maxHp);
-			goodDrawText(strlen(N_HP)*16+16,20*i+2*i+10,statNumberString,2);
-			goodDrawText(3,20*i+2*i+10,N_HP,2);
+			blackDrawText(strlen(N_HP)*16+16,20*i+2*i+10,statNumberString,2);
+			blackDrawText(3,20*i+2*i+10,N_HP,2);
 
 			i++;
 			sprintf((char*)&statNumberString,"%d/%d",party[selectedMember].mp,party[selectedMember].fighterStats.maxMp);
-			goodDrawText(strlen(N_MP)*16+16,20*i+2*i+10,statNumberString,2);
-			goodDrawText(3,20*i+2*i+10,N_MP,2);
+			blackDrawText(strlen(N_MP)*16+16,20*i+2*i+10,statNumberString,2);
+			blackDrawText(3,20*i+2*i+10,N_MP,2);
 			
 			i++;
 			sprintf((char*)&statNumberString,"%d",party[selectedMember].fighterStats.level);
-			goodDrawText(strlen(N_LV)*16+32,20*i+2*i+10,statNumberString,2);
-			goodDrawText(3,20*i+2*i+10,N_LV,2);			
+			blackDrawText(strlen(N_LV)*16+32,20*i+2*i+10,statNumberString,2);
+			blackDrawText(3,20*i+2*i+10,N_LV,2);			
 			
 			double animationScale=(BOTTOMSCREENHEIGHT-120)/ (double)partyIdleAnimation[selectedMember].height;
 			DrawAnimationAsISay(&partyIdleAnimation[selectedMember],BOTTOMSCREENWIDTH-partyIdleAnimation[selectedMember].width*animationScale-32,120,animationScale);
@@ -2111,31 +2117,31 @@ void StatusLoop(){
 			drawRectangle(245,141,470,262,252,255,255,255);
 	
 			if (subspot==0){
-				goodDrawText(CenterText(N_HAPPYMENU,4),146,N_HAPPYMENU,4);
-				goodDrawText(287,183,N_RESUME,4);
-				goodDrawText(287,183+32+5,playerName,4);
-				goodDrawText(287,183+32+32+5+5,N_SAVE,4);
-				goodDrawText(287,183+32+32+32+5+5+5,N_LOAD,4);
-				goodDrawText(287,183+32+32+32+32+5+5+5+5,N_QUIT,4);
+				blackDrawText(CenterText(N_HAPPYMENU,4),146,N_HAPPYMENU,4);
+				blackDrawText(287,183,N_RESUME,4);
+				blackDrawText(287,183+32+5,playerName,4);
+				blackDrawText(287,183+32+32+5+5,N_SAVE,4);
+				blackDrawText(287,183+32+32+32+5+5+5,N_LOAD,4);
+				blackDrawText(287,183+32+32+32+32+5+5+5+5,N_QUIT,4);
 			}else if (subspot==1){
 				if (LANGUAGE==LANG_SPANISH){
-					goodDrawText(CenterText("?Quieres cargar?",4),146,"'?Quieres cargar?",4);
-					goodDrawText(287,183,"S'i.",4);
-					goodDrawText(287,183+32+5,"No.",4);
+					blackDrawText(CenterText("?Quieres cargar?",4),146,"'?Quieres cargar?",4);
+					blackDrawText(287,183,"S'i.",4);
+					blackDrawText(287,183+32+5,"No.",4);
 				}else if (LANGUAGE==LANG_ENGLISH){
-					goodDrawText(CenterText("Really load?",4),146,"Really load?",4);
-					goodDrawText(287,183,"Yes.",4);
-					goodDrawText(287,183+32+5,"No.",4);
+					blackDrawText(CenterText("Really load?",4),146,"Really load?",4);
+					blackDrawText(287,183,"Yes.",4);
+					blackDrawText(287,183+32+5,"No.",4);
 				}
 			}else if (subspot==2){
 				if (LANGUAGE==LANG_SPANISH){
-					goodDrawText(CenterText("?Quieres Salvar?",4),146,"'?Quieres Salvar?",4);
-					goodDrawText(287,183,"S'i.",4);
-					goodDrawText(287,183+32+5,"No.",4);
+					blackDrawText(CenterText("?Quieres Salvar?",4),146,"'?Quieres Salvar?",4);
+					blackDrawText(287,183,"S'i.",4);
+					blackDrawText(287,183+32+5,"No.",4);
 				}else if (LANGUAGE==LANG_ENGLISH){
-					goodDrawText(CenterText("Really save?",4),146,"Really save?",4);
-					goodDrawText(287,183,"Yes.",4);
-					goodDrawText(287,183+32+5,"No.",4);
+					blackDrawText(CenterText("Really save?",4),146,"Really save?",4);
+					blackDrawText(287,183,"Yes.",4);
+					blackDrawText(287,183+32+5,"No.",4);
 				}
 			}
 			DrawAnimationAsISay(&selectorAnimation,245,selected*selectorAnimation.height*2+(selectorAnimation.height/2)+183+selected*5,2);
@@ -2146,36 +2152,36 @@ void StatusLoop(){
 			drawRectangle(0,0,320,240,252,255,255,255);
 	
 			if (subspot==0){
-				goodDrawText(5,0,N_HAPPYMENU,3.5);
+				blackDrawText(5,0,N_HAPPYMENU,3.5);
 				// 0
-				goodDrawText(30,32+24+5,N_RESUME,3);
+				blackDrawText(30,32+24+5,N_RESUME,3);
 				// 1
-				goodDrawText(30,32+24+24+5+5,playerName,3);
+				blackDrawText(30,32+24+24+5+5,playerName,3);
 				// 2
-				goodDrawText(30,32+24+24+24+5+5+5,N_SAVE,3);
+				blackDrawText(30,32+24+24+24+5+5+5,N_SAVE,3);
 				// 3
-				goodDrawText(30,32+24+24+24+24+5+5+5+5,N_LOAD,3);
+				blackDrawText(30,32+24+24+24+24+5+5+5+5,N_LOAD,3);
 				// 4
-				goodDrawText(30,32+24+24+24+24+24+5+5+5+5+5,N_QUIT,3);
+				blackDrawText(30,32+24+24+24+24+24+5+5+5+5+5,N_QUIT,3);
 			}else if (subspot==1){
 				if (LANGUAGE==LANG_SPANISH){
-					goodDrawText(5,0,"'?Quieres cargar?",3.5);
-					goodDrawText(30,32+24+5,"S'i.",3);
-					goodDrawText(30,32+24+25+5+5,"No.",3);
+					blackDrawText(5,0,"'?Quieres cargar?",3.5);
+					blackDrawText(30,32+24+5,"S'i.",3);
+					blackDrawText(30,32+24+25+5+5,"No.",3);
 				}else if (LANGUAGE==LANG_ENGLISH){
-					goodDrawText(5,0,"Really load?",3.5);
-					goodDrawText(30,32+24+5,"Yes.",3);
-					goodDrawText(30,32+24+25+5+5,"No.",3);
+					blackDrawText(5,0,"Really load?",3.5);
+					blackDrawText(30,32+24+5,"Yes.",3);
+					blackDrawText(30,32+24+25+5+5,"No.",3);
 				}
 			}else if (subspot==2){
 				if (LANGUAGE==LANG_SPANISH){
-					goodDrawText(5,0,"'?Quieres salvar?",3.5);
-					goodDrawText(30,32+24+5,"S'i.",3);
-					goodDrawText(30,32+24+25+5+5,"No.",3);
+					blackDrawText(5,0,"'?Quieres salvar?",3.5);
+					blackDrawText(30,32+24+5,"S'i.",3);
+					blackDrawText(30,32+24+25+5+5,"No.",3);
 				}else if (LANGUAGE==LANG_ENGLISH){
-					goodDrawText(5,0,"Really save?",3.5);
-					goodDrawText(30,32+24+5,"Yes.",3);
-					goodDrawText(30,32+24+25+5+5,"No.",3);
+					blackDrawText(5,0,"Really save?",3.5);
+					blackDrawText(30,32+24+5,"Yes.",3);
+					blackDrawText(30,32+24+25+5+5,"No.",3);
 				}
 			}
 			DrawAnimationAsISay(&selectorAnimation,0,selected*24+32+24+selected*5+5,1);
@@ -2272,11 +2278,11 @@ void StatusLoop(){
 				drawTextureScale(loadButton,CenterSomething(getTextureWidth(resumeButton)*_buttonScale),getTextureHeight(resumeButton)*_buttonScale*2,_buttonScale,_buttonScale);
 				drawTextureScale(backButton,CenterSomething(getTextureWidth(resumeButton)*_buttonScale),getTextureHeight(resumeButton)*_buttonScale*3,_buttonScale,_buttonScale);
 			}else if (submenu==SUBMENU_SAVECONFIRM){
-				goodDrawText(CenterSomething(textWidth(fontSize,"Really save?")),currentTextHeight/2,"Really save?",fontSize);
+				blackDrawText(CenterSomething(textWidth(fontSize,"Really save?")),currentTextHeight/2,"Really save?",fontSize);
 				drawTextureScale(yesButton,CenterSomething(getTextureWidth(yesButton)*_buttonScale),getTextureHeight(resumeButton)*_buttonScale*1,_buttonScale,_buttonScale);
 				drawTextureScale(noButton,CenterSomething(getTextureWidth(noButton)*_buttonScale),getTextureHeight(resumeButton)*_buttonScale*2,_buttonScale,_buttonScale);
 			}else if (submenu==SUBMENU_LOADCONFIRM){
-				goodDrawText(CenterSomething(textWidth(fontSize,"Really load?")),currentTextHeight/2,"Really load?",fontSize);
+				blackDrawText(CenterSomething(textWidth(fontSize,"Really load?")),currentTextHeight/2,"Really load?",fontSize);
 				drawTextureScale(yesButton,CenterSomething(getTextureWidth(yesButton)*_buttonScale),getTextureHeight(resumeButton)*_buttonScale*1,_buttonScale,_buttonScale);
 				drawTextureScale(noButton,CenterSomething(getTextureWidth(noButton)*_buttonScale),getTextureHeight(resumeButton)*_buttonScale*2,_buttonScale,_buttonScale);
 			}
@@ -2355,9 +2361,9 @@ void CreditsView(){
 		drawTextureScale(rightButton,SCREENWIDTH-getTextureWidth(leftButton)*2,SCREENHEIGHT-getTextureHeight(leftButton)*2,2,2);
 		drawTextureScale(selectButton,(SCREENWIDTH/2)-getTextureWidth(selectButton)*2/2,SCREENHEIGHT-getTextureHeight(selectButton)*2,2,2);
 		
-		//goodDrawText(int x, int y, const char* text, float size)
-		goodDrawText(32,32,"Use the buttons to select a credits or license file.",fontSize);
-		goodDrawText(32,32+currentTextHeight*2,_creditsFileList[selected],fontSize);
+		//blackDrawText(int x, int y, const char* text, float size)
+		blackDrawText(32,32,"Use the buttons to select a credits or license file.",fontSize);
+		blackDrawText(32,32+currentTextHeight*2,_creditsFileList[selected],fontSize);
 		endDrawing();
 
 		FpsCapWait();
@@ -2429,12 +2435,12 @@ void CreditsView(){
 			drawTextureScale(backButton,0,SCREENHEIGHT-getTextureHeight(leftButton)*2,2,2);
 			drawTextureScale(rightButton,SCREENWIDTH-getTextureWidth(leftButton)*2,SCREENHEIGHT-getTextureHeight(leftButton)*2,2,2);
 			
-			//goodDrawText(int x, int y, const char* text, float size)
+			//blackDrawText(int x, int y, const char* text, float size)
 			for (i=0;i<_creditsLinePerScreen;i++){
-				goodDrawText(32,32+i*currentTextHeight,_currentLoadedCredits[i],fontSize);
+				blackDrawText(32,32+i*currentTextHeight,_currentLoadedCredits[i],fontSize);
 			}
 			
-			//goodDrawText(32,32+currentTextHeight*2,_creditsFileList[selected],fontSize);
+			//blackDrawText(32,32+currentTextHeight*2,_creditsFileList[selected],fontSize);
 			
 			endDrawing();
 			FpsCapWait();
@@ -2942,13 +2948,13 @@ char BattleLop(char canRun){
 							DrawGrayBackground();
 							drawTextureScale(winTexture,CenterSomething(getTextureWidth(winTexture)*2),3,2,2);
 
-							goodDrawText(0,10+getTextureHeight(winTexture)*2,"EXP:",8);
-							goodDrawText(textWidth(fontSize,"EXP: "),10+getTextureHeight(winTexture)*2,temp2,8);
+							blackDrawText(0,10+getTextureHeight(winTexture)*2,"EXP:",8);
+							blackDrawText(textWidth(fontSize,"EXP: "),10+getTextureHeight(winTexture)*2,temp2,8);
 					
 							for (i=0;i<partySize;i++){
 								if (didLevelUp[i]==1){
-									goodDrawText(0,10+getTextureHeight(winTexture)*2+(i+1)*currentTextHeight,party[i].fighterStats.name,4);
-									goodDrawText(textWidth(fontSize,party[i].fighterStats.name)+textWidth(fontSize," "),10+getTextureHeight(winTexture)*2+(i+1)*currentTextHeight,N_LEVELEDUP,4);
+									blackDrawText(0,10+getTextureHeight(winTexture)*2+(i+1)*currentTextHeight,party[i].fighterStats.name,4);
+									blackDrawText(textWidth(fontSize,party[i].fighterStats.name)+textWidth(fontSize," "),10+getTextureHeight(winTexture)*2+(i+1)*currentTextHeight,N_LEVELEDUP,4);
 								}
 							}
 						#else
@@ -2957,13 +2963,13 @@ char BattleLop(char canRun){
 							endDrawing();
 							sf2d_start_frame(GFX_BOTTOM, GFX_LEFT);
 
-							goodDrawText(5,5,"EXP:",4);
-							goodDrawText(8*4*5+5,5,temp2,4);
+							blackDrawText(5,5,"EXP:",4);
+							blackDrawText(8*4*5+5,5,temp2,4);
 					
 							for (i=0;i<partySize;i++){
 								if (didLevelUp[i]==1){
-									goodDrawText(5,40+i*24+i*5,party[i].fighterStats.name,2);
-									goodDrawText(5+strlen(party[i].fighterStats.name)*16+16,40+i*24+i*5,N_LEVELEDUP,2);
+									blackDrawText(5,40+i*24+i*5,party[i].fighterStats.name,2);
+									blackDrawText(5+strlen(party[i].fighterStats.name)*16+16,40+i*24+i*5,N_LEVELEDUP,2);
 								}
 							}
 						#endif
@@ -3416,7 +3422,7 @@ char BattleLop(char canRun){
 				drawRectangle(_lastPartyUIX,48,128,32,0,0,0,255);
 				drawRectangle(_lastPartyUIX,48,floor(128*(((double)party[i].mp)/party[i].fighterStats.maxMp)),32,0,0,190,255);
 				// name
-				goodDrawText(_lastPartyUIX,90,party[i].fighterStats.name,2);
+				blackDrawText(_lastPartyUIX,90,party[i].fighterStats.name,2);
 			#endif
 			// Draws attack animation for person moving to attack
 			if (battleStatus==BATTLESTATUS_MOVETOTARGET){
@@ -3527,7 +3533,7 @@ char BattleLop(char canRun){
 					drawRectangle((i+1)*10+i*70,17,70,15,0,0,0,255);
 					drawRectangle((i+1)*10+i*70,17,floor(70*(((double)party[i].mp)/party[i].fighterStats.maxMp)),15,0,0,190,255);
 					// name
-					goodDrawText((i+1)*10+i*70,34,party[i].fighterStats.name,1);
+					blackDrawText((i+1)*10+i*70,34,party[i].fighterStats.name,1);
 				}
 
 			}
@@ -3635,7 +3641,6 @@ void TitleLoop(){
 		#endif
 
 		if (wasJustPressed(aButton)){
-			// TODO - Crash on NIntendo Switch after this
 			if (isDown(SCE_CTRL_UP)==1 && isDown(SCE_CTRL_CROSS)==1 && isDown(SCE_CTRL_CIRCLE)==1){
 				_didSecretCode=1;
 			}
@@ -3674,7 +3679,7 @@ void TitleLoop(){
 			break;
 		}
 		if (wasJustPressed(SCE_CTRL_SQUARE)){
-			#if PLATFORM != PLAT_VITA
+			#if PLATFORM == PLAT_VITA
 				if (aButton==SCE_CTRL_CROSS){
 					aButton=SCE_CTRL_CIRCLE;
 					bButton=SCE_CTRL_CROSS;
@@ -3691,19 +3696,19 @@ void TitleLoop(){
 		drawTextureScale(titleImage,0,0,(float)SCREENWIDTH/getTextureWidth(titleImage),(float)SCREENHEIGHT/getTextureHeight(titleImage));
 		//DrawUnusedAreaRect();
 		#if PLATFORM != PLAT_COMPUTER
-			#if PLATFORM != PLAT_3DS
+			#if PLATFORM != PLAT_3DS && PLATFORM != PLAT_SWITCH
 				if (aButton==SCE_CTRL_CROSS){
-					goodDrawText(51+8,SCREENHEIGHT-currentTextHeight,"Select Button: X",3.5);
+					blackDrawText(51+8,SCREENHEIGHT-currentTextHeight,"Select Button: X",3.5);
 				}else{
-					goodDrawText(51+8,SCREENHEIGHT-currentTextHeight,"Select Button: O",3.5);
+					blackDrawText(51+8,SCREENHEIGHT-currentTextHeight,"Select Button: O",3.5);
 				}
 			#elif PLATFORM == PLAT_3DS
 				endDrawing();
 				sf2d_start_frame(GFX_BOTTOM, GFX_LEFT);
 				if (LANGUAGE==LANG_ENGLISH){
-					goodDrawText(0,0,"X: Espa'nol",2);
+					blackDrawText(0,0,"X: Espa'nol",2);
 				}else if (LANGUAGE==LANG_SPANISH){
-					goodDrawText(0,0,"X: English",2);
+					blackDrawText(0,0,"X: English",2);
 				}
 			#endif
 		#endif
@@ -3960,13 +3965,20 @@ void Init(){
 	selectSoundEffect = loadSound((char*)tempPathFixBuffer);
 	fixPath("Stuff/Sound/SelectSoft.wav",tempPathFixBuffer,TYPE_EMBEDDED);
 	softSelectSoundEffect = loadSound((char*)tempPathFixBuffer);
+
+	BasicMessage("a.");
+	currentBGM = Mix_LoadMUS("romfs:Stuff/Sound/Town-Matt.ogg");
+	BasicMessage("v.");
+	if (currentBGM!=NULL){
+		BasicMessage("c.");
+		playMusic(currentBGM,0);
+		BasicMessage("d.");
+		BasicMessage("e.");
+	}
 }
 
 
-#if RENDERER == REND_SDL
-	extern SDL_Window* mainWindow;
-	extern SDL_Renderer* mainWindowRenderer;
-#endif
+
 // May not actually quit out of the program. You still need to return from the main function
 void Quit(lua_State* L){
 	lua_close(L);
