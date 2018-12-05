@@ -16,7 +16,7 @@ TODO - Slight rumble when you walk into wall
 #include "GeneralGoodConfig.h"
 
 // Only turned off when I'm working on my game. Needs to be set to 1 before release
-#define SHOWSPLASH 1
+#define SHOWSPLASH (PLATFORM == PLAT_VITA)
 
 // Temp
 #define StartFrameStuff(); FpsCapStart(); \
@@ -367,7 +367,7 @@ char defaultSelected=1;
 */
 CrossTexture* tilesets[5];
 object mapObjects[MAXOBJECTS];
-Good2dArray layers[5]={NULL,0,0,0,0};
+Good2dArray layers[5];
 Good2dArray tileOtherData;
 char numberOfLayers=0;
 CrossTexture* playerDown;
@@ -3821,7 +3821,6 @@ void Init(){
 			freeTexture(happy);
 	#endif
 
-
 	initAudio();
 	makeDataDirectory();
 	LoadFont();
@@ -3965,16 +3964,6 @@ void Init(){
 	selectSoundEffect = loadSound((char*)tempPathFixBuffer);
 	fixPath("Stuff/Sound/SelectSoft.wav",tempPathFixBuffer,TYPE_EMBEDDED);
 	softSelectSoundEffect = loadSound((char*)tempPathFixBuffer);
-
-	BasicMessage("a.");
-	currentBGM = Mix_LoadMUS("romfs:Stuff/Sound/Town-Matt.ogg");
-	BasicMessage("v.");
-	if (currentBGM!=NULL){
-		BasicMessage("c.");
-		playMusic(currentBGM,0);
-		BasicMessage("d.");
-		BasicMessage("e.");
-	}
 }
 
 

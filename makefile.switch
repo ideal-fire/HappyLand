@@ -54,7 +54,11 @@ CXXFLAGS	:= $(CFLAGS) -fno-rtti -fno-exceptions -std=gnu++11
 ASFLAGS	:=	-g $(ARCH)
 LDFLAGS	=	-specs=$(DEVKITPRO)/libnx/switch.specs -g $(ARCH) -Wl,-Map,$(notdir $*.map)
 
-LIBS	:= -lluaswitch -lGeneralGoodSwitch -lsdlfontcache -lSDL2_ttf -lfreetype -lbz2 -lSDL2_mixer -lSDL2_image -lpng -ljpeg -lSDL2 -lmpg123 -lmodplug -lvorbisfile -lvorbis -logg -lEGL -lglapi -ldrm_nouveau -lstdc++ -lnx -lz -lm
+#https://github.com/Cid2mizard/Pixel_Shuffle_NX/blob/master/Makefile
+LIBS	:=	-lluaswitch -lGeneralGoodSwitch -lsdlfontcache -lSDL2_ttf -lfreetype -lbz2 -lSDL2_image -lSDL2_mixer -lSDL2 \
+			-lpng -lz -ljpeg \
+			-lvorbisidec -logg -lmpg123 -lmodplug -lEGL -lglapi -ldrm_nouveau -lstdc++ \
+			-lnx -lm
 
 #---------------------------------------------------------------------------------
 # list of directories containing libraries, this must be the top level containing
