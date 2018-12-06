@@ -1,7 +1,3 @@
-@echo off
 cd happy
-@echo on
-a
-@echo off
+./a.exe
 cd ..
-@echo on
