@@ -99,9 +99,9 @@ function Event08()
 		end
 
 		if (questionanswer==false) then
-			tempPort33 = LoadPNG(FixString("Stuff/Portraits/Player.png"));
-			questionanswer = ShowMessageWithPortrait("(The game will be very hard without Matt.) Can Matt come?",true,tempPort33,0);
-			UnloadTexture(tempPort33);
+			--tempPort33 = LoadPNG(FixString("Stuff/Portraits/Player.png"));
+			--questionanswer = ShowMessageWithPortrait("(The game will be very hard without Matt.) Can Matt come?",true,tempPort33,0);
+			--UnloadTexture(tempPort33);
 		end
 
 		if (questionanswer==true) then

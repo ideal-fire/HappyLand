@@ -79,7 +79,7 @@ function Event04()
 			ShowMessageWithPortrait("?!",false,playerSurprised,0);
 			ShowMessageWithPortrait("S'i, t'u quieres mi firma.",false,bigfootport,0);
 			ShowMessageWithPortrait("No.",false,playerHappy,0);
-			ShowMessageWithPortrait("'?Porque est'as en La Sala De Pie Grande?",false,bigfootport,0);
+			ShowMessageWithPortrait("'?Por que est'as en La Sala De Pie Grande?",false,bigfootport,0);
 			ShowMessageWithPortrait("Porque you quiero matar t'u y tomar mis papas.",false,playerHappy,0);
 			ShowMessageWithPortrait("'!Ah, s'i! Si me matas, debes entrar el portal para recibir tus papas.",false,bigfootport,0);
 			ShowMessageWithPortrait("Bueno.",false,playerHappy,0);

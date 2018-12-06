@@ -1,6 +1,7 @@
 Happy Land
 -----
-Programming and beautiful art - MyLegGuy
+
+
 =================
 ==== MUSIC ======
 =================
@@ -20,8 +21,5 @@ https://www.youtube.com/holfix
 ==Town - Matt==
 PumPkiNot
 
-===============
-==== OTHER ====
-===============
-This uses SDL2, SDL_Mixer, SDL_TTF, Lua, and others.
-This software is based in part of the work of the FreeType Team.
+http://www.publicdomainpictures.net/view-image.php?image=174627&picture=hand-with-thumb-up
+http://www.publicdomainpictures.net/view-image.php?image=131480&picture=potato-in-3d

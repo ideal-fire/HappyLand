@@ -28,7 +28,7 @@ function Event03()
 	if (Lang==1) then
 		ShowMessageWithPortrait("Go up to get to Big Foot Land.",false,tempPort,0);
 	elseif (Lang==2) then
-		ShowMessageWithPortrait("Subir para ir a La Sala De Pie Grande.",false,tempPort,0);
+		ShowMessageWithPortrait("Subir para ir a El Mundo de Pie Grande.",false,tempPort,0);
 	end
 
 	UnloadTexture(tempPort);

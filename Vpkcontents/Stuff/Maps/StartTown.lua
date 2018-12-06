@@ -123,20 +123,29 @@ function Event07()
 
 		if (Lang==1) then
 			ShowMessageWithPortrait("You look angry.", false, smileyplayer, 0);
-			-- I would put an acsent on arbol, but I didn't add support for capital acsented letters
 			ShowMessageWithPortrait("That's right, I'm Angry Tree", false, treeport, 0);
 			ShowMessageWithPortrait("Why're you angry?", false, smileyplayer, 0);
-			ShowMessageWithPortrait("I can talk and think, but I'm a tree. So I can't move.", false, treeport, 0);
-			ShowMessageWithPortrait("It isn't that bad. This world is very small, it has only four rooms. There isn't much to see.", false, smileyplayer, 0);
-			ShowMessageWithPortrait(">:(", false, treeport, 0);
+			ShowMessageWithPortrait("Everybody around here keeps stepping on my roots. But I'll be putting an end to that today.", false, treeport, 0);
+			ShowMessageWithPortrait("Really? How do you plan on doing that?", false, smileyplayer, 0);
+			pauseBGM();
+			ShowMessageWithPortrait("These roots aren't just for being stepped on!", false, treeport, 0);
+			resumeBGM();
+			ShowMessageWithPortrait("What else can they be used for?", false, smileyplayer, 0);
+			ShowMessageWithPortrait("Getting nutriets, water, and other stuff.", false, treeport, 0);
+			ShowMessageWithPortrait("Anyway, now that I've enlightened you, I'm now going to kill you using logs.", false, treeport, 0);
 		elseif (Lang==2) then
+			-- Puedes venir entras de mi casa...
+			local _angryPlayer = LoadPNG(FixString("Stuff/Portraits/PlayerAngry.png"));
+
 			ShowMessageWithPortrait("'?Eres enojado?", false, smileyplayer, 0);
 			-- I would put an acsent on arbol, but I didn't add support for capital acsented letters
 			ShowMessageWithPortrait("S'i, me llamo Enojado Arbol.", false, treeport, 0);
 			ShowMessageWithPortrait("'?Porque est'as enojado?", false, smileyplayer, 0);
-			ShowMessageWithPortrait("Porque puedo hablar y pensar, pero soy un 'arbol. No puedo mover.", false, treeport, 0);
-			ShowMessageWithPortrait("No es m'uy horrible. Este mundo es muy peque'no. 4 salas. No hay mucho para ver.", false, smileyplayer, 0);
-			ShowMessageWithPortrait(">:(", false, treeport, 0);
+			ShowMessageWithPortrait("Porque no me gusta el sol y t'u tienes una casa.", false, treeport, 0);
+			ShowMessageWithPortrait("No me importa, t'u nunca me das manzanas. Yo voy a te mato porque eres est'upido.", false, smileyplayer, 0);
+			ShowMessageWithPortrait("noooooooooooo", false, treeport, 0);
+
+			UnloadTexture(_angryPlayer);
 		end
 
 		
@@ -189,6 +198,7 @@ function Event07()
 	end
 	
 	UnloadTexture(treeport);
+	UnloadTexture(smileyplayer);
 	treeport=nil;
 	
 end
