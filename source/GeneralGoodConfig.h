@@ -70,8 +70,6 @@
 	// These must be changed BEFORE compiling the library.
 		// If the program will use uma0 for the data directory instead of ux0.
 		#define USEUMA0 1
-		// For some reason, I can't remember what exactly this does. Something for Android.
-		#define DOFIXCOORDS 0
 	// Only affects SDL. Not really worth using this setting.
 	#define USEVSYNC 0
 
@@ -105,6 +103,7 @@
 		#define SOUNDPLAYER SND_SDL
 		#define RENDERER REND_SDL
 		#define TEXTRENDERER TEXT_FONTCACHE
+		#define SUBPLATFORM SUB_ANDROID
 	#elif PRESET == PRE_SWITCH
 		#define PLATFORM PLAT_SWITCH
 		#define SOUNDPLAYER SND_SDL
@@ -121,6 +120,12 @@
 
 	#ifndef SUBPLATFORM
 		#define SUBPLATFORM SUB_NONE
+	#endif
+
+	#if PLATFORM != PLAT_SWITCH && PLATFORM != PLAT_COMPUTER
+		#define DOFIXCOORDS 0
+	#else
+		#define DOFIXCOORDS 1
 	#endif
 
 #endif

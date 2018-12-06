@@ -32,10 +32,10 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 			/* 'fread' can return > 0 *and* set the EOF flag. If next call to
 			   'getF' called 'fread', it might still wait for user input.
 			   The next check avoids this problem. */
-			if (Crossfeof(lf->f)){
+			if (crossfeof(lf->f)){
 				return NULL;
 			}
-			*size = Crossfread(lf->buff, 1, sizeof(lf->buff), lf->f);  /* read block */
+			*size = crossfread(lf->buff, 1, sizeof(lf->buff), lf->f);  /* read block */
 		}
 		//lf->buff[*size]='\0';
 		return lf->buff;
@@ -46,12 +46,12 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 		int c;
 		lf->n = 0;
 		do {
-			c = Crossgetc(lf->f);
+			c = crossgetc(lf->f);
 			if (c == EOF || c != *(const unsigned char *)p++) return c;
 			lf->buff[lf->n++] = c;  /* to be read by the parser */
 		} while (*p != '\0');
 		lf->n = 0;  /* prefix matched; discard it */
-		return Crossgetc(lf->f);  /* return next character */
+		return crossgetc(lf->f);  /* return next character */
 	}
 	
 	/*
@@ -65,9 +65,9 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 		int c = *cp = skipBOM(lf);
 		if (c == '#') {  /* first line is a comment (Unix exec. file)? */
 			do {  /* skip first line */
-			  c = Crossgetc(lf->f);
+			  c = crossgetc(lf->f);
 			} while (c != EOF && c != '\n');
-			*cp = Crossgetc(lf->f);  /* skip end-of-line, if present */
+			*cp = crossgetc(lf->f);  /* skip end-of-line, if present */
 			return 1;  /* there was a comment */
 		}
 		else return 0;  /* no comment */
@@ -79,7 +79,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 		int c;
 		int fnameindex = lua_gettop(L) + 1;  /* index of filename on the stack */
 		lua_pushfstring(L, "@%s", filename);
-		lf.f=Crossfopen(filename,"r");
+		lf.f=crossfopen(filename,"r");
 
 		if (lf.f==NULL){
 			printf("not exist.");
@@ -94,7 +94,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 		if (c != EOF)
 			lf.buff[lf.n++] = c;  /* 'c' is the first character of the stream */
 		status = lua_load(L, getF_SDL, &lf, lua_tostring(L, -1), mode); // Next to edit is this?
-		Crossfclose(lf.f);  /* close file (even in case of errors) */
+		crossfclose(lf.f);  /* close file (even in case of errors) */
 		lua_remove(L, fnameindex);
 		return status;
 	}

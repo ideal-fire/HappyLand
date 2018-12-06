@@ -642,7 +642,7 @@
 				freeMusic(currentBGM);
 			}
 			currentBGM = loadMusic((char*)lua_tostring(passedState,1));
-			playMusic(currentBGM,0);
+			currentBGMPlayHandle = playMusic(currentBGM,0);
 		#endif
 		return 0;
 	}
@@ -661,7 +661,16 @@
 		}
 		return 0;
 	}
-	
+
+	int L_pauseBGM(lua_State* passedState){
+		pauseMusic(currentBGMPlayHandle);
+		return 0;
+	}
+	int L_resumeBGM(lua_State* passedState){
+		resumeMusic(currentBGMPlayHandle);
+		return 0;
+	}
+
 	// Makes Lua useful.
 	void PushCFunctions(){
 		LUAREGISTER(L_SetMapImageData,"SetMapImageData");
@@ -712,6 +721,9 @@
 		LUAREGISTER(L_PlayBGM,"PlayBGM");
 		LUAREGISTER(L_Gooddofile,"Gooddofile");
 		LUAREGISTER(L_AutosaveIfNoSavefile,"AutosaveIfNoSavefile");
+
+		LUAREGISTER(L_pauseBGM,"pauseBGM");
+		LUAREGISTER(L_resumeBGM,"resumeBGM");
 	}
 
 #endif

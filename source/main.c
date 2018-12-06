@@ -9,6 +9,14 @@ TODO - Sometimes, enemy attack animations dissapear.
 	Snowmen ones dissapeared after angry tree also
 	Noob Big Foot had animatioin
 TODO - Slight rumble when you walk into wall
+
+TODO - If matt isn't used and player beats normal Big Foot, secret ending.
+	- Fight matt?
+	- "This isn't how it was supposed to be"
+	- "What do you think I was doing when you left me behind?"
+	- 
+
+	- It should be impossible to beat him if you're at the perfect level to be able to beat big foot alone
 */
 
 #define BGMENABLE 1
@@ -81,6 +89,8 @@ int LANGUAGE=LANG_ENGLISH;
 
 #define TOUCHENABLED 0
 
+#define VSTRING "v1.2"
+
 #if PLATFORM==PLAT_VITA
 	#define SAFEDRAW 1
 	#define SCREENWIDTH 960
@@ -112,6 +122,12 @@ int LANGUAGE=LANG_ENGLISH;
 	#define YESNOSCALE 2
 	#define SELECTIONBUTTONSCALE 2
 #elif PLATFORM==PLAT_COMPUTER
+	#include <stdlib.h>
+	void XOutFunction(){
+		exit(0);
+	}
+	#define SCE_TOUCH 19
+	#define SCE_ANDROID_BACK 20
 	#define SAFEDRAW 0
 	#define SCREENWIDTH 704
 	#define SCREENHEIGHT 512
@@ -164,7 +180,7 @@ int LANGUAGE=LANG_ENGLISH;
 #elif PLATFORM==PLAT_SWITCH
 	#define SCE_TOUCH KEY_TOUCH
 
-	#define SAFEDRAW 1
+	#define SAFEDRAW 0
 	#define SCREENWIDTH 1280
 	#define SCREENHEIGHT 720
 	#define MAPXSCALE 3
@@ -394,6 +410,7 @@ short walkingPathProgress=0;
 float androidXScale;
 float androidYScale;
 CROSSMUSIC* currentBGM=NULL;
+CROSSPLAYHANDLE currentBGMPlayHandle;
 CROSSSFX* selectSoundEffect=NULL;
 CROSSSFX* softSelectSoundEffect=NULL;
 CrossTexture* pauseButtonTexture;
@@ -429,8 +446,89 @@ animation possibleEnemiesAttackAnimation[10];
 ///////////////////////////////////////////////
 */
 
+void insertTildeCharacter(char* _dest, char _engEqual){
+	char* _putThis="";
+	switch(_engEqual){
+		case 'a':
+			_putThis = "á";
+			break;
+		case 'e':
+			_putThis = "é";
+			break;
+		case 'i':
+			_putThis = "í";
+			break;
+		case 'o':
+			_putThis = "ó";
+			break;
+		case 'u':
+			_putThis = "ú";
+			break;
+		case 'n':
+			_putThis = "ñ";
+			break;
+		case '!':
+			_putThis = "¡";
+			break;
+		case '?':
+			_putThis = "¿";
+			break;
+		default:
+			_putThis = "ERROR IN TILDE GET!";
+	}
+	strcpy(_dest,_putThis);
+}
+
+char isPossibleTildeChar(char _engEqual){
+	switch(_engEqual){
+		case 'a':
+		case 'e':
+		case 'i':
+		case 'o':
+		case 'u':
+		case 'n':
+		case '!':
+		case '?':
+			return 1;
+		default:
+			return 0;
+	}
+}
+
 void blackDrawText(int x, int y, const char* message, double fontSize){
-	goodDrawTextColored(x,y,message,fontSize,0,0,0);
+	char* _realMessage = (char*)message;
+	#if TEXTRENDERER == TEXT_FONTCACHE
+		// Look for places to put Spanish characters
+		char* _nextTilde=(char*)message-1;
+		int _totalTilde=0;
+		while ((_nextTilde=strstr(&(_nextTilde[1]),"'"))!=NULL){
+			_totalTilde+=isPossibleTildeChar(_nextTilde[1]);
+		}
+		
+		if (_totalTilde>0){
+			_realMessage = malloc(strlen(message)+3*_totalTilde+1); // 4 bytes max utf8
+			_realMessage[0]='\0';
+			int _cachedStrlen = strlen(message);
+			int _nextAppend=0;
+			int i;
+			for (i=0;i<_cachedStrlen;++i){
+				if (message[i]=='\'' && isPossibleTildeChar(message[i+1])){
+					_realMessage[_nextAppend]='\0';
+					insertTildeCharacter(&(_realMessage[_nextAppend]),message[i+1]);
+					++i;
+					_nextAppend = strlen(_realMessage);
+				}else{
+					_realMessage[_nextAppend++]=message[i];
+				}
+			}
+			_realMessage[_nextAppend]='\0';
+		}
+
+	#endif
+	goodDrawTextColored(x,y,_realMessage,fontSize,0,0,0);
+	if (_realMessage!=message){
+		free(_realMessage);
+	}
 }
 
 void clearDebugFile(){
@@ -1429,12 +1527,14 @@ signed char SelectSpell(partyMember member){
 		}
 
 		if (wasJustPressed(SCE_CTRL_DOWN)){
+			PlaySoftMenuSoundEffect();
 			selected++;
 
 			if (selected==numberOfSkillsSelect){
 				selected=0;
 			}
 		}else if (wasJustPressed(SCE_CTRL_UP)){
+			PlaySoftMenuSoundEffect();
 			selected--;
 			// Unsigned char go from -1 to 255
 			if (selected>100){
@@ -1662,12 +1762,22 @@ void AddPartyMemberViaLua(int specialId){
 	}
 }
 
+char* getSavefilePath(){
+	//Can use https://github.com/vitasdk/vita-headers/blob/236582e4aef188071dc83c9e8338282b12ab1731/include/psp2/apputil.h
+	#if PLATFORM != PLAT_SWITCH
+		char _localFixBuffer[256];
+		fixPath("savefile",_localFixBuffer,TYPE_DATA);
+		return strdup(_localFixBuffer);
+	#else
+		return strdup("/switch/HappyLand.sav");
+	#endif
+}
+
 char DoesSavefileExist(){
-	fixPath("savefile",tempPathFixBuffer,TYPE_DATA);
-	if (checkFileExist(tempPathFixBuffer)==1){
-		return 1;
-	}
-	return 0;
+	char* _tempSavePath = getSavefilePath();
+	char _ret = checkFileExist(_tempSavePath);
+	free(_tempSavePath);
+	return _ret;
 }
 
 /*
@@ -1707,9 +1817,9 @@ void Save(){
 	int j=0;
 	FILE* fp;
 
-	//Can use
-	//https://github.com/vitasdk/vita-headers/blob/236582e4aef188071dc83c9e8338282b12ab1731/include/psp2/apputil.h
-	fixPath("savefile",tempPathFixBuffer,TYPE_DATA);
+	char* _tempSavePath = getSavefilePath();
+	strcpy(tempPathFixBuffer,_tempSavePath);
+	free(_tempSavePath);
 	fp = fopen (tempPathFixBuffer, "w");
 
 	short pathLength = strlen(currentMapFilepath);
@@ -1770,7 +1880,8 @@ void Save(){
 
 void Load(){
 	if (DoesSavefileExist()==0){
-		BasicMessage("No savefile found AND YOU STILL TRIED TO LOAD! The game will now crash.");
+		BasicMessage("No savefile found.");
+		return;
 	}
 	DestroyEntireParty();
 	int i=0;
@@ -1778,7 +1889,9 @@ void Load(){
 
 	FILE* fp;
 
-	fixPath("savefile",tempPathFixBuffer,TYPE_DATA);
+	char* _tempSavePath = getSavefilePath();
+	strcpy(tempPathFixBuffer,_tempSavePath);
+	free(_tempSavePath);
 	fp = fopen (tempPathFixBuffer, "r");
 	//fprintf(fp, "%s\n", currentMapFilepath);
 	////fread
@@ -1912,32 +2025,32 @@ void StatusLoop(){
 		startDrawing();
 		DrawGrayBackground();
 		#if PLATFORM != PLAT_3DS
-			blackDrawText(SCREENWIDTH/2-strlen(party[selectedMember].fighterStats.name)*64/2,3,party[selectedMember].fighterStats.name,8);
+			blackDrawText(CenterSomething(textWidth(fontSize,party[selectedMember].fighterStats.name)),3,party[selectedMember].fighterStats.name,8);
 			blackDrawText(3,69,N_ATK,4);
 			sprintf((char*)&statNumberString,"%d",party[selectedMember].fighterStats.attack);
-			blackDrawText(strlen(N_ATK)*32+32,69,statNumberString,4);
+			blackDrawText(textWidth(fontSize,N_ATK)+32,69,statNumberString,4);
 			blackDrawText(3,106,N_MATK,4);
 			sprintf((char*)&statNumberString,"%d",party[selectedMember].fighterStats.magicAttack);
-			blackDrawText(strlen(N_MATK)*32+32,106,statNumberString,4);
+			blackDrawText(textWidth(fontSize,N_MATK)+32,106,statNumberString,4);
 			blackDrawText(3,143,N_DEF,4);
 			sprintf((char*)&statNumberString,"%d",party[selectedMember].fighterStats.defence);
-			blackDrawText(strlen(N_DEF)*32+32,143,statNumberString,4);
+			blackDrawText(textWidth(fontSize,N_DEF)+32,143,statNumberString,4);
 			blackDrawText(3,180,N_MDEF,4);
 			sprintf((char*)&statNumberString,"%d",party[selectedMember].fighterStats.magicDefence);
-			blackDrawText(strlen(N_MDEF)*32+32,180,statNumberString,4);
+			blackDrawText(textWidth(fontSize,N_MDEF)+32,180,statNumberString,4);
 			blackDrawText(3,217,N_SPEED,4);
 			sprintf((char*)&statNumberString,"%d",party[selectedMember].fighterStats.speed);
-			blackDrawText(strlen(N_SPEED)*32+32,217,statNumberString,4);
+			blackDrawText(textWidth(fontSize,N_SPEED)+32,217,statNumberString,4);
 	
 			sprintf((char*)&statNumberString,"%d/%d",party[selectedMember].hp,party[selectedMember].fighterStats.maxHp);
-			blackDrawText(strlen(N_HP)*32+32,254,statNumberString,4);
+			blackDrawText(textWidth(fontSize,N_HP)+32,254,statNumberString,4);
 			blackDrawText(3,254,N_HP,4);
 			sprintf((char*)&statNumberString,"%d/%d",party[selectedMember].mp,party[selectedMember].fighterStats.maxMp);
-			blackDrawText(strlen(N_MP)*32+32,291,statNumberString,4);
+			blackDrawText(textWidth(fontSize,N_MP)+32,291,statNumberString,4);
 			blackDrawText(3,291,N_MP,4);
 			
 			sprintf((char*)&statNumberString,"%d",party[selectedMember].fighterStats.level);
-			blackDrawText(strlen(N_LV)*32+32,328,statNumberString,4);
+			blackDrawText(textWidth(fontSize,N_LV)+32,328,statNumberString,4);
 			blackDrawText(3,328,N_LV,4);
 			
 			double animationScale=(SCREENHEIGHT-180)/ partyIdleAnimation[selectedMember].height;
@@ -2002,6 +2115,7 @@ void StatusLoop(){
 }
 
 #if PLATFORM != PLAT_COMPUTER
+	#define MENUEXBOARDER 5
 	void MenuLop(){
 	signed char selected=0;
 	// 0 - menu
@@ -2106,45 +2220,48 @@ void StatusLoop(){
 	
 		DrawMapThings();
 
+		int _menuX = CenterSomething(470+MENUEXBOARDER*2);
+		int _menuY = CenterSomethingCustomWidth(262+MENUEXBOARDER*2,SCREENHEIGHT);
+		int _menuElemX = _menuX+MENUEXBOARDER+selectorAnimation.width*2+MENUEXBOARDER;
+		int _menuElemY = _menuY+MENUEXBOARDER+currentTextHeight;
 
 		#if PLATFORM!=PLAT_3DS
-			// Draw fancy shade thingie
-			drawRectangle(720,136,5,272,0,0,0,255);
-			drawRectangle(240,408,485,5,0,0,0,255);
+			// Draw fancy shade
+			drawRectangle(_menuX,_menuY,470+MENUEXBOARDER*3,262+MENUEXBOARDER*3,0,0,0,255);
 			// Draw border
-			drawRectangle(240,136,480,272,0,255,0,255);
+			drawRectangle(_menuX,_menuY,480,272,0,255,0,255);
 			// Draw real rectangle
-			drawRectangle(245,141,470,262,252,255,255,255);
+			drawRectangle(_menuX+MENUEXBOARDER,_menuY+MENUEXBOARDER,470,262,252,255,255,255);
 	
 			if (subspot==0){
-				blackDrawText(CenterText(N_HAPPYMENU,4),146,N_HAPPYMENU,4);
-				blackDrawText(287,183,N_RESUME,4);
-				blackDrawText(287,183+32+5,playerName,4);
-				blackDrawText(287,183+32+32+5+5,N_SAVE,4);
-				blackDrawText(287,183+32+32+32+5+5+5,N_LOAD,4);
-				blackDrawText(287,183+32+32+32+32+5+5+5+5,N_QUIT,4);
+				blackDrawText(CenterText(N_HAPPYMENU,4),_menuY+MENUEXBOARDER,N_HAPPYMENU,4);
+				blackDrawText(_menuElemX,_menuElemY,N_RESUME,4);
+				blackDrawText(_menuElemX,_menuElemY+32+5,playerName,4);
+				blackDrawText(_menuElemX,_menuElemY+32+32+5+5,N_SAVE,4);
+				blackDrawText(_menuElemX,_menuElemY+32+32+32+5+5+5,N_LOAD,4);
+				blackDrawText(_menuElemX,_menuElemY+32+32+32+32+5+5+5+5,N_QUIT,4);
 			}else if (subspot==1){
 				if (LANGUAGE==LANG_SPANISH){
-					blackDrawText(CenterText("?Quieres cargar?",4),146,"'?Quieres cargar?",4);
-					blackDrawText(287,183,"S'i.",4);
-					blackDrawText(287,183+32+5,"No.",4);
+					blackDrawText(CenterText("?Quieres cargar?",4),_menuY+MENUEXBOARDER,"'?Quieres cargar?",4);
+					blackDrawText(_menuElemX,_menuElemY,"S'i.",4);
+					blackDrawText(_menuElemX,_menuElemY+32+5,"No.",4);
 				}else if (LANGUAGE==LANG_ENGLISH){
-					blackDrawText(CenterText("Really load?",4),146,"Really load?",4);
-					blackDrawText(287,183,"Yes.",4);
-					blackDrawText(287,183+32+5,"No.",4);
+					blackDrawText(CenterText("Really load?",4),_menuY+MENUEXBOARDER,"Really load?",4);
+					blackDrawText(_menuElemX,_menuElemY,"Yes.",4);
+					blackDrawText(_menuElemX,_menuElemY+32+5,"No.",4);
 				}
 			}else if (subspot==2){
 				if (LANGUAGE==LANG_SPANISH){
-					blackDrawText(CenterText("?Quieres Salvar?",4),146,"'?Quieres Salvar?",4);
-					blackDrawText(287,183,"S'i.",4);
-					blackDrawText(287,183+32+5,"No.",4);
+					blackDrawText(CenterText("?Quieres Salvar?",4),_menuY+MENUEXBOARDER,"'?Quieres Salvar?",4);
+					blackDrawText(_menuElemX,_menuElemY,"S'i.",4);
+					blackDrawText(_menuElemX,_menuElemY+32+5,"No.",4);
 				}else if (LANGUAGE==LANG_ENGLISH){
-					blackDrawText(CenterText("Really save?",4),146,"Really save?",4);
-					blackDrawText(287,183,"Yes.",4);
-					blackDrawText(287,183+32+5,"No.",4);
+					blackDrawText(CenterText("Really save?",4),_menuY+MENUEXBOARDER,"Really save?",4);
+					blackDrawText(_menuElemX,_menuElemY,"Yes.",4);
+					blackDrawText(_menuElemX,_menuElemY+32+5,"No.",4);
 				}
 			}
-			DrawAnimationAsISay(&selectorAnimation,245,selected*selectorAnimation.height*2+(selectorAnimation.height/2)+183+selected*5,2);
+			DrawAnimationAsISay(&selectorAnimation,_menuX+MENUEXBOARDER,selected*selectorAnimation.height*2+(selectorAnimation.height/2)+_menuElemY+selected*5,2);
 		#elif PLATFORM == PLAT_3DS
 			endDrawing();
 			sf2d_start_frame(GFX_BOTTOM, GFX_LEFT);
@@ -2309,28 +2426,41 @@ void CreditsView(){
 
 
 	const char* _creditsFileList[] = {
-	"Credits.txt",
-	"Liberation-Sans-License.txt",
-	"libvita2d-License.txt",
-	"LICENSE.FLAC.txt",
-	"LICENSE.freetype.txt",
-	//"LICENSE.modplug.txt",
-	"LICENSE.ogg-vorbis.txt",
-	"LICENSE.smpeg.txt",
-	//"LICENSE.zlib.txt",
-	"Lua-License.txt",
-	"SDL_FontCache-License.txt" };
-	//"SDL-License.txt",
-	//"SDL-Mixer-License.txt",
-	//"SDL-ttf-License.txt" };
+		"Credits.txt",
+		"Liberation-Sans-License.txt",
+		"Lua-License.txt",
+		"SDL_FontCache-License.txt",
+		#if SOUNDPLAYER == SND_SDL
+			"libmpg123-license.txt",
+			"LICENSE.FLAC.txt",
+			"LICENSE.ogg-vorbis.txt",
+		#endif
+		#if TEXTRENDERER != TEXT_DEBUG
+			"LICENSE.freetype.txt",
+		#endif
+		#if PLATFORM == PLAT_VITA
+			"libvita2d-License.txt",
+		#endif
+		#if SUBPLATFORM == SUB_ANDROID
+			"LICENSE.smpeg.txt",
+		#endif
+	};
+
 	int selected=0;
 	const int _selectedMax=sizeof(_creditsFileList)/sizeof(char*);
-	CrossTexture* leftButton = loadPNG("Stuff/Battle/LeftIcon.png");
-	CrossTexture* rightButton = loadPNG("Stuff/Battle/RightIcon.png");
-	CrossTexture* selectButton = loadPNG("Stuff/Battle/SelectIcon.png");
-	CrossTexture* backButton = loadPNG("Stuff/Battle/BackIcon.png");
 
-	int _creditsLinePerScreen = floor(((SCREENHEIGHT-32-getTextureHeight(selectButton)*2))/(double)currentTextHeight);
+	#if TOUCHENABLED
+		CrossTexture* leftButton = loadPNG("Stuff/Battle/LeftIcon.png");
+		CrossTexture* rightButton = loadPNG("Stuff/Battle/RightIcon.png");
+		CrossTexture* selectButton = loadPNG("Stuff/Battle/SelectIcon.png");
+		CrossTexture* backButton = loadPNG("Stuff/Battle/BackIcon.png");
+	#endif
+
+	int _extraMinus=0;
+	#if TOUCHENABLED
+		_extraMinus = getTextureHeight(selectButton)*2;
+	#endif
+	int _creditsLinePerScreen = floor(((SCREENHEIGHT-32-_extraMinus))/(double)currentTextHeight);
 	char _currentLoadedCredits[_creditsLinePerScreen][200];
 
 	while (1){
@@ -2353,14 +2483,32 @@ void CreditsView(){
 				}
 			}
 		#endif
+		if (wasJustPressed(SCE_CTRL_LEFT)){
+			selected--;
+			if (selected<0){
+				selected=_selectedMax-1;
+			}
+		}
+		if (wasJustPressed(SCE_CTRL_RIGHT)){
+			selected++;
+			if (selected>=_selectedMax){
+				selected=0;
+			}
+		}
+		if (wasJustPressed(SCE_CTRL_CROSS)){
+			break;
+		}
 		controlsEnd();
 
 		startDrawing();
 		DrawGrayBackground();
-		drawTextureScale(leftButton,0,SCREENHEIGHT-getTextureHeight(leftButton)*2,2,2);
-		drawTextureScale(rightButton,SCREENWIDTH-getTextureWidth(leftButton)*2,SCREENHEIGHT-getTextureHeight(leftButton)*2,2,2);
-		drawTextureScale(selectButton,(SCREENWIDTH/2)-getTextureWidth(selectButton)*2/2,SCREENHEIGHT-getTextureHeight(selectButton)*2,2,2);
-		
+
+		#if TOUCHENABLED
+			drawTextureScale(leftButton,0,SCREENHEIGHT-getTextureHeight(leftButton)*2,2,2);
+			drawTextureScale(rightButton,SCREENWIDTH-getTextureWidth(leftButton)*2,SCREENHEIGHT-getTextureHeight(leftButton)*2,2,2);
+			drawTextureScale(selectButton,(SCREENWIDTH/2)-getTextureWidth(selectButton)*2/2,SCREENHEIGHT-getTextureHeight(selectButton)*2,2,2);
+		#endif
+
 		//blackDrawText(int x, int y, const char* text, float size)
 		blackDrawText(32,32,"Use the buttons to select a credits or license file.",fontSize);
 		blackDrawText(32,32+currentTextHeight*2,_creditsFileList[selected],fontSize);
@@ -2374,9 +2522,10 @@ void CreditsView(){
 	strcpy(_tempCreditsFilepathConcat,"Stuff/License/");
 	strcat(_tempCreditsFilepathConcat,_creditsFileList[selected]);
 	fixPath(_tempCreditsFilepathConcat,tempPathFixBuffer, TYPE_EMBEDDED);
-	currentCreditsFile = crossfopen(_tempCreditsFilepathConcat,"r");
+	currentCreditsFile = crossfopen(tempPathFixBuffer,"r");
 	if (currentCreditsFile==NULL){
 		BasicMessage("Failed to load file.");
+		return;
 	}
 	char _quit=0;
 	while (_quit==0){
@@ -2429,12 +2578,18 @@ void CreditsView(){
 					}
 				}
 			#endif
+			if (wasJustPressed(SCE_CTRL_CROSS) || wasJustPressed(SCE_CTRL_CIRCLE)){
+				_quit = wasJustPressed(SCE_CTRL_CIRCLE);
+				break;
+			}
 			controlsEnd();
 			startDrawing();
 			DrawGrayBackground();
-			drawTextureScale(backButton,0,SCREENHEIGHT-getTextureHeight(leftButton)*2,2,2);
-			drawTextureScale(rightButton,SCREENWIDTH-getTextureWidth(leftButton)*2,SCREENHEIGHT-getTextureHeight(leftButton)*2,2,2);
-			
+			#if TOUCHENABLED
+				drawTextureScale(backButton,0,SCREENHEIGHT-getTextureHeight(leftButton)*2,2,2);
+				drawTextureScale(rightButton,SCREENWIDTH-getTextureWidth(leftButton)*2,SCREENHEIGHT-getTextureHeight(leftButton)*2,2,2);
+			#endif
+
 			//blackDrawText(int x, int y, const char* text, float size)
 			for (i=0;i<_creditsLinePerScreen;i++){
 				blackDrawText(32,32+i*currentTextHeight,_currentLoadedCredits[i],fontSize);
@@ -2447,10 +2602,12 @@ void CreditsView(){
 		}
 	}
 	crossfclose(currentCreditsFile);
-	freeTexture(leftButton);
-	freeTexture(rightButton);
-	freeTexture(selectButton);
-	freeTexture(backButton);
+	#if TOUCHENABLED
+		freeTexture(leftButton);
+		freeTexture(rightButton);
+		freeTexture(selectButton);
+		freeTexture(backButton);
+	#endif
 	#if TEXTRENDERER == TEXT_FONTCACHE
 		fontSize = 50;
 		LoadFont();
@@ -3082,6 +3239,7 @@ char BattleLop(char canRun){
 				}
 			#endif
 			if (wasJustPressed(SCE_CTRL_DOWN) || wasJustPressed(SCE_CTRL_RIGHT)){
+				PlaySoftMenuSoundEffect();
 				selected++;
 				if (canRun==1){
 					if (selected==4){
@@ -3094,6 +3252,7 @@ char BattleLop(char canRun){
 				}
 			}
 			if (wasJustPressed(SCE_CTRL_UP) || wasJustPressed(SCE_CTRL_LEFT)){
+				PlaySoftMenuSoundEffect();
 				selected--;
 				if (selected<0){
 					if (canRun==1){
@@ -3134,7 +3293,7 @@ char BattleLop(char canRun){
 					}
 				}else if (selected==2){
 					// Item
-					BasicMessage("Maybe one day, there will be items you can use in battle.");
+					BasicMessage(LANGUAGE == LANG_ENGLISH ? "Maybe one day, there will be items you can use in battle." : "No hay cosas que t'u puedes usar en este juego.");
 				}else if (selected==3){
 					// Run
 					place=0;
@@ -3687,14 +3846,19 @@ void TitleLoop(){
 					bButton=SCE_CTRL_CIRCLE;
 					aButton=SCE_CTRL_CROSS;
 				}
+			#else
+				CreditsView();
 			#endif
+		}
+		if (wasJustPressed(SCE_CTRL_TRIANGLE)){
+			LANGUAGE = (LANGUAGE == LANG_ENGLISH ? LANG_SPANISH : LANG_ENGLISH);
+			freeTexture(titleImage);
+			titleImage = LoadEmbeddedPNG(LANGUAGE == LANG_ENGLISH ? "Stuff/Title.png" : "SpanishReplace/title.png");
 		}
 
 		startDrawing();
 
-		//DrawTexture(titleImage,0,0);
 		drawTextureScale(titleImage,0,0,(float)SCREENWIDTH/getTextureWidth(titleImage),(float)SCREENHEIGHT/getTextureHeight(titleImage));
-		//DrawUnusedAreaRect();
 		#if PLATFORM != PLAT_COMPUTER
 			#if PLATFORM != PLAT_3DS && PLATFORM != PLAT_SWITCH
 				if (aButton==SCE_CTRL_CROSS){
@@ -3710,8 +3874,13 @@ void TitleLoop(){
 				}else if (LANGUAGE==LANG_SPANISH){
 					blackDrawText(0,0,"X: English",2);
 				}
+			#elif PLATFORM == PLAT_SWITCH
+				blackDrawText(64,SCREENHEIGHT-currentTextHeight,LANGUAGE == LANG_ENGLISH ? "Espa'nol" : "English",2);
+				blackDrawText(64,SCREENHEIGHT-currentTextHeight*2,"Credits",2);
 			#endif
 		#endif
+
+		goodDrawTextColored(SCREENWIDTH-textWidth(fontSize,VSTRING),0,VSTRING,fontSize,214,214,214);
 
 		endDrawing();
 		
@@ -3748,51 +3917,11 @@ void Init(){
 		vita2d_set_clear_color(RGBA8(212, 208, 200, 0xFF));
 		// 0 this out so we start the game without having pushed any buttons
 		memset(&pad, 0, sizeof(pad));
-	#elif PLATFORM == PLAT_COMPUTER
-		SDL_Init(SDL_INIT_VIDEO);
-		#if SUBPLATFORM == SUB_ANDROID
-			// For knowing screen resolution and stuff.
-			SDL_DisplayMode displayMode;
-			if( SDL_GetCurrentDisplayMode( 0, &displayMode ) == 0 ){
-				mainWindow = SDL_CreateWindow( "HappyWindo", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, displayMode.w, displayMode.h, SDL_WINDOW_SHOWN );
-				screenWidth=displayMode.w;
-				screenHeight=displayMode.h;
-			}else{
-				printf("Failed to get display mode....\n");
-			}
-			_screenWidthReal = SCREENWIDTH;
-			_screenHeightReal = SCREENHEIGHT;
-		#else
-			mainWindow = SDL_CreateWindow( "HappyWindo", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, SCREENWIDTH, SCREENHEIGHT, SDL_WINDOW_SHOWN );
-			//ShowErrorIfNull(mainWindow);
-			//screenWidth=1024;
-			//screenHeight=736;
-			SDL_DisplayMode displayMode;
-			displayMode.w=SCREENWIDTH;
-			displayMode.h=SCREENHEIGHT;
-
-			_screenWidthReal = SCREENWIDTH;
-			_screenHeightReal = SCREENHEIGHT;
-		#endif
-		if (USEVSYNC){
-			mainWindowRenderer = SDL_CreateRenderer( mainWindow, -1, SDL_RENDERER_PRESENTVSYNC);
-		}else{
-			mainWindowRenderer = SDL_CreateRenderer( mainWindow, -1, SDL_RENDERER_ACCELERATED);
-		}
-		ShowErrorIfNull(mainWindowRenderer);
-
-		// This is the default background color.
-		//SDL_SetRenderDrawColor( mainWindowRenderer, 212, 208, 200, 255 );
-		// Check if this fails?
-		IMG_Init( IMG_INIT_PNG );
-
-		// We need to set this because SDL_FontCache will change it if we don't.
-		SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "0");
 	#elif PLATFORM == PLAT_3DS
 		sf2d_init();
 		sf2d_set_clear_color(RGBA8(212, 208, 200, 0xFF));
-	#elif PLATFORM == PLAT_SWITCH
-		initGraphics(640,480, &_screenWidthReal, &_screenHeightReal);
+	#elif PLATFORM == PLAT_SWITCH || PLATFORM == PLAT_COMPUTER
+		initGraphics(SCREENWIDTH,SCREENHEIGHT, &_screenWidthReal, &_screenHeightReal);
 	#endif
 
 	#if SHOWSPLASH==1
@@ -3822,7 +3951,9 @@ void Init(){
 	#endif
 
 	initAudio();
-	makeDataDirectory();
+	#if PLATFORM != PLAT_SWITCH
+		makeDataDirectory();
+	#endif
 	LoadFont();
 
 	InitGoodArray(&tileOtherData);
@@ -3916,6 +4047,15 @@ void Init(){
 	#endif
 
 	#if PLATFORM == PLAT_COMPUTER
+
+		SDL_DisplayMode displayMode;
+		#if SUBPLATFORM == SUB_ANDROID
+			SDL_GetCurrentDisplayMode( 0, &displayMode);
+		#else
+			displayMode.w = SCREENWIDTH;
+			displayMode.h = SCREENHEIGHT;
+		#endif
+
 		double foundRatio;
 		if (FitToWidth(displayMode.w,displayMode.h)==1){
 			foundRatio = ((double)displayMode.w)/SCREENWIDTH;
