@@ -87,7 +87,7 @@ int LANGUAGE=LANG_ENGLISH;
 
 #define ANDROIDTEST 0
 
-#define TOUCHENABLED 0
+#define TOUCHENABLED 1
 
 #define VSTRING "v1.2"
 
@@ -1165,7 +1165,7 @@ char ShowMessageWithPortrait(char* _tempMsg, char isQuestion, CrossTexture* port
 		if (isQuestion==1){
 			drawTextureScale(yesButtonTexture,SCREENWIDTH-getTextureWidth(yesButtonTexture)*YESNOSCALE,TEXTBOXY-getTextureHeight(yesButtonTexture)*YESNOSCALE-getTextureHeight(yesButtonTexture)*YESNOSCALE,YESNOSCALE,YESNOSCALE);
 			drawTextureScale(noButtonTexture,SCREENWIDTH-getTextureWidth(noButtonTexture)*YESNOSCALE,TEXTBOXY-getTextureHeight(noButtonTexture)*YESNOSCALE,YESNOSCALE,YESNOSCALE);
-			#if PLATFORM != PLAT_COMPUTER
+			#if !TOUCHENABLED
 				DrawAnimationAsISay(&selectorAnimation,SCREENWIDTH-getTextureWidth(yesButtonTexture)*YESNOSCALE-YESNOSCALE*22-5,TEXTBOXY-(currentSelected)*(getTextureHeight(yesButtonTexture)*YESNOSCALE)-((getTextureHeight(yesButtonTexture)*YESNOSCALE)/2),YESNOSCALE);
 			#endif
 		}
@@ -1577,7 +1577,7 @@ signed char SelectSpell(partyMember member){
 				}
 			}
 			DrawAnimationAsISay(&selectorAnimation,0,(selected+1)*currentTextHeight+(currentTextHeight/4)*selected,4);
-			#if PLATFORM == PLAT_COMPUTER
+			#if TOUCHENABLED
 				blackDrawText(88,SCREENHEIGHT-currentTextHeight,"Back",6);
 			#endif
 		#else
@@ -2114,7 +2114,7 @@ void StatusLoop(){
 	}
 }
 
-#if PLATFORM != PLAT_COMPUTER
+#if !TOUCHENABLED
 	#define MENUEXBOARDER 5
 	void MenuLop(){
 	signed char selected=0;
@@ -2618,7 +2618,7 @@ void Overworld(){
 	FpsCapStart();
 	controlsStart();
 	// Main logic
-	#if PLATFORM == PLAT_COMPUTER
+	#if TOUCHENABLED
 		if (wasJustPressed(SCE_TOUCH)){
 			if (FixTouchX(touchX)<32*MAPXSCALE && FixTouchY(touchY)<32*MAPYSCALE){
 				PlaySoftMenuSoundEffect();
@@ -2810,7 +2810,7 @@ void Overworld(){
 	// Drawing
 	startDrawing();
 	DrawMapThings();
-	#if PLATFORM == PLAT_COMPUTER
+	#if TOUCHENABLED
 		drawTextureScale(pauseButtonTexture,0,0,MAPXSCALE,MAPYSCALE);
 	#endif
 	endDrawing();
@@ -2842,7 +2842,7 @@ char BattleLop(char canRun){
 	// The current place in the orderOfAction
 	unsigned char currentOrder=0;
 	// For all menus in battle.
-	#if PLATFORM == PLAT_COMPUTER
+	#if TOUCHENABLED
 		// Start offscreen
 		signed char selected=-4;
 	#else
@@ -3209,7 +3209,7 @@ char BattleLop(char canRun){
 			}
 		}else if (battleStatus==BATTLESTATUS_CHOOSINGMOVE)/*Choosing type of move*/{
 			char _actionQueue=0;
-			#if PLATFORM == PLAT_COMPUTER
+			#if TOUCHENABLED
 				if (wasJustPressed(SCE_TOUCH)){
 					if (FixTouchY(touchY)>SCREENHEIGHT-getTextureHeight(attackButton)*SELECTIONBUTTONSCALE){
 						if ( FixTouchX(touchX)>(SCREENWIDTH-(getTextureWidth(attackButton)*4*SELECTIONBUTTONSCALE))/2 ){
@@ -3223,11 +3223,16 @@ char BattleLop(char canRun){
 									break;
 								}
 							}
-							if (_didChange==1){
-								if (selected==_oldSelected){
-									_actionQueue = QUEUE_X;
-								}else{
-									PlaySoftMenuSoundEffect();
+
+							if (selected==3 && !canRun){
+								selected=_oldSelected;
+							}else{
+								if (_didChange==1){
+									if (selected==_oldSelected){
+										_actionQueue = QUEUE_X;
+									}else{
+										PlaySoftMenuSoundEffect();
+									}
 								}
 							}
 						}
@@ -3303,7 +3308,7 @@ char BattleLop(char canRun){
 		}else if (battleStatus==BATTLESTATUS_CHOOSINGTARGET)/*Choosing target*/{
 			char _actionQueue=0;
 			
-			#if PLATFORM == PLAT_COMPUTER
+			#if TOUCHENABLED
 				if (wasJustPressed(SCE_TOUCH)){
 					if (FixTouchY(touchY)>SCREENHEIGHT-getTextureHeight(attackButton)*SELECTIONBUTTONSCALE){
 						if ( FixTouchX(touchX)>(SCREENWIDTH-(getTextureWidth(attackButton)*4*SELECTIONBUTTONSCALE))/2 ){
@@ -3546,7 +3551,7 @@ char BattleLop(char canRun){
 			#endif
 		}
 
-		#if PLATFORM == PLAT_COMPUTER
+		#if TOUCHENABLED
 			if (battleStatus==BATTLESTATUS_CHOOSINGTARGET){
 				drawTextureScale(leftButton,(SCREENWIDTH-(getTextureWidth(attackButton)*4*SELECTIONBUTTONSCALE))/2,SCREENHEIGHT-getTextureHeight(attackButton)*SELECTIONBUTTONSCALE,SELECTIONBUTTONSCALE,SELECTIONBUTTONSCALE);
 				drawTextureScale(selectButton,((SCREENWIDTH-(getTextureWidth(attackButton)*4*SELECTIONBUTTONSCALE))/2)+getTextureWidth(attackButton)*SELECTIONBUTTONSCALE,SCREENHEIGHT-getTextureHeight(attackButton)*SELECTIONBUTTONSCALE,SELECTIONBUTTONSCALE,SELECTIONBUTTONSCALE);
@@ -3563,7 +3568,7 @@ char BattleLop(char canRun){
 				continue;
 			}
 
-			#if PLATFORM==PLAT_COMPUTER || PLATFORM==PLAT_VITA
+			#if PLATFORM!=PLAT_3DS
 				// Draw health and MP bar for party member
 
 				if (i!=0){
@@ -3757,7 +3762,7 @@ void TitleLoop(){
 	while (place!=2){
 		StartFrameStuff();
 
-		#if PLATFORM == PLAT_COMPUTER
+		#if SUBPLATFORM == SUB_ANDROID
 			if (wasJustPressed(SCE_ANDROID_BACK)){
 				if (_didSecretCode==0){
 					_didSecretCode=2;
@@ -3769,6 +3774,10 @@ void TitleLoop(){
 					break;
 				}
 			}
+		#endif
+
+		#if TOUCHENABLED
+			
 			// 445
 			// 74
 			if (wasJustPressed(SCE_TOUCH)){
