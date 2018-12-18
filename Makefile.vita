@@ -3,7 +3,7 @@ PSVITAIP=$(VITAIP)
 TITLE_ID = VSDK00001
 TITLE_ID = MYLEGNOOB
 TARGET   = HappyLand
-OBJS     = main.o
+OBJS     = ./source/main.o
 
 LIBS = -lvita2d -lSceDisplay_stub -lSceGxm_stub \
 	-lSceSysmodule_stub -lSceCtrl_stub -lScePgf_stub \

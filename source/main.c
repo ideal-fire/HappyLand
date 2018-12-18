@@ -3752,7 +3752,7 @@ char BattleLop(char canRun){
 // Press back 3 times and tap in top left
 // Hold up and O as you press X
 void TitleLoop(){
-	#if PLATFORM != PLAT_COMPUTER
+	#if TOUCHENABLED == 0
 		CrossTexture* titleImage = LoadEmbeddedPNG("Stuff/Title.png");
 	#else
 		CrossTexture* titleImage = LoadEmbeddedPNG("Stuff/TitleAndroid.png");
