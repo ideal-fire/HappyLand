@@ -54,7 +54,7 @@ function Event03()
 			questionanswer = ShowMessageWithPortrait('Want to learn how to use it?', true, signport, 0);
 		elseif (Lang==2) then
 			ShowMessageWithPortrait('Soy Botella De Agua Grande. Puedo ' .. "ese'nar la magia " .. '"Beber Agua".', false, signport, 0);
-			questionanswer = ShowMessageWithPortrait("'?Quieres ese'nar la magia " .. '"Beber Agua"?', true, signport, 0);
+			questionanswer = ShowMessageWithPortrait("'?Quieres aprender la magia " .. '"Beber Agua"?', true, signport, 0);
 		end
 	
 		if (questionanswer==true) then
@@ -64,7 +64,7 @@ function Event03()
 			if (Lang==1) then
 				ShowMessageWithPortrait("You learned Drink Water!", false, signport, 0);
 			elseif (Lang==2) then
-				ShowMessageWithPortrait("'!T'u ense'naste " .. '"Beber Agua"!', false, signport, 0);
+				ShowMessageWithPortrait("'!T'u aprendiste " .. '"Beber Agua"!', false, signport, 0);
 			end
 			flags[1]=1;
 			StartWildBattle();

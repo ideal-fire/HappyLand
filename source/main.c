@@ -9,7 +9,6 @@ TODO - Sometimes, enemy attack animations dissapear.
 	Snowmen ones dissapeared after angry tree also
 	Noob Big Foot had animatioin
 TODO - Slight rumble when you walk into wall
-
 TODO - If matt isn't used and player beats normal Big Foot, secret ending.
 	- Fight matt?
 	- "This isn't how it was supposed to be"
@@ -21,7 +20,7 @@ TODO - If matt isn't used and player beats normal Big Foot, secret ending.
 
 #define BGMENABLE 1
 
-#include "GeneralGoodConfig.h"
+#include <GeneralGood/GeneralGoodConfig.h>
 
 // Only turned off when I'm working on my game. Needs to be set to 1 before release
 #define SHOWSPLASH (PLATFORM == PLAT_VITA)
@@ -87,8 +86,6 @@ int LANGUAGE=LANG_ENGLISH;
 
 #define ANDROIDTEST 0
 
-#define TOUCHENABLED 1
-
 #define VSTRING "v1.2"
 
 #if PLATFORM==PLAT_VITA
@@ -117,17 +114,21 @@ int LANGUAGE=LANG_ENGLISH;
 	#define DEFAULTPORTRAITSIZE 200
 	// You know how in the battle when you hit somebody it shows the damage
 	// well this is the scale of the text
-	#define DAMAGETEXTSIZE 8
+	#define DAMAGETEXTSIZE fontSize
 
 	#define YESNOSCALE 2
 	#define SELECTIONBUTTONSCALE 2
-#elif PLATFORM==PLAT_COMPUTER
+
+	#define UISCALE 1
+
+	#define SCE_TOUCH 0
+	#define SCE_ANDROID_BACK 0
+
+	#define TOUCHENABLED 0
+#elif PLATFORM==PLAT_COMPUTER && 0
 	#include <stdlib.h>
-	void XOutFunction(){
-		exit(0);
-	}
-	#define SCE_TOUCH 19
-	#define SCE_ANDROID_BACK 20
+//#define SCE_TOUCH 19
+//	#define SCE_ANDROID_BACK 20
 	#define SAFEDRAW 0
 	#define SCREENWIDTH 704
 	#define SCREENHEIGHT 512
@@ -143,6 +144,8 @@ int LANGUAGE=LANG_ENGLISH;
 	#define DAMAGETEXTSIZE fontSize
 	#define YESNOSCALE 3
 	#define SELECTIONBUTTONSCALE 1.7
+
+	#define TOUCHENABLED 1
 #elif PLATFORM==PLAT_3DS
 	#define SAFEDRAW 1
 	#define SCREENWIDTH 400
@@ -177,12 +180,14 @@ int LANGUAGE=LANG_ENGLISH;
 	#define DEFAULTPORTRAITSIZE 100
 	#define YESNOSCALE 1
 	#define DAMAGETEXTSIZE 2
-#elif PLATFORM==PLAT_SWITCH
+	
+	#define TOUCHENABLED 0
+#elif PLATFORM==PLAT_SWITCH || PLATFORM == PLAT_COMPUTER
 	#define SCE_TOUCH KEY_TOUCH
 
 	#define SAFEDRAW 0
-	#define SCREENWIDTH 1280
-	#define SCREENHEIGHT 720
+	#define SCREENWIDTH 1248
+	#define SCREENHEIGHT 672
 	#define MAPXSCALE 3
 	#define MAPYSCALE 3
 	#define BATTLEENTITYSCALE 3
@@ -207,10 +212,12 @@ int LANGUAGE=LANG_ENGLISH;
 	// well this is the scale of the text
 	#define DAMAGETEXTSIZE 3
 
-	#define YESNOSCALE 2
+	#define YESNOSCALE 3
 	#define SELECTIONBUTTONSCALE 2
 
 	#define UISCALE 3
+
+	#define TOUCHENABLED 0
 #endif
 
 // CAHNGED BY SCALE
@@ -263,13 +270,13 @@ int realDrawYOffset=0;
 
 char tempPathFixBuffer[256];
 
-#include "GeneralGoodExtended.h"
-#include "GeneralGood.h"
-#include "GeneralGoodGraphics.h"
-#include "GeneralGoodText.h"
-#include "GeneralGoodImages.h"
-#include "GeneralGoodSound.h"
-#include "GeneralGood.h"
+#include <GeneralGood/GeneralGoodExtended.h>
+#include <GeneralGood/GeneralGood.h>
+#include <GeneralGood/GeneralGoodGraphics.h>
+#include <GeneralGood/GeneralGoodText.h>
+#include <GeneralGood/GeneralGoodImages.h>
+#include <GeneralGood/GeneralGoodSound.h>
+#include <GeneralGood/GeneralGood.h>
 #include "GoodArray.h"
 #include "FpsCapper.h"
 #include "pathfinding.h"
@@ -445,7 +452,16 @@ animation possibleEnemiesAttackAnimation[10];
 // 
 ///////////////////////////////////////////////
 */
-
+void XOutFunction(){
+	exit(0);
+}
+char isInTileMapBounds(int x, int y){
+	return !(x<0 || y<0 || y>=tileOtherData.height || x>=tileOtherData.width);
+}
+void controlsReset(){
+	controlsStart();
+	controlsEnd();
+}
 void insertTildeCharacter(char* _dest, char _engEqual){
 	char* _putThis="";
 	switch(_engEqual){
@@ -495,9 +511,9 @@ char isPossibleTildeChar(char _engEqual){
 	}
 }
 
-void blackDrawText(int x, int y, const char* message, double fontSize){
+void blackDrawText(int x, int y, const char* message, double fontSizefkewifjeiwjf){
 	char* _realMessage = (char*)message;
-	#if TEXTRENDERER == TEXT_FONTCACHE
+	#if TEXTRENDERER == TEXT_FONTCACHE || TEXTRENDERER == TEXT_VITA2D
 		// Look for places to put Spanish characters
 		char* _nextTilde=(char*)message-1;
 		int _totalTilde=0;
@@ -548,6 +564,9 @@ CrossTexture* LoadEmbeddedPNG(char* filename){
 }
 
 void LoadFont(){
+
+
+	
 	#if TEXTRENDERER == TEXT_DEBUG
 
 		//fontImage=LoadEmbeddedPNG("Stuff/Font.png");
@@ -562,7 +581,9 @@ void LoadFont(){
 		// TODO - Change this
 		//fixPath("Stuff/LiberationSans-Regular.ttf",tempPathFixBuffer,TYPE_EMBEDDED);
 		//fontImage=loadPNG(tempPathFixBuffer);
-		#error todo
+		fixPath("Stuff/LiberationSans-Regular.ttf",tempPathFixBuffer,TYPE_EMBEDDED);
+		loadFont(tempPathFixBuffer);
+		//#error todo
 	#endif
 	currentTextHeight = textHeight(fontSize);
 }
@@ -573,10 +594,10 @@ void RestorePartyMember(int id){
 	party[passedSlot].mp=party[passedSlot].fighterStats.maxMp;
 }
 
-int FixX(int x){
+int fixX(int x){
 	return x+drawXOffset;
 }
-int FixY(int y){
+int fixY(int y){
 	return y+drawYOffset;
 }
 int NegativeFixX(int x){
@@ -785,7 +806,7 @@ void PlaySoftMenuSoundEffect(){
 }
 
 char CheckCollision(int x, int y){
-	if (x<0 || y<0 || y>=tileOtherData.height || x>=tileOtherData.width){
+	if (!isInTileMapBounds(x,y)){
 		return 1;
 	}
 	return GetMapSpotData(x,y)->isSolid;
@@ -1166,7 +1187,7 @@ char ShowMessageWithPortrait(char* _tempMsg, char isQuestion, CrossTexture* port
 			drawTextureScale(yesButtonTexture,SCREENWIDTH-getTextureWidth(yesButtonTexture)*YESNOSCALE,TEXTBOXY-getTextureHeight(yesButtonTexture)*YESNOSCALE-getTextureHeight(yesButtonTexture)*YESNOSCALE,YESNOSCALE,YESNOSCALE);
 			drawTextureScale(noButtonTexture,SCREENWIDTH-getTextureWidth(noButtonTexture)*YESNOSCALE,TEXTBOXY-getTextureHeight(noButtonTexture)*YESNOSCALE,YESNOSCALE,YESNOSCALE);
 			#if !TOUCHENABLED
-				DrawAnimationAsISay(&selectorAnimation,SCREENWIDTH-getTextureWidth(yesButtonTexture)*YESNOSCALE-YESNOSCALE*22-5,TEXTBOXY-(currentSelected)*(getTextureHeight(yesButtonTexture)*YESNOSCALE)-((getTextureHeight(yesButtonTexture)*YESNOSCALE)/2),YESNOSCALE);
+				DrawAnimationAsISay(&selectorAnimation,SCREENWIDTH-getTextureWidth(yesButtonTexture)*YESNOSCALE-YESNOSCALE*22-5,TEXTBOXY-(currentSelected)*(getTextureHeight(yesButtonTexture)*YESNOSCALE)-((getTextureHeight(yesButtonTexture)*YESNOSCALE)/2)-((getTextureHeight(selectorAnimation.texture)*YESNOSCALE)/2),YESNOSCALE);
 			#endif
 		}
 		
@@ -2234,31 +2255,31 @@ void StatusLoop(){
 			drawRectangle(_menuX+MENUEXBOARDER,_menuY+MENUEXBOARDER,470,262,252,255,255,255);
 	
 			if (subspot==0){
-				blackDrawText(CenterText(N_HAPPYMENU,4),_menuY+MENUEXBOARDER,N_HAPPYMENU,4);
-				blackDrawText(_menuElemX,_menuElemY,N_RESUME,4);
-				blackDrawText(_menuElemX,_menuElemY+32+5,playerName,4);
-				blackDrawText(_menuElemX,_menuElemY+32+32+5+5,N_SAVE,4);
-				blackDrawText(_menuElemX,_menuElemY+32+32+32+5+5+5,N_LOAD,4);
-				blackDrawText(_menuElemX,_menuElemY+32+32+32+32+5+5+5+5,N_QUIT,4);
+				blackDrawText(CenterText(N_HAPPYMENU,4),_menuY+MENUEXBOARDER,N_HAPPYMENU,fontSize);
+				blackDrawText(_menuElemX,_menuElemY,N_RESUME,fontSize);
+				blackDrawText(_menuElemX,_menuElemY+32+5,playerName,fontSize);
+				blackDrawText(_menuElemX,_menuElemY+32+32+5+5,N_SAVE,fontSize);
+				blackDrawText(_menuElemX,_menuElemY+32+32+32+5+5+5,N_LOAD,fontSize);
+				blackDrawText(_menuElemX,_menuElemY+32+32+32+32+5+5+5+5,N_QUIT,fontSize);
 			}else if (subspot==1){
 				if (LANGUAGE==LANG_SPANISH){
-					blackDrawText(CenterText("?Quieres cargar?",4),_menuY+MENUEXBOARDER,"'?Quieres cargar?",4);
-					blackDrawText(_menuElemX,_menuElemY,"S'i.",4);
-					blackDrawText(_menuElemX,_menuElemY+32+5,"No.",4);
+					blackDrawText(CenterText("?Quieres cargar?",fontSize),_menuY+MENUEXBOARDER,"'?Quieres cargar?",fontSize);
+					blackDrawText(_menuElemX,_menuElemY,"S'i.",fontSize);
+					blackDrawText(_menuElemX,_menuElemY+32+5,"No.",fontSize);
 				}else if (LANGUAGE==LANG_ENGLISH){
-					blackDrawText(CenterText("Really load?",4),_menuY+MENUEXBOARDER,"Really load?",4);
-					blackDrawText(_menuElemX,_menuElemY,"Yes.",4);
-					blackDrawText(_menuElemX,_menuElemY+32+5,"No.",4);
+					blackDrawText(CenterText("Really load?",fontSize),_menuY+MENUEXBOARDER,"Really load?",fontSize);
+					blackDrawText(_menuElemX,_menuElemY,"Yes.",fontSize);
+					blackDrawText(_menuElemX,_menuElemY+32+5,"No.",fontSize);
 				}
 			}else if (subspot==2){
 				if (LANGUAGE==LANG_SPANISH){
-					blackDrawText(CenterText("?Quieres Salvar?",4),_menuY+MENUEXBOARDER,"'?Quieres Salvar?",4);
-					blackDrawText(_menuElemX,_menuElemY,"S'i.",4);
-					blackDrawText(_menuElemX,_menuElemY+32+5,"No.",4);
+					blackDrawText(CenterText("?Quieres Salvar?",fontSize),_menuY+MENUEXBOARDER,"'?Quieres Salvar?",fontSize);
+					blackDrawText(_menuElemX,_menuElemY,"S'i.",fontSize);
+					blackDrawText(_menuElemX,_menuElemY+32+5,"No.",fontSize);
 				}else if (LANGUAGE==LANG_ENGLISH){
-					blackDrawText(CenterText("Really save?",4),_menuY+MENUEXBOARDER,"Really save?",4);
-					blackDrawText(_menuElemX,_menuElemY,"Yes.",4);
-					blackDrawText(_menuElemX,_menuElemY+32+5,"No.",4);
+					blackDrawText(CenterText("Really save?",fontSize),_menuY+MENUEXBOARDER,"Really save?",fontSize);
+					blackDrawText(_menuElemX,_menuElemY,"Yes.",fontSize);
+					blackDrawText(_menuElemX,_menuElemY+32+5,"No.",fontSize);
 				}
 			}
 			DrawAnimationAsISay(&selectorAnimation,_menuX+MENUEXBOARDER,selected*selectorAnimation.height*2+(selectorAnimation.height/2)+_menuElemY+selected*5,2);
@@ -2329,10 +2350,12 @@ void StatusLoop(){
 
 			controlsStart();
 
+			#if SUBPLATFORM == SUB_ANDROID
 			if (wasJustPressed(SCE_ANDROID_BACK)){
 				place=PLACE_OVERWORLD;
 				break;
 			}
+			#endif
 
 			if (wasJustPressed(SCE_TOUCH)){
 				if (FixTouchX(touchX)>CenterSomething(getTextureWidth(yesButton)*_buttonScale) && FixTouchX(touchX)<CenterSomething(getTextureWidth(yesButton)*_buttonScale)+getTextureWidth(yesButton)*_buttonScale){
@@ -2748,9 +2771,11 @@ void Overworld(){
 			}else if (playerObject->theAnimation.texture==playerUp){
 				eventUseY--;
 			}
-			tileSpotData* eventTempSpotData = GetMapSpotData(eventUseX,eventUseY);
-			if (eventTempSpotData->event!=0){
-				ExecuteEvent(playerObject,eventTempSpotData->event);
+			if (isInTileMapBounds(eventUseX,eventUseY)){
+				tileSpotData* eventTempSpotData = GetMapSpotData(eventUseX,eventUseY);
+				if (eventTempSpotData->event!=0){
+					ExecuteEvent(playerObject,eventTempSpotData->event);
+				}
 			}
 		}
 		
@@ -3105,13 +3130,13 @@ char BattleLop(char canRun){
 							DrawGrayBackground();
 							drawTextureScale(winTexture,CenterSomething(getTextureWidth(winTexture)*2),3,2,2);
 
-							blackDrawText(0,10+getTextureHeight(winTexture)*2,"EXP:",8);
-							blackDrawText(textWidth(fontSize,"EXP: "),10+getTextureHeight(winTexture)*2,temp2,8);
+							blackDrawText(0,10+getTextureHeight(winTexture)*2,"EXP:",fontSize);
+							blackDrawText(textWidth(fontSize,"EXP: "),10+getTextureHeight(winTexture)*2,temp2,fontSize);
 					
 							for (i=0;i<partySize;i++){
 								if (didLevelUp[i]==1){
-									blackDrawText(0,10+getTextureHeight(winTexture)*2+(i+1)*currentTextHeight,party[i].fighterStats.name,4);
-									blackDrawText(textWidth(fontSize,party[i].fighterStats.name)+textWidth(fontSize," "),10+getTextureHeight(winTexture)*2+(i+1)*currentTextHeight,N_LEVELEDUP,4);
+									blackDrawText(0,10+getTextureHeight(winTexture)*2+(i+1)*currentTextHeight,party[i].fighterStats.name,fontSize);
+									blackDrawText(textWidth(fontSize,party[i].fighterStats.name)+textWidth(fontSize," "),10+getTextureHeight(winTexture)*2+(i+1)*currentTextHeight,N_LEVELEDUP,fontSize);
 								}
 							}
 						#else
@@ -3120,13 +3145,13 @@ char BattleLop(char canRun){
 							endDrawing();
 							sf2d_start_frame(GFX_BOTTOM, GFX_LEFT);
 
-							blackDrawText(5,5,"EXP:",4);
-							blackDrawText(8*4*5+5,5,temp2,4);
+							blackDrawText(5,5,"EXP:",fontSize);
+							blackDrawText(8*4*5+5,5,temp2,fontSize);
 					
 							for (i=0;i<partySize;i++){
 								if (didLevelUp[i]==1){
-									blackDrawText(5,40+i*24+i*5,party[i].fighterStats.name,2);
-									blackDrawText(5+strlen(party[i].fighterStats.name)*16+16,40+i*24+i*5,N_LEVELEDUP,2);
+									blackDrawText(5,40+i*24+i*5,party[i].fighterStats.name,fontSize);
+									blackDrawText(5+strlen(party[i].fighterStats.name)*16+16,40+i*24+i*5,N_LEVELEDUP,fontSize);
 								}
 							}
 						#endif
@@ -3570,7 +3595,6 @@ char BattleLop(char canRun){
 
 			#if PLATFORM!=PLAT_3DS
 				// Draw health and MP bar for party member
-
 				if (i!=0){
 					if (textWidth(fontSize,party[i-1].fighterStats.name)+textWidth(fontSize, " ")>144){
 						_lastPartyUIX+=textWidth(fontSize,party[i-1].fighterStats.name)+textWidth(fontSize, " ");
@@ -3586,7 +3610,7 @@ char BattleLop(char canRun){
 				drawRectangle(_lastPartyUIX,48,128,32,0,0,0,255);
 				drawRectangle(_lastPartyUIX,48,floor(128*(((double)party[i].mp)/party[i].fighterStats.maxMp)),32,0,0,190,255);
 				// name
-				blackDrawText(_lastPartyUIX,90,party[i].fighterStats.name,2);
+				blackDrawText(_lastPartyUIX,90,party[i].fighterStats.name,fontSize);
 			#endif
 			// Draws attack animation for person moving to attack
 			if (battleStatus==BATTLESTATUS_MOVETOTARGET){
@@ -3838,11 +3862,9 @@ void TitleLoop(){
 				party[0].fighterStats.magicDefence=999;
 				party[0].fighterStats.level=100;
 			}
-			
 			fixPath(STARTINGMAP,tempPathFixBuffer,TYPE_EMBEDDED);
 			LoadMap(tempPathFixBuffer);
 			place=0;	
-			
 			ClearBottomScreen();
 			break;
 		}
@@ -3871,9 +3893,9 @@ void TitleLoop(){
 		#if PLATFORM != PLAT_COMPUTER
 			#if PLATFORM != PLAT_3DS && PLATFORM != PLAT_SWITCH
 				if (aButton==SCE_CTRL_CROSS){
-					blackDrawText(51+8,SCREENHEIGHT-currentTextHeight,"Select Button: X",3.5);
+					blackDrawText(51+8,SCREENHEIGHT-currentTextHeight,"Select Button: X",fontSize);
 				}else{
-					blackDrawText(51+8,SCREENHEIGHT-currentTextHeight,"Select Button: O",3.5);
+					blackDrawText(51+8,SCREENHEIGHT-currentTextHeight,"Select Button: O",fontSize);
 				}
 			#elif PLATFORM == PLAT_3DS
 				endDrawing();
@@ -3884,8 +3906,8 @@ void TitleLoop(){
 					blackDrawText(0,0,"X: English",2);
 				}
 			#elif PLATFORM == PLAT_SWITCH
-				blackDrawText(64,SCREENHEIGHT-currentTextHeight,LANGUAGE == LANG_ENGLISH ? "Espa'nol" : "English",2);
-				blackDrawText(64,SCREENHEIGHT-currentTextHeight*2,"Credits",2);
+				blackDrawText(64,SCREENHEIGHT-currentTextHeight,LANGUAGE == LANG_ENGLISH ? "Espa'nol" : "English",fontSize);
+				blackDrawText(64,SCREENHEIGHT-currentTextHeight*2,"Credits",fontSize);
 			#endif
 		#endif
 
@@ -3918,20 +3940,8 @@ void Init(){
 	// Variables for splash
 	int _screenWidthReal=0;
 	int _screenHeightReal=0;
-	#if PLATFORM == PLAT_VITA
-		_screenWidthReal=960;
-		_screenHeightReal=544;
-		// Init vita2d and set its clear color.
-		vita2d_init();
-		vita2d_set_clear_color(RGBA8(212, 208, 200, 0xFF));
-		// 0 this out so we start the game without having pushed any buttons
-		memset(&pad, 0, sizeof(pad));
-	#elif PLATFORM == PLAT_3DS
-		sf2d_init();
-		sf2d_set_clear_color(RGBA8(212, 208, 200, 0xFF));
-	#elif PLATFORM == PLAT_SWITCH || PLATFORM == PLAT_COMPUTER
-		initGraphics(SCREENWIDTH,SCREENHEIGHT, &_screenWidthReal, &_screenHeightReal);
-	#endif
+	initGraphics(SCREENWIDTH,SCREENHEIGHT, &_screenWidthReal, &_screenHeightReal);
+	setClearColor(212,208,200,255);
 
 	#if SHOWSPLASH==1
 			#if PLATFORM == PLAT_VITA
@@ -4055,14 +4065,14 @@ void Init(){
 		LoadFont();
 	#endif
 
-	#if PLATFORM == PLAT_COMPUTER
+	#if RENDERER == REND_SDL
 
 		SDL_DisplayMode displayMode;
 		#if SUBPLATFORM == SUB_ANDROID
 			SDL_GetCurrentDisplayMode( 0, &displayMode);
 		#else
-			displayMode.w = SCREENWIDTH;
-			displayMode.h = SCREENHEIGHT;
+			displayMode.w = _screenWidthReal;
+			displayMode.h = _screenHeightReal;
 		#endif
 
 		double foundRatio;
@@ -4146,6 +4156,10 @@ void Quit(lua_State* L){
 		sceKernelExitProcess(0);
 	#elif PLATFORM == PLAT_3DS
 		// Nothing needed for 3ds?
+	#elif PLATFORM == PLAT_SWITCH
+		SDL_Quit();
+		romfsExit();
+		consoleExit(NULL);
 	#endif
 }
 
