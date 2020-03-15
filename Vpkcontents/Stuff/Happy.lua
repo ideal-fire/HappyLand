@@ -133,6 +133,8 @@ flags[3]=0;
 flags[4]=0;
 -- Denied Matt's join request
 flags[5]=0;
+-- Secret post game mission active
+flags[6]=0;
 
 numberOfFlags=#flags+1;
 

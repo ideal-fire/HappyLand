@@ -3203,9 +3203,17 @@ char BattleLop(char canRun){
 						selectedSpell = &(GetSpellList(enemySpellSelected)->theSpell);
 						ResetAnimation(&(selectedSpell->theAnimation));
 						LoadSpellImageIfNeeded(enemySpellSelected);
+
+						// target self for heal spells
+						char isNeg=0;
+						if (selectedSpell->attack<0 || selectedSpell->magicAttack<0){
+							isNeg=1;
+							target=orderOfAction[currentOrder];
+						}
 						
 						int tempDone = Damage(GetBattlerById(orderOfAction[currentOrder]),GetBattlerById(target),selectedSpell->attack,selectedSpell->magicAttack,selectedSpell->spellSpecialProperty);
-						sprintf((char*)&temp2,"%d",tempDone);
+						temp3=tempDone;
+						sprintf((char*)&temp2,"%d",isNeg ? tempDone*-1 : tempDone);
 						GetBattlerById(orderOfAction[currentOrder])->mp -= selectedSpell->mpCost;
 						
 						battleStatus=BATTLESTATUS_SPELLANIMATION;
@@ -3778,6 +3786,8 @@ char BattleLop(char canRun){
 void TitleLoop(){
 	#if TOUCHENABLED == 0
 		CrossTexture* titleImage = LoadEmbeddedPNG("Stuff/Title.png");
+		CrossTexture* squareIcon = LoadEmbeddedPNG(PLATFORM == PLAT_VITA ? "Stuff/Title_Square.png" : "Stuff/Title_Square_Alt.png");
+		CrossTexture* triangleIcon = LoadEmbeddedPNG(PLATFORM == PLAT_VITA ? "Stuff/Title_Triangle.png" : "Stuff/Title_Triangle_Alt.png");
 	#else
 		CrossTexture* titleImage = LoadEmbeddedPNG("Stuff/TitleAndroid.png");
 	#endif
@@ -3889,9 +3899,12 @@ void TitleLoop(){
 
 		startDrawing();
 
-		drawTextureScale(titleImage,0,0,(float)SCREENWIDTH/getTextureWidth(titleImage),(float)SCREENHEIGHT/getTextureHeight(titleImage));
-		#if PLATFORM != PLAT_COMPUTER
-			#if PLATFORM != PLAT_3DS && PLATFORM != PLAT_SWITCH
+		float titleImageYScale=(float)SCREENHEIGHT/getTextureHeight(titleImage);
+		float titleImageXScale=(float)SCREENWIDTH/getTextureWidth(titleImage);
+		drawTextureScale(titleImage,0,0,titleImageXScale,titleImageYScale);
+		#if SUBPLATFORM != SUB_ANDROID
+			#if PLATFORM == PLAT_VITA
+				// TODO - Draw the icons
 				if (aButton==SCE_CTRL_CROSS){
 					blackDrawText(51+8,SCREENHEIGHT-currentTextHeight,"Select Button: X",fontSize);
 				}else{
@@ -3905,9 +3918,16 @@ void TitleLoop(){
 				}else if (LANGUAGE==LANG_SPANISH){
 					blackDrawText(0,0,"X: English",2);
 				}
-			#elif PLATFORM == PLAT_SWITCH
-				blackDrawText(64,SCREENHEIGHT-currentTextHeight,LANGUAGE == LANG_ENGLISH ? "Espa'nol" : "English",fontSize);
-				blackDrawText(64,SCREENHEIGHT-currentTextHeight*2,"Credits",fontSize);
+			#else
+				int tinyIconH = getTextureHeight(triangleIcon)*titleImageYScale;
+				int tinyIconW = getTextureWidth(triangleIcon)*titleImageXScale;
+				int tinyPad = currentTextHeight/9;
+				int curY = SCREENHEIGHT-tinyIconH-tinyPad;
+				drawTextureScale(triangleIcon,tinyPad,curY,titleImageXScale,titleImageYScale);
+				blackDrawText(tinyIconW+tinyPad*2,curY+CenterSomethingCustomWidth(tinyIconH,currentTextHeight),LANGUAGE == LANG_ENGLISH ? "Espa'nol" : "English",fontSize);
+				curY-=(tinyIconH+tinyPad);
+				drawTextureScale(squareIcon,tinyPad,curY,titleImageXScale,titleImageYScale);
+				blackDrawText(tinyIconW+tinyPad*2,curY+CenterSomethingCustomWidth(tinyIconH,currentTextHeight),"Credits",fontSize);
 			#endif
 		#endif
 

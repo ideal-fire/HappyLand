@@ -159,4 +159,6 @@ tileset0=LoadPNG(FixString("Stuff/Tilesets/Inside1.png"));
 SetTileset(tileset0,0);
 tileset0=nil;
 
-PlayBGM(FixString("Stuff/Sound/Town-Matt.ogg"))
+if (flags[6]==0) then
+   PlayBGM(FixString("Stuff/Sound/Town-Matt.ogg"))
+end

@@ -230,9 +230,9 @@ function Event11()
 	tempPort = LoadPNG(FixString("Stuff/Portraits/Note.png"));
 
 	if (Lang==1) then
-		ShowMessageWithPortrait("All your potato are belong to us. - Big Foot",false,tempPort,0);
+		ShowMessageWithPortrait("Come to Big Foot Land if you ever want to see your potatoes again. - Big Foot",false,tempPort,0);
 	elseif (Lang==2) then
-		ShowMessageWithPortrait("Todos tu papa son pertenece a nosotros. - Pie Grande",false,tempPort,0);
+		ShowMessageWithPortrait("Viene al Mundo de Pie Grande si quieres tus papas. - Pie Grande",false,tempPort,0);
 	end
 
 	UnloadTexture(tempPort);
@@ -251,7 +251,9 @@ dofile(FixString("Stuff/BattleLua/Slime.lua"));
 
 SetEncounterRate(10);
 
-PlayBGM(FixString("Stuff/Sound/HolFix-PixelParade.ogg"))
+if (flags[6]==0) then
+   PlayBGM(FixString("Stuff/Sound/HolFix-PixelParade.ogg"))
+end
 
 if (flags[3]==1) then
 	-- Remove the tree if you've fought it

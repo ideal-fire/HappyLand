@@ -254,5 +254,6 @@ if (GetLevel(0)<6) then
 	end
 end
 
-
-PlayBGM(FixString("Stuff/Sound/HolFix-Savior.ogg"))
+if (flags[6]==0) then
+   PlayBGM(FixString("Stuff/Sound/HolFix-Savior.ogg"))
+end

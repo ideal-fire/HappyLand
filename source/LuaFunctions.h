@@ -598,10 +598,15 @@
 		lua_pushnumber(passedState,party[passedMemberSlot].fighterStats.level);
 		return 1;
 	}
+
+	int L_Quit(lua_State* passedState){
+		place=2;
+		return 0;
+	}
 	
 	int L_EndGame(lua_State* passedState){
 		//ThanksForPlaying
-		place=2;
+		L_Quit(NULL);
 		if (LANGUAGE==LANG_ENGLISH){
 			ShowMessage("Thanks for playing!",0);
 		}else if (LANGUAGE==LANG_SPANISH){
@@ -724,6 +729,8 @@
 
 		LUAREGISTER(L_pauseBGM,"pauseBGM");
 		LUAREGISTER(L_resumeBGM,"resumeBGM");
+
+		LUAREGISTER(L_Quit,"ExitTheGame");
 	}
 
 #endif

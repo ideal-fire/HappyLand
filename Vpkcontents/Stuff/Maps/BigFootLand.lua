@@ -280,7 +280,9 @@ tileset0=LoadPNG(FixString("Stuff/Tilesets/BigFootLand.png"));
 SetTileset(tileset0,0);
 tileset0=nil;
 
-PlayBGM(FixString("Stuff/Sound/HolFix-TheSearch.ogg"))
+if (flags[6]==0) then
+   PlayBGM(FixString("Stuff/Sound/HolFix-TheSearch.ogg"))
+end
 
 if (GetLevel(1,TYPE_ID)>=9) then
 	AutosaveIfNoSavefile();
