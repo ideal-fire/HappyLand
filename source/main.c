@@ -4139,28 +4139,22 @@ void Quit(lua_State* L){
 		mainWindow = NULL;
 		mainWindowRenderer = NULL;
 		// QUit SDL subsystems
+		SDL_Quit();
 		IMG_Quit();
 	#elif RENDERER == REND_SF2D
 		sf2d_fini();
 	#endif
 	#if SOUNDPLAYER == SND_SDL
-		// TODO sdl mixer quit
+		Mix_Quit();
 	#endif
-	#if PLATFORM == PLAT_COMPUTER
-		#if RENDERER == REND_SDL
-			SDL_Quit();
-		#else
-			printf("No quit function avalible for Windows without SDL.\n");
-		#endif
-	#elif PLATFORM == PLAT_VITA
+	#if PLATFORM == PLAT_VITA
 		sceKernelExitProcess(0);
 	#elif PLATFORM == PLAT_3DS
 		// Nothing needed for 3ds?
 	#elif PLATFORM == PLAT_SWITCH
-		SDL_Quit();
 		romfsExit();
-		consoleExit(NULL);
 	#endif
+	exit(0);
 }
 
 int main(int argc, char *argv[]){
