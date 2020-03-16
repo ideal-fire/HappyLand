@@ -86,7 +86,7 @@ int LANGUAGE=LANG_ENGLISH;
 
 #define ANDROIDTEST 0
 
-#define VSTRING "v1.2"
+#define VSTRING "v1.3"
 
 #if PLATFORM==PLAT_VITA
 	#define SAFEDRAW 1
@@ -196,7 +196,7 @@ int LANGUAGE=LANG_ENGLISH;
 	// This is so they don't overlap the healthbar
 	#define MINYBATTLE 106
 	// This is so they don't overlap the selection buttons. Put as the screen height for no restriction
-	#define MAXYBATTLE 416
+	#define MAXYBATTLE 544
 	
 	// Textbox's y position
 	#define TEXTBOXY 520
@@ -454,6 +454,9 @@ animation possibleEnemiesAttackAnimation[10];
 */
 void XOutFunction(){
 	exit(0);
+}
+char inRegion(int regionMinX, int regionMinY, int regionMaxX, int regionMaxY, int pointX, int pointY, int pointW, int pointH){
+	return (pointX<regionMaxX && pointX+pointW>regionMinX && pointY<regionMaxY && pointY+pointH>regionMinY);
 }
 char isInTileMapBounds(int x, int y){
 	return !(x<0 || y<0 || y>=tileOtherData.height || x>=tileOtherData.width);
@@ -1387,6 +1390,11 @@ int RandBetween(int leftBound, int rightBound){
 	return ((rand()%(rightBound-leftBound))+leftBound);
 }
 
+
+long distanceSquared(int x1, int y1, int x2, int y2){
+	return (x2-x1)*(x2-x1)+(y2-y1)*(y2-y1);
+}
+
 void InitWildBattle(){
 	int i=0;
 
@@ -1421,22 +1429,51 @@ void InitWildBattle(){
 	}
 }
 
+#define MAXREPOSATTEMPTS 500
 void BattleInit(){
-	//numberOfEnemies=1;
-	int i=0;
-	// Generates random positions for characters.
+	int i;
+	// Generates random positions for enemies.
 	for (i=0;i<numberOfEnemies;i++){
-		enemies[i].y=RandBetween(MINYBATTLE, MAXYBATTLE-enemyIdleAnimation[i]->height*BATTLEENTITYSCALE);
-		enemies[i].x=RandBetween(SCREENWIDTH/2,SCREENWIDTH-enemyIdleAnimation[i]->width*BATTLEENTITYSCALE);
+		int tryY;
+		int tryX;
+		long maxDistance=0;
+		int curAttempt=0;
+		do{
+			int _thisY = RandBetween(MINYBATTLE, MAXYBATTLE-enemyIdleAnimation[i]->height*BATTLEENTITYSCALE);
+			int _thisX = RandBetween(SCREENWIDTH/2,SCREENWIDTH-enemyIdleAnimation[i]->width*BATTLEENTITYSCALE);
+			int rightX = _thisX+enemyIdleAnimation[i]->width*BATTLEENTITYSCALE;
+			int bottomY = _thisY+enemyIdleAnimation[i]->height*BATTLEENTITYSCALE;
+			// check if it overlaps any enemies
+			long _thisMinDistance=99999999;
+			int j;
+			for (j=i-1;j>=0;--j){
+				if (inRegion(_thisX,_thisY,rightX,bottomY,enemies[j].x,enemies[j].y,enemyIdleAnimation[j]->width*BATTLEENTITYSCALE,enemyIdleAnimation[j]->height*BATTLEENTITYSCALE)){
+					long d=distanceSquared(_thisX+(enemyIdleAnimation[i]->width*BATTLEENTITYSCALE)/2,_thisY+(enemyIdleAnimation[i]->height*BATTLEENTITYSCALE)/2,enemies[j].x+(enemyIdleAnimation[j]->width*BATTLEENTITYSCALE/2),enemies[j].y+(enemyIdleAnimation[j]->height*BATTLEENTITYSCALE/2));
+					if (d<_thisMinDistance){
+						_thisMinDistance=d;
+					}
+				}
+			}
+			if (_thisMinDistance==99999999 || _thisMinDistance>=maxDistance){
+				tryX=_thisX;
+				tryY=_thisY;
+				maxDistance=_thisMinDistance;
+				if (_thisMinDistance==99999999){
+					break;
+				}
+			}
+		}while((curAttempt++)<MAXREPOSATTEMPTS);
+		enemies[i].y=tryY;
+		enemies[i].x=tryX;
 	}
+	//
 	for (i=0;i<partySize;i++){
 		party[i].y=RandBetween(MINYBATTLE, MAXYBATTLE-partyIdleAnimation[i].height*BATTLEENTITYSCALE);
 		party[i].x=RandBetween(0,SCREENWIDTH/2-partyIdleAnimation[i].width*BATTLEENTITYSCALE);
 	}
-
 	for (i=partySize;i<4;i++){
 		party[i].hp=0;
-	}	
+	}
 }
 
 spellLinkedList* GetSpellList(int num){
