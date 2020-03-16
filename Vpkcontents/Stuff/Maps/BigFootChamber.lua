@@ -7,6 +7,30 @@ function MapDispose()
 	Event05=nil;
 	Event06=nil;
 	Event07=nil;
+	setTorchNonsense=nil;
+end
+
+-- pass 0 to do it normally, 1 to alternate
+function setTorchNonsense(doAlternateNumberBool)
+   _isAlternate=0;
+   tempx=0;
+   tempy=5;
+   while (true) do
+		local _tileNum;
+		if ((_isAlternate % 2)==0) then
+		   _tileNum=6;
+		else
+		   _tileNum=14;
+		end
+		_isAlternate=_isAlternate+doAlternateNumberBool;
+		SetMapImageData(tempx,tempy,1,0,_tileNum);
+		SetMapImageData(14-tempx,tempy,1,0,_tileNum);
+		if (tempy==0) then
+			break;
+		end
+		tempx=tempx+1;
+		tempy=tempy-1;
+	end
 end
 
 function Event06()
@@ -214,21 +238,9 @@ tileset0=LoadPNG(FixString("Stuff/Tilesets/BigFootChamber.png"));
 SetTileset(tileset0,0);
 tileset0=nil;
 
-if (flags[4]==1) then
-	tempx=0;
-	tempy=5;
+if (flags[4]==1 and flags[6]==0) then
 	-- Set torches
-	while (true) do
-		SetMapImageData(tempx,tempy,1,0,6);
-		SetMapImageData(14-tempx,tempy,1,0,6);
-	
-		if (tempy==0) then
-			break;
-		end
-	
-		tempx=tempx+1;
-		tempy=tempy-1;
-	end
+	setTorchNonsense(0);
 	
 	-- Add portal
 	SetMapImageData(7,0,1,0,7);
@@ -244,6 +256,14 @@ else
 	SetMapImageData(7,0,1,0,0);
 	SetMapOtherData(7,0,false,0);
 end
+if (flags[6]==1) then
+	setTorchNonsense(1);
+	-- Remove Big Foot
+	HideTile(7,3,1);
+	HideTile(8,3,1);
+	HideTile(7,4,1);
+	HideTile(8,4,1);
+end
 
 RedrawMap();
 if (GetLevel(0)<6) then
@@ -254,6 +274,14 @@ if (GetLevel(0)<6) then
 	end
 end
 
-if (flags[6]==0) then
-   PlayBGM(FixString("Stuff/Sound/HolFix-Savior.ogg"))
+-- just left big foot land and now we start the secret mission
+if (flags[6]==1 and flags[7]==0) then
+	if (Lang==1) then
+		ShowMessage("I feel all I worked for is going to be for nothing if I don't become stronger very soon.",false);
+	else
+		ShowMessage("Estoy asustado...",false);
+	end
+   flags[7]=1;
 end
+
+PlayBGM(FixString("Stuff/Sound/HolFix-Savior.ogg"))

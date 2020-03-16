@@ -9,6 +9,7 @@ function MapDispose()
 	Event07=nil;
 	Event08=nil;
 	Event09=nil;
+	Event10=nil;
 end
 
 function Event01()
@@ -82,11 +83,15 @@ function Event06()
 	tempPort=nil;
 end
 function Event07()
-	if (flags[2]==0 and flags[5]==0) then
-		Event08();
-	end
-	SetPlayerPosition(6,8);
-	ChangeMap(FixString("Stuff/Maps/StartTown"));
+   if (flags[7]==1) then
+	  ShowMessage("There's no escape.",false);
+   else
+	  if (flags[2]==0 and flags[5]==0) then
+		 Event08();
+	  end
+	  SetPlayerPosition(6,8);
+	  ChangeMap(FixString("Stuff/Maps/StartTown"));
+   end
 end
 -- Matt
 function Event08()
@@ -148,6 +153,80 @@ function Event09()
 	UnloadTexture(tempPort);
 	tempPort=nil;
 end
+function Event10()
+	signport = LoadPNG(FixString("Stuff/Portraits/Matt.png"));
+	if (Lang==1) then
+	   ShowMessageWithPortrait("I want a potato.", false, signport, 0);
+	elseif (Lang==2) then
+	   ShowMessageWithPortrait("Quiero una papa.", false, signport, 0);
+	end
+	UnloadTexture(signport);
+	signport=nil;
+   
+	-- Battle
+		InlineEnemy0Member = Malloc(true,2);
+		InlineEnemy0Stats = GetPartyMemberStats(InlineEnemy0Member);
+		-- IMPORTANT LINE
+		SetStats(InlineEnemy0Stats,987,60,255,44,30,99,38,30,70);
+		
+		InlineEnemy0Idle = Malloc(true,0);
+		InlineEnemy0Attack = Malloc(true,0);
+		SetAnimation(InlineEnemy0Idle,10,100,100,4,true,0,0,LoadPNG(FixString("Stuff/Enemies/BlueBigFoot.png")));
+		SetAnimation(InlineEnemy0Attack,8,100,100,4,true,0,0,LoadPNG(FixString("Stuff/Enemies/BlueBigFootAttack.png")));
+
+		InlineEnemy1Member = Malloc(true,2);
+		InlineEnemy1Stats = GetPartyMemberStats(InlineEnemy1Member);
+		-- IMPORTRANT LINE
+		SetStats(InlineEnemy1Stats,987,16,255,28,30,0,50,30,30);
+		
+		InlineEnemy1Idle = Malloc(true,0);
+		InlineEnemy1Attack = Malloc(true,0);
+		SetAnimation(InlineEnemy1Idle,10,100,100,8,false,0,0,LoadPNG(FixString("Stuff/Enemies/BigFoot.png")));
+		SetAnimation(InlineEnemy1Attack,15,79,78,3,false,0,0,LoadPNG(FixString("Stuff/Enemies/BigFootAttack.png")));
+
+		didWin = StartSpecificBattle(4,InlineEnemy0Member,InlineEnemy0Idle,InlineEnemy0Attack, InlineEnemy1Member, InlineEnemy1Idle, InlineEnemy1Attack, InlineEnemy1Member, InlineEnemy1Idle, InlineEnemy1Attack, InlineEnemy1Member, InlineEnemy1Idle, InlineEnemy1Attack);
+		
+		FreeAnimationImage(InlineEnemy0Idle);
+		FreeAnimationImage(InlineEnemy0Attack);
+		Free(InlineEnemy0Idle);
+		Free(InlineEnemy0Attack);
+		Free(InlineEnemy0Member);
+		FreeAnimationImage(InlineEnemy1Idle);
+		FreeAnimationImage(InlineEnemy1Attack);
+		Free(InlineEnemy1Idle);
+		Free(InlineEnemy1Attack);
+		Free(InlineEnemy1Member);
+		
+		InlineEnemy0Member=nil;
+		InlineEnemy0Stats=nil;
+		InlineEnemy0Idle = nil;
+		InlineEnemy0Attack = nil;
+		InlineEnemy1Member=nil;
+		InlineEnemy1Stats=nil;
+		InlineEnemy1Idle = nil;
+		InlineEnemy1Attack = nil;
+
+		if (didWin==true) then
+			if (Lang==1) then
+				ToBlack();
+				ShowMessage("The End. [Bonus End]",false)
+				ThanksForPlaying();
+			elseif (Lang==2) then
+				ToBlack();
+				ShowMessage("Fin. [Extra]",false);
+				ThanksForPlaying();
+			end
+		else
+		   tempPort33 = LoadPNG(FixString("Stuff/Portraits/PlayerSad.png"));
+			if (Lang==1) then
+				ShowMessageWithPortrait("So it ends here...",false,tempPort33,0);
+			else
+				ShowMessageWithPortrait("Esto es el fin...",false,tempPort33,0);
+			end
+			UnloadTexture(tempPort33);
+			ExitTheGame();
+		end
+end
 
 if (flags[2]==1) then
 	-- Hide Matt
@@ -159,6 +238,27 @@ tileset0=LoadPNG(FixString("Stuff/Tilesets/Inside1.png"));
 SetTileset(tileset0,0);
 tileset0=nil;
 
-if (flags[6]==0) then
-   PlayBGM(FixString("Stuff/Sound/Town-Matt.ogg"))
+PlayBGM(FixString("Stuff/Sound/Town-Matt.ogg"))
+
+if (flags[7]==1) then
+	if (flags[6]==0) then
+		-- if flags[6] is 0 but flags[7] is 1 then the player is on the final quest and entered the room normally
+
+		-- move matt
+		SetMapImageData(6,12,1,0,0);
+		SetMapImageData(7,12,1,0,12);
+		SetMapOtherData(7,12,true,10);
+		
+		SetMapImageData(6,13,0,0,1); -- wall
+		SetMapOtherData(6,13,true,0);
+		SetMapImageData(8,13,0,0,1); -- wall
+		SetMapOtherData(8,13,true,0);
+
+		-- make the door solid
+		SetMapOtherData(7,14,true,7);
+	else
+		-- the player came here by dying. kick them out.
+		SetPlayerPosition(7,1);
+		ChangeMap(FixString("Stuff/Maps/BigFootChamber"));
+	end
 end

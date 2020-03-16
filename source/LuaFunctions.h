@@ -676,6 +676,12 @@
 		return 0;
 	}
 
+	int L_getPlayerPos(lua_State* passedState){
+		lua_pushinteger(L,playerObject->x/32);
+		lua_pushinteger(L,playerObject->y/32);
+		return 2;
+	}
+
 	// Makes Lua useful.
 	void PushCFunctions(){
 		LUAREGISTER(L_SetMapImageData,"SetMapImageData");
@@ -731,6 +737,7 @@
 		LUAREGISTER(L_resumeBGM,"resumeBGM");
 
 		LUAREGISTER(L_Quit,"ExitTheGame");
+		LUAREGISTER(L_getPlayerPos,"getPlayerPos");
 	}
 
 #endif

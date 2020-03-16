@@ -1247,7 +1247,10 @@ void LoadMap(char* path){
 
 	char withDotLua[strlen(path)+strlen(".lua")+1];
 	sprintf(withDotLua,"%s%s",path,".lua");
-	luaL_dofile(L,withDotLua);
+	char _hasError = luaL_dofile(L,withDotLua);
+	if (_hasError){
+		BasicMessage((char*)lua_tostring(L,-1));
+	}
 	// The reason we need this temp buffer stupidity is because I tried to pass currentMapFilepath to this function, which makes this function strcpy with dest and src the same
 	char _tempBuf[strlen(path)+1];
 	strcpy(_tempBuf,path);
@@ -1937,6 +1940,7 @@ void Save(){
 }
 
 void Load(){
+	controlsReset();
 	if (DoesSavefileExist()==0){
 		BasicMessage("No savefile found.");
 		return;

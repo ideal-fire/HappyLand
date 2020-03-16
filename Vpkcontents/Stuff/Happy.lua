@@ -19,6 +19,17 @@ function SetFlag(index,val)
 	flags[index]=val;
 end
 
+local _haveStartedBGM = false;
+oldPlayBgm = PlayBGM;
+function PlayBGM(filename)
+   if (flags[7] == 0) then
+	  oldPlayBgm(filename);
+   elseif (_haveStartedBGM==false) then
+	  _haveStartedBGM=true;
+	  oldPlayBgm(FixString("Stuff/Sound/myMedly10-12-16.ogg"));
+   end
+end
+
 -- Includes the dot
 -- Example return value:
 -- .png
@@ -133,8 +144,12 @@ flags[3]=0;
 flags[4]=0;
 -- Denied Matt's join request
 flags[5]=0;
--- Secret post game mission active
+-- Killed nameless man (and secret mission requirement met)
 flags[6]=0;
+-- If seen the cutscene as leaving bigfootland
+flags[7]=0;
+-- if snowman has been made
+flags[8]=0;
 
 numberOfFlags=#flags+1;
 

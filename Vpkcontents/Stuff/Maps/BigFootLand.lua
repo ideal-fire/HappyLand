@@ -1,14 +1,17 @@
 -- MAKE BIGFOOTS FALL
 
-
 function MapDispose()
 	FreeTileset(0);
 	Event01=nil;
 	Event02=nil;
 	Event03=nil;
 	Event04=nil;
+	Event05=nil;
 	EasyHideBigfoot=nil;
 	EasyShowBigfoot=nil;
+	EasyHideAllFoot=nil;
+	surroundPotatoWithWalkEvents=nil;
+	setFootOther=nil;
 end
 
 function Event01()
@@ -29,9 +32,49 @@ function Event02()
 
 	UnloadTexture(tempPort);
 	tempPort=nil;
+
+	if (flags[6]==1) then -- hide the box after use
+	   SetMapImageData(2,12,1,0,0);
+	   SetMapOtherData(2,12,false,0);
+	end
 end
 function Event03()
-	ShowMessage("...",false);
+   if (flags[6]==0) then
+	  ShowMessage("...",false);
+   else
+	  ShowMessage("......",false);
+   end
+end
+function Event05()
+   surroundPotatoWithWalkEvents(0);
+   EasyHideAllFoot();
+   pauseBGM();
+end
+function surroundPotatoWithWalkEvents(eventNum)
+   for i=5,8 do
+	  SetMapOtherData(i,2,false,eventNum);
+	  SetMapOtherData(i,3,false,eventNum);
+	  SetMapOtherData(i,4,false,eventNum);
+   end
+   SetMapOtherData(9,2,false,eventNum);
+end
+
+function EasyHideAllFoot()
+   EasyHideBigfoot(3,3);
+   EasyHideBigfoot(2,6);
+   EasyHideBigfoot(4,9);
+   EasyHideBigfoot(6,5);
+   EasyHideBigfoot(9,3);
+   EasyHideBigfoot(11,5);
+   EasyHideBigfoot(9,7);
+   EasyHideBigfoot(8,10);
+   EasyHideBigfoot(11,11);
+end
+function setFootOther(topleftx, toplefty,issolid,eventNum)
+	SetMapOtherData(topleftx,toplefty,issolid,eventNum);
+	SetMapOtherData(topleftx+1,toplefty,issolid,eventNum);
+	SetMapOtherData(topleftx,toplefty+1,issolid,eventNum);
+	SetMapOtherData(topleftx+1,toplefty+1,issolid,eventNum);
 end
 
 function EasyHideBigfoot(topleftx, toplefty)
@@ -40,15 +83,24 @@ function EasyHideBigfoot(topleftx, toplefty)
 	SetMapImageData(topleftx,toplefty+1,1,0,0);
 	SetMapImageData(topleftx+1,toplefty+1,1,0,0);
 	--x,y,layer,tileset,tile
+	setFootOther(topleftx,toplefty,false,0);
 end
 function EasyShowBigfoot(topleftx, toplefty)
 	SetMapImageData(topleftx,toplefty,1,0,10);
 	SetMapImageData(topleftx+1,toplefty,1,0,11);
 	SetMapImageData(topleftx,toplefty+1,1,0,12);
 	SetMapImageData(topleftx+1,toplefty+1,1,0,13);
+	setFootOther(topleftx,toplefty,true,3);
 end
 
 function Event04()
+   flags[6]=1;
+			  -- remove portal
+			  SetMapImageData(7,2,1,0,0);
+			  SetMapOtherData(7,0,false,0);
+			  -- place events around the player
+			  surroundPotatoWithWalkEvents(5);
+			  do return end;
 	-- POTATOZZZZZZZZ
 
 	BigFootPackPortrait = LoadPNG(FixString("Stuff/Portraits/BigFootPack.png"));
@@ -104,15 +156,7 @@ function Event04()
 			ShowMessageWithPortrait("'!Vamos, Pies Grandes!",false,BigFootPackPortrait,0);
 		end
 		-- Don't confuse the player
-		EasyHideBigfoot(3,3);
-		EasyHideBigfoot(2,6);
-		EasyHideBigfoot(4,9);
-		EasyHideBigfoot(6,5);
-		EasyHideBigfoot(9,3);
-		EasyHideBigfoot(11,5);
-		EasyHideBigfoot(9,7);
-		EasyHideBigfoot(8,10);
-		EasyHideBigfoot(11,11);
+		EasyHideAllFoot();
 
 		-- Battle
 			InlineEnemy0Member = Malloc(true,2);
@@ -232,22 +276,32 @@ function Event04()
 		InlineEnemy0Attack = nil;
 
 		if (didWin==true) then
-			if (Lang==1) then
-				ShowMessageWithPortrait("No0o0o00oOOoo0o0oo! You win this round. I shall now retreat to my hidden fortress.",false,NamelessDeadPortrait,0);
-				ToBlack();
-				ShowMessage("Nathan was happy that he wasn't scammed. He returned to his house and slept for the rest of his life because the world was at peace.",false);
-				ShowMessage("The End. [Harder End]",false);
-				ThanksForPlaying();
-			elseif (Lang==2) then
-				ShowMessageWithPortrait("'!No0o0o00oOOoo0o0oo! T'u ganate. Yo voy a ir a mi fortaleza castillo.",false,NamelessDeadPortrait,0);
-				ToBlack();
-				ShowMessage("Nathan era feliz porque 'el no se estaf'o . 'el fu'i a su casa y dorm'i por el resto de su vida porque el mundo era tranquilo.",false);
-				ShowMessage("The End. [Harder End]",false);
-				ThanksForPlaying();
-			end
+		   if (GetPartySize()==1) then -- activate secret mission
+			  flags[6]=1;
+			  -- remove portal
+			  SetMapImageData(7,2,1,0,0);
+			  SetMapOtherData(7,0,false,0);
+			  -- place events around the player
+			  surroundPotatoWithWalkEvents(5);
+			  
+		   else
+			  if (Lang==1) then
+				 ShowMessageWithPortrait("No0o0o00oOOoo0o0oo! You win this round. I shall now retreat to my hidden fortress.",false,NamelessDeadPortrait,0);
+				 ToBlack();
+				 ShowMessage("Nathan was happy that he wasn't scammed. He returned to his house and slept for the rest of his life because the world was at peace.",false);
+				 ShowMessage("The End. [Harder End]",false);
+				 ThanksForPlaying();
+			  elseif (Lang==2) then
+				 ShowMessageWithPortrait("'!No0o0o00oOOoo0o0oo! T'u ganate. Yo voy a ir a mi fortaleza castillo.",false,NamelessDeadPortrait,0);
+				 ToBlack();
+				 ShowMessage("Nathan era feliz porque 'el no se estaf'o . 'el fu'i a su casa y dorm'i por el resto de su vida porque el mundo era tranquilo.",false);
+				 ShowMessage("The End. [Harder End]",false);
+				 ThanksForPlaying();
+			  end
+		   end
 		elseif (didWin==false) then
 			if (Lang==1) then
-					ShowMessageWithPortrait("Hahahaha! I have less names than you!",false,NamelessPortrait,0);
+					ShowMessageWithPortrait("Hahahaha! I have fewer names than you!",false,NamelessPortrait,0);
 			elseif (Lang==2) then
 				ShowMessageWithPortrait("'!Jajajaja! '!You tengo menos nombres que t'u!",false,NamelessPortrait,0);
 			end
@@ -275,13 +329,24 @@ function Event04()
 	EatPortrait=nil;
 end
 
-
 tileset0=LoadPNG(FixString("Stuff/Tilesets/BigFootLand.png"));
 SetTileset(tileset0,0);
 tileset0=nil;
 
-if (flags[6]==0) then
-   PlayBGM(FixString("Stuff/Sound/HolFix-TheSearch.ogg"))
+if (flags[6]==1) then
+   pauseBGM();
+   -- the player saved in here and then loaded.
+   SetPlayerPosition(7,13);
+   for i=0,14 do
+	  for j=0,12 do
+		 HideTile(i,j,0);
+		 HideTile(i,j,1);
+		 SetMapOtherData(i,j,true,0);
+	  end
+   end
+   
+else
+	PlayBGM(FixString("Stuff/Sound/HolFix-TheSearch.ogg"))
 end
 
 if (GetLevel(1,TYPE_ID)>=9) then

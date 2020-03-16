@@ -32,6 +32,7 @@ function Event01()
 	--Free(enemyatk0);
 	--Free(WierdSlimeHybridMember);
 --
+	flags[6]=0; -- very important!
 	SetPlayerPosition(7,13);
 	ChangeMap(FixString("Stuff/Maps/NathansHouse"));
 end
@@ -106,7 +107,11 @@ end
 function Event06()
 	signport = LoadPNG(FixString("Stuff/Portraits/PlayerSad.png"));
 	if (Lang==1) then
-		ShowMessageWithPortrait("I can't pull the sword.", false, signport, 0);
+		if (flags[7]==1) then
+			ShowMessageWithPortrait("The sword jiggles a little but there's no way I can pull it.", false, signport, 0);
+		else
+			ShowMessageWithPortrait("I can't pull the sword at all.", false, signport, 0);
+		end
 	elseif (Lang==2) then
 		ShowMessageWithPortrait("No puedo extraer la espada.", false, signport, 0);
 	end
@@ -206,7 +211,11 @@ function Event08()
 	-- Flower
 	signport = LoadPNG(FixString("Stuff/Portraits/Flower.png"));
 	if (Lang==1) then
-		ShowMessageWithPortrait("I'm The Lone Flower.", false, signport, 0);
+		if (flags[7]==1) then
+			ShowMessageWithPortrait("You're going to eat the potatoes instead of planting them?!", false, signport, 0);
+		else
+			ShowMessageWithPortrait("I'm The Lone Flower.", false, signport, 0);
+		end
 	elseif (Lang==2) then
 		ShowMessageWithPortrait("Me llamo El Flor Solo.", false, signport, 0);
 	end
@@ -230,7 +239,11 @@ function Event11()
 	tempPort = LoadPNG(FixString("Stuff/Portraits/Note.png"));
 
 	if (Lang==1) then
-		ShowMessageWithPortrait("Come to Big Foot Land if you ever want to see your potatoes again. - Big Foot",false,tempPort,0);
+	   if (flags[7]==1) then
+		  ShowMessageWithPortrait("Get stronger if you want to keep your potatoes.",false,tempPort,0);
+	   else
+		  ShowMessageWithPortrait("Come to Big Foot Land if you ever want to see your potatoes again. - Big Foot",false,tempPort,0);
+	   end
 	elseif (Lang==2) then
 		ShowMessageWithPortrait("Viene al Mundo de Pie Grande si quieres tus papas. - Pie Grande",false,tempPort,0);
 	end
@@ -251,12 +264,15 @@ dofile(FixString("Stuff/BattleLua/Slime.lua"));
 
 SetEncounterRate(10);
 
-if (flags[6]==0) then
-   PlayBGM(FixString("Stuff/Sound/HolFix-PixelParade.ogg"))
-end
+PlayBGM(FixString("Stuff/Sound/HolFix-PixelParade.ogg"))
 
 if (flags[3]==1) then
 	-- Remove the tree if you've fought it
 	SetMapImageData(0,7,1,0,0);
 	SetMapOtherData(0,7,false,0);
+end
+if (flags[7]==1) then
+	-- remove nameless man
+	SetMapImageData(12,3,1,0,0);
+	SetMapOtherData(12,3,false,0);
 end
