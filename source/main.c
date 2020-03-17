@@ -1018,8 +1018,13 @@ char ShowMessageWithPortrait(char* _tempMsg, char isQuestion, CrossTexture* port
 	int i, j;
 	
 	if (isQuestion==1){
-		yesButtonTexture=LoadEmbeddedPNG("Stuff/Yes.png");
-		noButtonTexture=LoadEmbeddedPNG("Stuff/No.png");
+		if (LANGUAGE==LANG_ENGLISH){
+			yesButtonTexture=LoadEmbeddedPNG("Stuff/Yes.png");
+			noButtonTexture=LoadEmbeddedPNG("Stuff/No.png");
+		}else if (LANGUAGE==LANG_SPANISH){
+			yesButtonTexture=LoadEmbeddedPNG("SpanishReplace/Yes.png");
+			noButtonTexture=LoadEmbeddedPNG("SpanishReplace/No.png");
+		}
 		
 		//if (SCREENWIDTH/getTextureWidth(yesButtonTexture)>=8){
 		//	YESNOSCALE=2;
@@ -2244,6 +2249,7 @@ void StatusLoop(){
 			}
 		}else if (wasJustPressed(SCE_CTRL_START)){
 			place=0;
+			controlsReset();
 			return;
 		}else if (wasJustPressed(bButton)){
 			if (subspot==0){
@@ -2871,6 +2877,16 @@ void Overworld(){
 		place=1;
 	}
 
+	if (wasJustPressed(SCE_CTRL_TRIANGLE)){
+		#warning testcode
+		int i;
+		for (i=0;i<partySize;i++){
+
+							LevelUp(&(party[i]),0);
+				
+					}
+	}
+	
 	UpdateCameraValues(playerObject);
 
 	// Drawing
@@ -2986,11 +3002,20 @@ char BattleLop(char canRun){
 	CrossTexture* selectButton=NULL;
 	CrossTexture* backButton=NULL;
 
-	attackButton = LoadEmbeddedPNG("Stuff/Battle/AttackIcon.png");
-	magicButton = LoadEmbeddedPNG("Stuff/Battle/MagicIcon.png");
-	runButton = LoadEmbeddedPNG("Stuff/Battle/RunIcon.png");
-	itemButton = LoadEmbeddedPNG("Stuff/Battle/ItemIcon.png");
-	winTexture = LoadEmbeddedPNG("Stuff/Battle/Win.png");
+	if (LANGUAGE==LANG_ENGLISH){
+		attackButton = LoadEmbeddedPNG("Stuff/Battle/AttackIcon.png");
+		magicButton = LoadEmbeddedPNG("Stuff/Battle/MagicIcon.png");
+		runButton = LoadEmbeddedPNG("Stuff/Battle/RunIcon.png");
+		itemButton = LoadEmbeddedPNG("Stuff/Battle/ItemIcon.png");
+		winTexture = LoadEmbeddedPNG("Stuff/Battle/Win.png");
+	}else if (LANGUAGE==LANG_SPANISH){
+		attackButton = LoadEmbeddedPNG("SpanishReplace/Battle/AttackIcon.png");
+		magicButton = LoadEmbeddedPNG("SpanishReplace/Battle/MagicIcon.png");
+		runButton = LoadEmbeddedPNG("SpanishReplace/Battle/RunIcon.png");
+		itemButton = LoadEmbeddedPNG("SpanishReplace/Battle/ItemIcon.png");
+		winTexture = LoadEmbeddedPNG("SpanishReplace/Battle/Win.png");
+
+	}
 	iconHighlightTexture = LoadEmbeddedPNG("Stuff/Battle/HighlightIcon.png");
 	selectButton = LoadEmbeddedPNG("Stuff/Battle/SelectIcon.png");
 	leftButton = LoadEmbeddedPNG("Stuff/Battle/LeftIcon.png");
@@ -3126,10 +3151,17 @@ char BattleLop(char canRun){
 				if (isOneAlive==0){
 					// Set this back to 1 to not trigger thing after battle end
 					isOneAlive=1;
-	
 					int totalEarnExp=0;
+					double expMultiplier;
+					if (numberOfEnemies==3){
+						expMultiplier=1.1;
+					}else if (numberOfEnemies>=4){
+						expMultiplier=1.25;
+					}else{
+						expMultiplier=1;
+					}
 					for (i=0;i<numberOfEnemies;i++){
-						totalEarnExp+=enemies[i].fighterStats.exp;
+						totalEarnExp+=enemies[i].fighterStats.exp*expMultiplier;
 						for (k=0;k<10;k++){
 							if (enemies[i].fighterStats.spells[k]!=0){
 								for (j=0;j<partySize;j++){
@@ -3778,6 +3810,13 @@ char BattleLop(char canRun){
 			sf2d_swapbuffers();
 		#endif
 
+			if (wasJustPressed(SCE_CTRL_TRIANGLE)){
+				#warning debugcode
+				for (i=0;i<numberOfEnemies;i++){
+					enemies[i].hp=0;
+				}
+			}
+			
 		controlsEnd();
 		FpsCapWait();
 	}
@@ -3943,7 +3982,7 @@ void TitleLoop(){
 		float titleImageYScale=(float)SCREENHEIGHT/getTextureHeight(titleImage);
 		float titleImageXScale=(float)SCREENWIDTH/getTextureWidth(titleImage);
 		drawTextureScale(titleImage,0,0,titleImageXScale,titleImageYScale);
-		#if SUBPLATFORM != SUB_ANDROID
+		#if TOUCHENABLED == 0
 			#if PLATFORM == PLAT_VITA
 				// TODO - Draw the icons
 				if (aButton==SCE_CTRL_CROSS){

@@ -94,13 +94,13 @@ function EasyShowBigfoot(topleftx, toplefty)
 end
 
 function Event04()
-   flags[6]=1;
-			  -- remove portal
-			  SetMapImageData(7,2,1,0,0);
-			  SetMapOtherData(7,0,false,0);
-			  -- place events around the player
-			  surroundPotatoWithWalkEvents(5);
-			  do return end;
+   -- flags[6]=1;
+   -- 			  -- remove portal
+   -- 			  SetMapImageData(7,2,1,0,0);
+   -- 			  SetMapOtherData(7,0,false,0);
+   -- 			  -- place events around the player
+   -- 			  surroundPotatoWithWalkEvents(5);
+   -- 			  do return end;
 	-- POTATOZZZZZZZZ
 
 	BigFootPackPortrait = LoadPNG(FixString("Stuff/Portraits/BigFootPack.png"));

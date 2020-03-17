@@ -148,8 +148,16 @@ flags[5]=0;
 flags[6]=0;
 -- If seen the cutscene as leaving bigfootland
 flags[7]=0;
--- if snowman has been made
+-- 0: snowman has not been made
+-- 1: snowman made and killed
+-- 2: snowman made and failed to kill
+-- 3: snowman made and friends
 flags[8]=0;
+-- if the secret snow blob boss has been killed
+flags[9]=0;
+-- if big heal has been learned
+flags[10]=0;
+
 
 numberOfFlags=#flags+1;
 
@@ -220,4 +228,14 @@ if (Lang==1) then
 elseif (Lang==2) then
 	-- Taladro De Zanahoria??
 	SetSpell(GetSpell(4),MallocString("Zanahoria"),0,16,MallocString(FixString("Stuff/Spell/CarrotDrill.png")),10);
+end
+
+-- Add Big Heal
+AddSpell();
+animationSpell1 = GetSpellAnimation(GetSpell(5));
+SetAnimation(animationSpell1,6,32,32,4,false,0,0);
+if (Lang==1) then
+	SetSpell(GetSpell(5),MallocString("Big Heal"),-100,0,MallocString(FixString("Stuff/Spell/Heal.png")),15,SPELLSPECIAL_NODEFENCE);
+elseif (Lang==2) then
+	SetSpell(GetSpell(5),MallocString("Curar Grande"),-100,0,MallocString(FixString("Stuff/Spell/Heal.png")),15,SPELLSPECIAL_NODEFENCE);
 end

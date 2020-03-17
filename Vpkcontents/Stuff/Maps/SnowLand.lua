@@ -8,6 +8,7 @@ function MapDispose()
 	Event06=nil;
 	Event07=nil;
 	Event08=nil;
+	Event09=nil;
 	snowAX = nil;
 	snowAY = nil;
 	snowBX = nil;
@@ -17,23 +18,77 @@ function MapDispose()
 	placeSnowmanMaybe=nil;
 	snowPosOverlap=nil;
 	pushSnowAt=nil;
+	setupSnowmanStats=nil;
+	snowBlobTalkCount=nil;
+	didInitiallyPlaceUseful=nil;
 end
 
 function Event01()
-	SetPlayerPosition(13,14);
-	ChangeMap(FixString("Stuff/Maps/StartTown"));
+   if (didInitiallyPlaceUseful==0 and flags[7]==1 and GetLevel(0)>=30) then
+	  didInitiallyPlaceUseful=1;
+	  SetMapImageData(10,8,1,0,4);
+	  SetMapOtherData(10,8,true,9);
+	  SetPlayerPosition(7,1);
+   else
+	  SetPlayerPosition(13,14);
+	  ChangeMap(FixString("Stuff/Maps/StartTown"));
+   end
 end
 function Event02()
-	tempPort = LoadPNG(FixString("Stuff/Portraits/Lump.png"));
+   if (snowBlobTalkCount==30) then
+	  SetMapImageData(4,8,1,0,0);
+	  SetMapOtherData(4,8,false,0);
+		-- START BATTLE
+			WierdSlimeHybridMember = Malloc(true,2);
+			
+			enemyidle0 = Malloc(true,0);
+			enemyatk0 = Malloc(true,0);
+			SetAnimation(enemyidle0,10,32,32,1,false,0,0,LoadPNG(FixString("Stuff/Enemies/blob.png")));
+			SetAnimation(enemyatk0,10,32,32,1,false,0,0,LoadPNG(FixString("Stuff/Enemies/blob.png")));
 
-	if (Lang==1) then
-		ShowMessageWithPortrait("It's a useless pile of snow clearly only there to make the area seem less empty.",false,tempPort,0);
-	elseif (Lang==2) then
-		ShowMessageWithPortrait("Esta es nieve in'util.",false,tempPort,0);
-	end
+			WierdSlimeHybridStats = GetPartyMemberStats(WierdSlimeHybridMember);
+			-- nep style boss
+			SetStats(WierdSlimeHybridStats,2000,2000,2000,2000,2000,2000,2000,2000,65535);
+			SetStatsSpells(WierdSlimeHybridMember,1,2,3,4,5);
+			
+			didWin = StartSpecificBattle(1,WierdSlimeHybridMember,enemyidle0,enemyatk0);
+			FreeAnimationImage(enemyidle0);
+			FreeAnimationImage(enemyatk0);
+			Free(enemyidle0);
+			Free(enemyatk0);
+			Free(WierdSlimeHybridMember);			
+			WierdSlimeHybridMember=nil;
+			WierdSlimeHybridStats=nil;
+			enemyidle0 = nil;
+			enemyatk0 = nil;
+			RestoreEntireParty();
 
-	UnloadTexture(tempPort);
-	tempPort=nil;
+		if (didWin==true) then
+		   flags[9]=1;
+		else
+		   SetPlayerPosition(13,14);
+		   ChangeMap(FixString("Stuff/Maps/StartTown"));
+		end
+   else
+	  snowBlobTalkCount=snowBlobTalkCount+1;
+	  tempPort = LoadPNG(FixString("Stuff/Portraits/Lump.png"));
+	  if (Lang==1) then
+		 if (snowBlobTalkCount==30) then
+			ShowMessageWithPortrait("Leave me alone.",false,tempPort,0);
+		 else
+			ShowMessageWithPortrait("It's a useless pile of snow clearly only there to make the area seem less empty.",false,tempPort,0);
+		 end
+	  elseif (Lang==2) then
+		 if (snowBlobTalkCount==30) then
+			ShowMessageWithPortrait("Voy a matar tu.",false,tempPort,0);
+		 else
+			ShowMessageWithPortrait("Esta es nieve in'util.",false,tempPort,0);
+		 end
+	  end
+
+	  UnloadTexture(tempPort);
+	  tempPort=nil;
+   end
 end
 function Event03()
 	tempPort = LoadPNG(FixString("Stuff/Portraits/Sign.png"));
@@ -76,7 +131,6 @@ function pushSnowAt(snowx,snowy,tilenum,eventnum)
    end
 
    if (destx<0 or destx>14 or desty>14) then
-	  print("out of bounds move attempt");
 	  return snowx,snowy;
    end
    _,_,destissolid,destevent = GetMap(destx,desty);
@@ -88,7 +142,6 @@ function pushSnowAt(snowx,snowy,tilenum,eventnum)
 	  SetMapImageData(destx,desty,1,0,tilenum);
 	  SetMapOtherData(destx,desty,true,eventnum);
    else
-	  print("cant move here");
 	  return snowx,snowy;
    end
    destissolid=nil;
@@ -108,10 +161,87 @@ function Event07()
    placeSnowmanMaybe();
 end
 function Event08()
-   ShowMessage("aaaaaaa",false);
-   flags[8]=1;
-   SetMapImageData(snowBX,snowBY,1,0,0);
-   SetMapOtherData(snowBX,snowBY,false,0);
+   local _willKill;
+   if (Lang==1) then
+	  _willKill = ShowMessage("Kill?",true);
+   else
+	  _willKill = ShowMessage("Matar?",true);
+   end
+   if (_willKill) then
+		SetMapImageData(snowBX,snowBY,1,0,0);
+		SetMapOtherData(snowBX,snowBY,false,0);
+		-- START BATTLE
+			WierdSlimeHybridMember = Malloc(true,2);
+			WierdSlimeHybridStats = GetPartyMemberStats(WierdSlimeHybridMember);
+			SetStats(WierdSlimeHybridStats,255,200,255,62,14,50,50,20,150);
+			
+			enemyidle0 = Malloc(true,0);
+			enemyatk0 = Malloc(true,0);
+			SetAnimation(enemyidle0,10,50,50,3,false,0,0,LoadPNG(FixString("Stuff/Enemies/Snowman.png")));
+			SetAnimation(enemyatk0,5,50,55,6,false,0,0,LoadPNG(FixString("Stuff/Enemies/SnowmanAttack.png")));
+
+			SetStatsSpells(WierdSlimeHybridMember,1,5);
+			
+			didWin = StartSpecificBattle(1,WierdSlimeHybridMember,enemyidle0,enemyatk0);
+			FreeAnimationImage(enemyidle0);
+			FreeAnimationImage(enemyatk0);
+			Free(enemyidle0);
+			Free(enemyatk0);
+			Free(WierdSlimeHybridMember);			
+			WierdSlimeHybridMember=nil;
+			WierdSlimeHybridStats=nil;
+			enemyidle0 = nil;
+			enemyatk0 = nil;
+			RestoreEntireParty();
+			
+		-- if lose
+		if (didWin==false) then
+		   placeSnowmanMaybe();
+		   if (Lang==1) then
+			  ShowMessage("You're a bully. I'm going home.",false);
+		   else
+			  ShowMessage("Eres antipatico. Voy a ir a mi casa.",false);
+		   end
+		   SetMapImageData(snowBX,snowBY,1,0,0);
+		   SetMapOtherData(snowBX,snowBY,false,0);
+		   flags[8]=2;
+		else
+		   ShowMessage("(The local snow men don't like you even more.)",false);
+		   setupSnowmanStats();
+		   flags[8]=1;
+		end
+		didWin=nil;
+   else
+	  if (Lang==1) then
+		 _willKill = ShowMessage("Friend?",true);
+	  else
+		 _willKill = ShowMessage("Amigo?",true);
+	  end
+	  if (_willKill==true) then
+		 flags[8]=3;
+		 SetMapImageData(snowBX,snowBY,1,0,0);
+		 SetMapOtherData(snowBX,snowBY,false,0);
+	  else
+		 return;
+	  end
+   end
+end
+function Event09()
+   -- learn big heal
+   if (Lang==1) then
+	  ShowMessage("I'm Actually Useful Pile of Snow. I'm here to teach you how to use 'Big Heal'.", false);
+	  _willLearn = ShowMessage("Learn it?", true);
+   else
+	  ShowMessage("Yo soy la nieve 'util", false);
+	  _willLearn = ShowMessage("Quieres ense'nar \"Curar Grande?\"", true);
+   end
+   if (_willLearn==true) then
+	  for i=0,GetPartySize()-1 do
+		 AddSpellToStats(GetPartyMemberStats(i),6);
+	  end
+	  HideTile(10,8,1);
+   end
+   _willLearn=nil;
 end
 function snowPosOverlap(x,y)
    if (x==snowBX and y==snowBY) then
@@ -143,13 +273,30 @@ SetTileset(tileset0,0);
 tileset0=nil;
 
 
+snowBlobTalkCount=0;
+if (flags[9]==1) then
+   SetMapImageData(4,8,1,0,0);
+   SetMapOtherData(4,8,false,0);
+end
+
+didInitiallyPlaceUseful=0;
+if (GetLevel(0)>=30) then
+   if (flags[7]==1) then
+	  didInitiallyPlaceUseful=1;
+	  if (flags[10]==0) then
+		 SetMapImageData(10,8,1,0,4);
+		 SetMapOtherData(10,8,true,9);
+	  end
+   end
+end
+
 --
 battleEnemyLoadId=0;
 dofile(FixString("Stuff/BattleLua/Snowman.lua"));
 --
-SetEncounterRate(99); -- 8
+SetEncounterRate(8);
 
-if (flags[8]==0) then
+if (flags[8]==0 and flags[7]==0) then
    -- generate random snow positions. x position 1 is reserved for fixed fallback positions
    tempx=math.random(2,13);
    tempy=math.random(7,13);

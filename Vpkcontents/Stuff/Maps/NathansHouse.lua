@@ -163,48 +163,30 @@ function Event10()
 	UnloadTexture(signport);
 	signport=nil;
    
-	-- Battle
-		InlineEnemy0Member = Malloc(true,2);
-		InlineEnemy0Stats = GetPartyMemberStats(InlineEnemy0Member);
-		-- IMPORTANT LINE
-		SetStats(InlineEnemy0Stats,987,60,255,44,30,99,38,30,70);
-		
-		InlineEnemy0Idle = Malloc(true,0);
-		InlineEnemy0Attack = Malloc(true,0);
-		SetAnimation(InlineEnemy0Idle,10,100,100,4,true,0,0,LoadPNG(FixString("Stuff/Enemies/BlueBigFoot.png")));
-		SetAnimation(InlineEnemy0Attack,8,100,100,4,true,0,0,LoadPNG(FixString("Stuff/Enemies/BlueBigFootAttack.png")));
+	-- START BATTLE
+		WierdSlimeHybridMember = Malloc(true,2);
+		WierdSlimeHybridStats = GetPartyMemberStats(WierdSlimeHybridMember);
+		SetStats(WierdSlimeHybridStats,987,70,255,15,13,7,11,9,40);
 
-		InlineEnemy1Member = Malloc(true,2);
-		InlineEnemy1Stats = GetPartyMemberStats(InlineEnemy1Member);
-		-- IMPORTRANT LINE
-		SetStats(InlineEnemy1Stats,987,16,255,28,30,0,50,30,30);
+		enemyidle0 = Malloc(true,0);
+		enemyatk0 = Malloc(true,0);
+		SetAnimation(enemyidle0,30,64,64,3,false,0,0,LoadPNG(FixString("Stuff/Enemies/AngryTree.png")));
+		SetAnimation(enemyatk0,8,64,64,3,false,0,0,LoadPNG(FixString("Stuff/Enemies/AngryTreeAttack.png")));
+	
+		SetStatsSpells(WierdSlimeHybridMember,4);
 		
-		InlineEnemy1Idle = Malloc(true,0);
-		InlineEnemy1Attack = Malloc(true,0);
-		SetAnimation(InlineEnemy1Idle,10,100,100,8,false,0,0,LoadPNG(FixString("Stuff/Enemies/BigFoot.png")));
-		SetAnimation(InlineEnemy1Attack,15,79,78,3,false,0,0,LoadPNG(FixString("Stuff/Enemies/BigFootAttack.png")));
+		didWin = StartSpecificBattle(1,WierdSlimeHybridMember,enemyidle0,enemyatk0);
 
-		didWin = StartSpecificBattle(4,InlineEnemy0Member,InlineEnemy0Idle,InlineEnemy0Attack, InlineEnemy1Member, InlineEnemy1Idle, InlineEnemy1Attack, InlineEnemy1Member, InlineEnemy1Idle, InlineEnemy1Attack, InlineEnemy1Member, InlineEnemy1Idle, InlineEnemy1Attack);
-		
-		FreeAnimationImage(InlineEnemy0Idle);
-		FreeAnimationImage(InlineEnemy0Attack);
-		Free(InlineEnemy0Idle);
-		Free(InlineEnemy0Attack);
-		Free(InlineEnemy0Member);
-		FreeAnimationImage(InlineEnemy1Idle);
-		FreeAnimationImage(InlineEnemy1Attack);
-		Free(InlineEnemy1Idle);
-		Free(InlineEnemy1Attack);
-		Free(InlineEnemy1Member);
-		
-		InlineEnemy0Member=nil;
-		InlineEnemy0Stats=nil;
-		InlineEnemy0Idle = nil;
-		InlineEnemy0Attack = nil;
-		InlineEnemy1Member=nil;
-		InlineEnemy1Stats=nil;
-		InlineEnemy1Idle = nil;
-		InlineEnemy1Attack = nil;
+		FreeAnimationImage(enemyidle0);
+		FreeAnimationImage(enemyatk0);
+		Free(enemyidle0);
+		Free(enemyatk0);
+		Free(WierdSlimeHybridMember);
+
+		WierdSlimeHybridMember=nil;
+		WierdSlimeHybridStats=nil;
+		enemyidle0 = nil;
+		enemyatk0 = nil;
 
 		if (didWin==true) then
 			if (Lang==1) then

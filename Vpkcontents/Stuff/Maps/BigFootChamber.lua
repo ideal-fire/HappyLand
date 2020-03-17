@@ -41,7 +41,11 @@ function Event01()
 	tempPort = LoadPNG(FixString("Stuff/Portraits/Note.png"));
 
 	if (Lang==1) then
-		ShowMessageWithPortrait("Welcome to Big Foot Chamber.",false,tempPort,0);
+	   if (flags[7]==1) then
+		  ShowMessageWithPortrait("You are leaving Big Foot Chamber. We hope you'll visit again!",false,tempPort,0);
+	   else
+		  ShowMessageWithPortrait("Welcome to Big Foot Chamber.",false,tempPort,0);
+	   end
 	elseif (Lang==2) then
 		ShowMessageWithPortrait("Bienvenido a La Sala De Pie Grande.",false,tempPort,0);
 	end

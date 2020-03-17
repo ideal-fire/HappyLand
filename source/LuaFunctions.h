@@ -238,24 +238,24 @@
 	// char level;
 	// short maxHp;
 	// short maxMp;
-	// unsigned char attack;
-	// unsigned char defence;
-	// unsigned char magicAttack;
-	// unsigned char magicDefence;
-	// unsigned char speed;
-	// short exp;
+	// unsigned short attack;
+	// unsigned short defence;
+	// unsigned short magicAttack;
+	// unsigned short magicDefence;
+	// unsigned short speed;
+	// unsigned short exp;
 	// char* name (optional)
 	int L_SetStats(lua_State* passedState){
 		stats* passedMember = lua_touserdata(passedState,1);
 		char level = lua_tonumber(passedState,2);
 		short maxHp = lua_tonumber(passedState,3);
 		short maxMp = lua_tonumber(passedState,4);
-		unsigned char attack = lua_tonumber(passedState,5);
-		unsigned char defence = lua_tonumber(passedState,6);
-		unsigned char magicAttack = lua_tonumber(passedState,7);
-		unsigned char magicDefence = lua_tonumber(passedState,8);
-		unsigned char speed = lua_tonumber(passedState,9);
-		short exp = lua_tonumber(passedState,10);
+		unsigned short attack = lua_tonumber(passedState,5);
+		unsigned short defence = lua_tonumber(passedState,6);
+		unsigned short magicAttack = lua_tonumber(passedState,7);
+		unsigned short magicDefence = lua_tonumber(passedState,8);
+		unsigned short speed = lua_tonumber(passedState,9);
+		unsigned short exp = lua_tonumber(passedState,10);
 	
 		passedMember->level=level;
 		passedMember->maxHp=maxHp;

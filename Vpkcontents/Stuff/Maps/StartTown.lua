@@ -11,6 +11,8 @@ function MapDispose()
 	Event09=nil;
 	Event10=nil;
 	Event11=nil;
+	Event12=nil;
+	setupSlimeStats=nil;
 end
 
 function Event01()
@@ -51,11 +53,11 @@ function Event03()
 	signport = LoadPNG(FixString("Stuff/Portraits/WaterBottle.png"));
 	if (flags[1]==0) then
 		if (Lang==1) then
-			ShowMessageWithPortrait("I'm Infinite Big Water Bottle. I can teach you how to use the spell 'Drink Water'.", false, signport, 0);
+			ShowMessageWithPortrait("I'm Infinite Big Water Bottle. I can teach you how to use the spell 'Drink Water.'", false, signport, 0);
 			questionanswer = ShowMessageWithPortrait('Want to learn how to use it?', true, signport, 0);
 		elseif (Lang==2) then
-			ShowMessageWithPortrait('Soy Botella De Agua Grande. Puedo ' .. "ese'nar la magia " .. '"Beber Agua".', false, signport, 0);
-			questionanswer = ShowMessageWithPortrait("'?Quieres aprender la magia " .. '"Beber Agua"?', true, signport, 0);
+			ShowMessageWithPortrait('Soy Botella De Agua Grande. Puedo ' .. "ese'nar la magia " .. '"Beber Agua."', false, signport, 0);
+			questionanswer = ShowMessageWithPortrait("'?Quieres aprender la magia " .. '"Beber Agua?"', true, signport, 0);
 		end
 	
 		if (questionanswer==true) then
@@ -105,16 +107,26 @@ function Event05()
 	signport=nil;
 end
 function Event06()
-	signport = LoadPNG(FixString("Stuff/Portraits/PlayerSad.png"));
-	if (Lang==1) then
-		if (flags[7]==1) then
+   
+   if (GetLevel(0)>=1000) then
+	  signport = LoadPNG(FixString("Stuff/Portraits/Player.png"));
+	  if (Lang==1) then
+		 ShowMessageWithPortrait("The sword is barely held in at all, but I don't want it.", false, signport, 0);
+	  elseif (Lang==2) then
+		 ShowMessageWithPortrait("Puedo extraer la espada, pero no lo quiero.", false, signport, 0);
+	  end
+   else
+	  signport = LoadPNG(FixString("Stuff/Portraits/PlayerSad.png"));
+	  if (Lang==1) then
+		 if (flags[7]==1) then
 			ShowMessageWithPortrait("The sword jiggles a little but there's no way I can pull it.", false, signport, 0);
-		else
+		 else
 			ShowMessageWithPortrait("I can't pull the sword at all.", false, signport, 0);
-		end
-	elseif (Lang==2) then
-		ShowMessageWithPortrait("No puedo extraer la espada.", false, signport, 0);
-	end
+		 end
+	  elseif (Lang==2) then
+		 ShowMessageWithPortrait("No puedo extraer la espada.", false, signport, 0);
+	  end
+   end
 	UnloadTexture(signport);
 	signport=nil;
 end
@@ -251,7 +263,11 @@ function Event11()
 	UnloadTexture(tempPort);
 	tempPort=nil;
 end
-
+function Event12()
+   -- onstep event
+   -- update the scaling slime stats
+   setupSlimeStats();
+end
 
 tileset0=LoadPNG(FixString("Stuff/Tilesets/Town1.png"));
 SetTileset(tileset0,0);
@@ -259,10 +275,7 @@ tileset0=nil;
 
 --
 battleEnemyLoadId=0;
-dofile(FixString("Stuff/BattleLua/Slime.lua"));
 --
-
-SetEncounterRate(10);
 
 PlayBGM(FixString("Stuff/Sound/HolFix-PixelParade.ogg"))
 
@@ -275,4 +288,21 @@ if (flags[7]==1) then
 	-- remove nameless man
 	SetMapImageData(12,3,1,0,0);
 	SetMapOtherData(12,3,false,0);
+	-- register an on-step event by putting an event everywhere
+	for i=0,14 do
+	   for j=0, 14 do
+		  _,_,destissolid,destevent = GetMap(i,j)
+		  if (destissolid==false and destevent==0) then
+			 SetMapOtherData(i,j,false,12);
+		  end
+	   end
+	end
+	destissolid=nil;
+	destevent=nil;
+	--
+	dofile(FixString("Stuff/BattleLua/Slime2.lua"));
+	SetEncounterRate(7);
+else
+   dofile(FixString("Stuff/BattleLua/Slime.lua"));
+   SetEncounterRate(10);
 end
