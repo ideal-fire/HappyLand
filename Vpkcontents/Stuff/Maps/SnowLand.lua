@@ -177,7 +177,7 @@ function Event08()
 			
 			enemyidle0 = Malloc(true,0);
 			enemyatk0 = Malloc(true,0);
-			SetAnimation(enemyidle0,10,50,50,3,false,0,0,LoadPNG(FixString("Stuff/Enemies/Snowman.png")));
+			SetAnimation(enemyidle0,10,50,50,3,true,0,0,LoadPNG(FixString("Stuff/Enemies/Snowman.png")));
 			SetAnimation(enemyatk0,5,50,55,6,false,0,0,LoadPNG(FixString("Stuff/Enemies/SnowmanAttack.png")));
 
 			SetStatsSpells(WierdSlimeHybridMember,1,5);
@@ -221,6 +221,7 @@ function Event08()
 		 flags[8]=3;
 		 SetMapImageData(snowBX,snowBY,1,0,0);
 		 SetMapOtherData(snowBX,snowBY,false,0);
+		 AddPartyMember3();
 	  else
 		 return;
 	  end

@@ -115,6 +115,21 @@ function AddPartyMember2()
 	tempatk=nil;
 end
 
+-- Snowman, id 3
+function AddPartyMember3()
+	AddPartyMember(3);
+
+	tempidle = GetPartyMemberAnimation(3,ANIMATION_IDLE, TYPE_ID);
+	tempatk = GetPartyMemberAnimation(3,ANIMATION_ATTACK, TYPE_ID);
+	SetAnimation(tempidle,10,50,50,3,true,0,0,LoadPNG(FixString("Stuff/Enemies/Snowman.png")));
+	SetAnimation(tempatk,5,50,55,6,false,0,0,LoadPNG(FixString("Stuff/Enemies/SnowmanAttack.png")));
+	
+	SetStats(GetPartyMemberStats(3, TYPE_ID),1,10,10,1,1,1,1,1,0,MallocString("Snowy"));
+	RestorePartyMember(3, TYPE_ID);
+	tempidle=nil;
+	tempatk=nil;
+end
+
 --[[
 	EXAMPLE PARTY MEMBER CODE
 	function AddPartyMemberSPECIALIDHERE()

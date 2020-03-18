@@ -3236,7 +3236,6 @@ char BattleLop(char canRun){
 					place=0;
 					break;
 				}
-
 			if (GetBattlerById(orderOfAction[currentOrder])->hp<=0){
 				currentOrder++;
 			}else{
